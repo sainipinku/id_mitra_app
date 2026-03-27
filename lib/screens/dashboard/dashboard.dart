@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/screens/dashboard/home.dart';
 import 'package:idmitra/screens/dashboard/reports.dart';
 import 'package:idmitra/screens/dashboard/users/users.dart';
 import 'package:idmitra/screens/dashboard/setting.dart';
+import 'package:idmitra/screens/home/student_list.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -33,11 +36,18 @@ class _DashboardState extends State<Dashboard> {
       _selectedIndex = index;
     });
   }
+  late HomeCubit homeCubit;
 
+  @override
+  void initState() {
+    super.initState();
+    homeCubit = context.read<HomeCubit>();
+    homeCubit.loadHomeData();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: dashboardAppBar(),
+      appBar: dashboardAppBar(context),
       body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

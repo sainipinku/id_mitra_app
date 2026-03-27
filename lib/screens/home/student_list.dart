@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/providers/students/students_cubit.dart';
+import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 
 class StudentListingPage extends StatefulWidget {
-  const StudentListingPage({super.key});
+  String schoolId;
+  StudentListingPage({super.key,required this.schoolId});
 
   @override
   State<StudentListingPage> createState() => _StudentListingPageState();
@@ -15,7 +21,9 @@ class StudentListingPage extends StatefulWidget {
 
 class _StudentListingPageState extends State<StudentListingPage> {
   TextEditingController searchController = TextEditingController();
-
+  ScrollController _scrollController = ScrollController();
+  Timer? _debounce;
+  int selectedIndex = 0;
   void openFilter(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -28,7 +36,20 @@ class _StudentListingPageState extends State<StudentListingPage> {
       },
     );
   }
+  @override
+  void initState() {
+    super.initState();
 
+    context.read<StudentsCubit>().fetchStudents(search: '',schoolId: widget.schoolId);
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+
+        context.read<StudentsCubit>().fetchStudents(isLoadMore: true,search: '',schoolId: widget.schoolId);
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,7 +61,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
           children: [
 
             /// SCHOOL DROPDOWN + FILTER
-            Row(
+            /*Row(
               children: [
 
                 Expanded(
@@ -79,9 +100,8 @@ class _StudentListingPageState extends State<StudentListingPage> {
                   ),
                 )
               ],
-            ),
+            ),*/
 
-            const SizedBox(height: 15),
 
             /// SEARCH BAR
             _searchBar(),
@@ -89,14 +109,44 @@ class _StudentListingPageState extends State<StudentListingPage> {
             const SizedBox(height: 15),
 
             /// STUDENT LIST
-            Expanded(
-              child: ListView.builder(
-                itemCount: 6,
-                itemBuilder: (context, index) {
-                  return const StudentCard();
-                },
-              ),
-            ),
+            BlocBuilder<StudentsCubit, StudentsState>(
+              builder: (context, state) {
+                if (state.loading) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                return Expanded(
+                  child: state.studentsList.isEmpty
+                      ? Center(
+                    child: Image.asset(
+                      "assets/images/no_data.png",
+                      height: 200,
+                    ),
+                  )
+                      : ListView.builder(
+                    controller: _scrollController,
+                    itemCount: state.studentsList.length +
+                        (state.hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index < state.studentsList.length) {
+                        final item = state.studentsList[index];
+                        return StudentCard(
+                           studentDetailsData: item,
+                        );
+                      } else {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                );
+              },
+            )
+
           ],
         ),
       ),
@@ -107,7 +157,15 @@ class _StudentListingPageState extends State<StudentListingPage> {
     return TextField(
       controller: searchController,
       style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
-      onChanged: (value) {},
+      onChanged: (value) {
+        if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+        _debounce = Timer(const Duration(milliseconds: 500), () {
+          context.read<StudentsCubit>().fetchStudents(
+            search: value.trim(),schoolId: widget.schoolId
+          );
+        });
+      },
       decoration: InputDecoration(
         filled: true, // ✅ important
         fillColor: AppTheme.whiteColor, // ✅ background color

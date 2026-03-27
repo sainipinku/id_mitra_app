@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
@@ -10,6 +11,9 @@ import 'package:idmitra/components/app_theme.dart';
 import 'dart:ui';
 
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/providers/home/home_cubit.dart';
+import 'package:idmitra/screens/profile_setting/profile_setting.dart';
+import 'package:idmitra/utils/navigation_utils.dart';
 
 
 class CommonAppBar extends StatelessWidget
@@ -158,102 +162,136 @@ class CommonAppBar extends StatelessWidget
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
-PreferredSizeWidget dashboardAppBar() {
+PreferredSizeWidget dashboardAppBar(BuildContext context) {
   return AppBar(
     backgroundColor: Colors.white,
     elevation: 0,
     automaticallyImplyLeading: false,
     titleSpacing: 0,
-    title: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
+    title: BlocBuilder<HomeCubit, HomeState>(
+      builder: (context, state) {
 
-          /// Profile Image
-          const CircleAvatar(
-            radius: 20,
-            backgroundImage: NetworkImage(
-              "https://i.pravatar.cc/150?img=3",
-            ),
-          ),
+        /// 🔄 LOADING
+        if (state.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          const SizedBox(width: 12),
+        /// ✅ SUCCESS
+        else if (state.dashboard != null) {
+          final data = state.user!.user;
 
-          /// Name + ID
-           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
               children: [
-                Text(
-                  "Aakash Mishra",
-                  style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
+
+                /// Profile Image
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: (data?.profilePhotoUrl != null &&
+                      data!.profilePhotoUrl!.isNotEmpty)
+                      ? NetworkImage(data.profilePhotoUrl!)
+                      : null,
+                  child: (data?.profilePhotoUrl == null ||
+                      data!.profilePhotoUrl!.isEmpty)
+                      ? Icon(Icons.person, color: Colors.grey)
+                      : null,
                 ),
-                Text(
-                  "ID Mitra partner",
-                  style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+
+                const SizedBox(width: 12),
+
+                /// Name + ID
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data!.name ?? '',
+                        style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
+                      ),
+                      Text(
+                        "ID Mitra partner",
+                        style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+                      ),
+                    ],
+                  ),
+                ),
+
+                /// Notification Icon
+                Stack(
+                  children: [
+                    IconButton(
+                      icon: Container(
+                          height: 70,
+                          width: 70,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppTheme.btn10perOpacityColor
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(3.0),
+                            child: svgIcon(icon: 'assets/icons/home/notification.svg', clr: AppTheme.btnColor,),
+                          )),
+                      onPressed: () {},
+                    ),
+
+                    /// Notification Badge
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Text(
+                          "1",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+
+                /// Setting Icon
+                IconButton(
+                  icon: Container(
+                      height: 70,
+                      width: 70,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.btn10perOpacityColor
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(3.0),
+                        child: svgIcon(icon: 'assets/icons/home/user-profile.svg', clr: AppTheme.btnColor,),
+                      )),
+                  onPressed: () {
+                    navigateWithTransition(
+                      context: context,
+                      page: ProfileSetting(),
+                    );
+                  },
                 ),
               ],
             ),
-          ),
+          );
+        }
 
-          /// Notification Icon
-          Stack(
-            children: [
-              IconButton(
-                icon: Container(
-                  height: 70,
-                  width: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.btn10perOpacityColor
-                  ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(3.0),
-                      child: svgIcon(icon: 'assets/icons/home/notification.svg', clr: AppTheme.btnColor,),
-                    )),
-                onPressed: () {},
-              ),
-
-              /// Notification Badge
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text(
-                    "1",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                    ),
-                  ),
-                ),
-              )
-            ],
-          ),
-
-          /// Setting Icon
-          IconButton(
-            icon: Container(
-                height: 70,
-                width: 70,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.btn10perOpacityColor
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(3.0),
-                  child: svgIcon(icon: 'assets/icons/home/user-profile.svg', clr: AppTheme.btnColor,),
-                )),
-            onPressed: () {},
-          ),
-        ],
-      ),
-    ),
+        /// ❌ ERROR / FALLBACK
+        else {
+          return const Center(
+            child: Text("Something went wrong"),
+          );
+        }
+      },
+    )
+    ,
   );
 }
 Widget commonButton({

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/screens/dashboard/users/user_details_page.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 class UsersDetailsWidgets extends StatefulWidget {
-  const UsersDetailsWidgets({super.key});
+  SchoolDetailsModel? schoolDetailsModel;
+  UsersDetailsWidgets({super.key,required this.schoolDetailsModel});
 
   @override
   State<UsersDetailsWidgets> createState() => _UsersDetailsWidgetsState();
@@ -26,23 +28,47 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
         onTap: (){
           navigateWithTransition(
             context: context,
-            page: UserDetailsPage(),
+            page: UserDetailsPage(schoolDetailsModel: widget.schoolDetailsModel,),
           );
         },
         child: Row(
           children: [
 
             /// PROFILE IMAGE
-            /// PROFILE IMAGE
             ClipRRect(
-              borderRadius: BorderRadius.circular(60), // optional rounded corners
-              child: Image.network(
-                "https://randomuser.me/api/portraits/men/32.jpg",
+              borderRadius: BorderRadius.circular(6),
+              child: (widget.schoolDetailsModel!.logoUrl != null &&
+                  widget.schoolDetailsModel!.logoUrl!.isNotEmpty)
+                  ? Image.network(
+                widget.schoolDetailsModel!.logoUrl ?? '',
                 height: 60,
                 width: 60,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 60,
+                    width: 60,
+                    color: Colors.grey.shade300,
+                    child: const Icon(
+                      Icons.person,
+                      size: 30,
+                      color: Colors.grey,
+                    ),
+                  );
+                },
+              )
+                  : Container(
+                height: 60,
+                width: 60,
+                color: Colors.grey.shade300,
+                child: const Icon(
+                  Icons.person,
+                  size: 30,
+                  color: Colors.grey,
+                ),
               ),
             ),
+
 
             const SizedBox(width: 12),
 
@@ -53,7 +79,7 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                 children: [
 
                   Text(
-                    "Sunrise Public School",
+                    widget.schoolDetailsModel!.name ?? '',
                     style:
                     MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                   ),
@@ -64,7 +90,7 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                     children: [
                       Icon(Icons.location_on,size: 15,),
                       Text(
-                        "Kota, Rajasthan",
+                        widget.schoolDetailsModel!.address ?? '',
                         style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
                       ),
                       SizedBox(width: 5,),

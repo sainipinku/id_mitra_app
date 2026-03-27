@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Map<String, String> map = {
                                     "whatsapp_phone": phoneController.text
                                         .trim(),
-                                    "user_type": "",
+                                    "user_type": "partner",
                                   };
 
                                   if (formkey.currentState!.validate()) {

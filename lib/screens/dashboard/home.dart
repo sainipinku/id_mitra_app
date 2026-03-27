@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/screens/SelectRolePage/SelectRolePage.dart';
 import 'package:idmitra/screens/dashboard/StatCard.dart';
-import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
-
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -16,147 +16,170 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
+      child: BlocBuilder<HomeCubit, HomeState>(
+        builder: (context, state) {
 
-          /// STATS GRID
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.4,
-            children: const [
+          /// 🔄 LOADING
+          if (state.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-              StatCard(
-                title: "Total Users",
-                value: "124",
-                icon: Icons.person,
-                color: Colors.blue,
-              ),
+          /// ✅ SUCCESS
+          else if (state.dashboard != null) {
+            final data = state.dashboard!.data;
 
-              StatCard(
-                title: "Active Users",
-                value: "98",
-                icon: Icons.person_outline,
-                color: Colors.green,
-              ),
-
-              StatCard(
-                title: "Total Students",
-                value: "500",
-                icon: Icons.school,
-                color: Colors.orange,
-              ),
-
-              StatCard(
-                title: "Total Employee",
-                value: "58",
-                icon: Icons.group,
-                color: Colors.purple,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          /// QUICK ACTIONS CARD
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                )
-              ],
-            ),
-            child: Column(
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                const Text(
-                  "Quick Actions",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                /// 🔹 STATS GRID
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.4,
+                  children: [
+
+                    StatCard(
+                      title: "Total Users",
+                      value: data?.orders?.total?.toString() ?? "0",
+                      icon: Icons.person,
+                      color: Colors.blue,
+                    ),
+
+                    StatCard(
+                      title: "Active Users",
+                      value: data?.orders?.total?.toString() ?? "0",
+                      icon: Icons.person_outline,
+                      color: Colors.green,
+                    ),
+
+                    StatCard(
+                      title: "Total Students",
+                      value: data?.orders?.total?.toString() ?? "0",
+                      icon: Icons.school,
+                      color: Colors.orange,
+                    ),
+
+                    StatCard(
+                      title: "Total Employee",
+                      value: data?.orders?.total?.toString() ?? "0",
+                      icon: Icons.group,
+                      color: Colors.purple,
+                    ),
+                  ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-                /// ADD NEW USER BUTTON
+                /// 🔹 QUICK ACTIONS CARD
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xff1FA2FF), Color(0xff12D8FA)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                      )
+                    ],
                   ),
-                  child: GestureDetector(
-                    onTap: (){
-                      navigateWithTransition(
-                        context: context,
-                        page: SelectRolePage(),
-                      );
-                    },
-                    child: Row(
-                      children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
 
-                        Container(
-                          height: 40,
-                            width: 40,
-                            decoration: BoxDecoration(
-                                shape: BoxShape.rectangle,
-                                color: AppTheme.btn10perOpacityColor
+                      const Text(
+                        "Quick Actions",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      /// 🔹 ADD USER BUTTON
+                      GestureDetector(
+                        onTap: () {
+                          navigateWithTransition(
+                            context: context,
+                            page: const SelectRolePage(),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xff1FA2FF), Color(0xff12D8FA)],
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(3.0),
-                              child: svgIcon(icon: 'assets/icons/home/add_user.svg', clr: AppTheme.whiteColor,),
-                            )),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
 
-                        const SizedBox(width: 12),
+                              Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.btn10perOpacityColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: svgIcon(
+                                    icon: 'assets/icons/home/add_user.svg',
+                                    clr: AppTheme.whiteColor,
+                                  ),
+                                ),
+                              ),
 
-                         Expanded(
-                          child: Text(
-                            "Add New Users",
-                            style: MyStyles.semiBoldTxt(AppTheme.whiteColor, 14),
+                              const SizedBox(width: 12),
+
+                              Expanded(
+                                child: Text(
+                                  "Add New Users",
+                                  style: MyStyles.semiBoldTxt(
+                                      AppTheme.whiteColor, 14),
+                                ),
+                              ),
+
+                              const CircleAvatar(
+                                radius: 14,
+                                backgroundColor: Colors.white,
+                                child: Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 14,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-
-                        Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: Colors.black,
-                          ),
-                        )
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                )
+                ),
               ],
-            ),
-          ),
-        ],
+            );
+          }
+
+          /// ❌ ERROR / FALLBACK
+          else {
+            return const Center(
+              child: Text("Something went wrong"),
+            );
+          }
+        },
       ),
     );
   }
-
 }

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/models/schools/SchoolListModel.dart';
+import 'package:idmitra/screens/home/student_list.dart';
+import 'package:idmitra/utils/navigation_utils.dart';
 
 class UserDetailsPage extends StatefulWidget {
-  const UserDetailsPage({super.key});
+  SchoolDetailsModel? schoolDetailsModel;
+  UserDetailsPage({super.key,this.schoolDetailsModel});
 
   @override
   State<UserDetailsPage> createState() => _UserDetailsPageState();
@@ -41,10 +45,14 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
                       /// IMAGE
                       Positioned.fill(
-                        child: Image.asset(
-                          "assets/images/school.png",
-                          fit: BoxFit.cover,
-                        ),
+                        child: Image.network(
+                    widget.schoolDetailsModel?.logoUrl ?? '',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.image, size: 40);
+                    },
+                  )
+
                       ),
 
                       /// DARK OVERLAY
@@ -57,7 +65,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                       /// CENTER TITLE
                       Center(
                         child: Text(
-                          "Sunrise Public School",
+                          widget.schoolDetailsModel?.name ?? '',
                           textAlign: TextAlign.center,
                           style: MyStyles.boldText(
                             size: 20,
@@ -89,7 +97,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                                         size: 14, color: AppTheme.whiteColor),
                                     const SizedBox(width: 4),
                                     Text(
-                                      "Kota, Rajasthan",
+                                      widget.schoolDetailsModel?.address ?? '',
                                       style: MyStyles.regularText(
                                           size: 12, color: AppTheme.whiteColor),
                                     ),
@@ -133,12 +141,23 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                 /// 🔹 TOP LOGO (PERFECT CENTER)
                 Positioned(
                   top: -40,
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.asset("assets/images/app_logo.png"),
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.white,
+                      child: ClipOval(
+                        child: Image.network(
+                          widget.schoolDetailsModel?.logoUrl ?? '',
+                          fit: BoxFit.cover,
+                          width: 80,
+                          height: 80,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.image, size: 40);
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -151,9 +170,14 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                statCard("STUDENTS", "1,250"),
-                statCard("STAFF", "85"),
-                statCard("TOTAL ORDERS", "11,00"),
+                statCard(title: "STUDENTS", value: "1,250",callBtn: (){
+                  navigateWithTransition(
+                    context: context,
+                    page: StudentListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? '',),
+                  );
+                }),
+                statCard(title: "STAFF", value: "85",callBtn: (){}),
+                statCard(title: "TOTAL ORDERS", value: "11,00",callBtn: (){}),
               ],
             ),
 
@@ -204,7 +228,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
                   infoRow(
                     "School Name",
-                    "Sunrise Public School",
+                    widget.schoolDetailsModel?.name ?? '',
                     "School ID",
                     "SH-99283-DX",
                   ),
@@ -256,7 +280,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
                   infoRow(
                     "Admin Name",
-                    "Sunrise Public School",
+                    widget.schoolDetailsModel!.admin!.name ?? '',
                     "ID Proof",
                     "SH-99283-DX",
                   ),
@@ -264,9 +288,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
                   infoRow(
                     "Email Address",
-                    "Xaviar@school.edu",
+                    widget.schoolDetailsModel!.admin!.email ?? '',
                     "Contact number",
-                    "+91 9876543210",
+                    widget.schoolDetailsModel!.admin!.phone ?? '',
                   ),
                 ],
               ),
@@ -278,28 +302,33 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   }
 
   /// 🔹 STAT CARD
-  Widget statCard(String title, String value) {
+  Widget statCard({required String title, required String value,required VoidCallback callBtn}) {
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: AppTheme.whiteColor,
-          border: Border.all(color: AppTheme.backBtnBgColor),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: MyStyles.boldText(size: 20, color: AppTheme.btnColor),
-            ),
-          ],
+      child: GestureDetector(
+        onTap: (){
+          callBtn();
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: AppTheme.whiteColor,
+            border: Border.all(color: AppTheme.backBtnBgColor),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: MyStyles.boldText(size: 20, color: AppTheme.btnColor),
+              ),
+            ],
+          ),
         ),
       ),
     );

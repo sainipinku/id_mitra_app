@@ -26,11 +26,11 @@ final class LoginTimeout extends LoginState {}
 
 final class LoginOnHold extends LoginState {}
 
-class RoleSelected extends LoginState {
-  final String selectedRole;
+class LogoutSuccess extends LoginState {
+  final LogoutModel logoutModel;
 
-  RoleSelected({required this.selectedRole});
+  LogoutSuccess({required this.logoutModel});
 
   @override
-  List<Object> get props => [selectedRole];
+  List<Object> get props => [logoutModel];
 }

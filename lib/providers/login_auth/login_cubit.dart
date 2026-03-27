@@ -11,6 +11,7 @@ import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 import 'package:idmitra/models/LoginModel.dart';
+import 'package:idmitra/models/LogoutModel.dart';
 
 
 part 'login_state.dart';
@@ -62,6 +63,32 @@ class LoginCubit extends Cubit<LoginState> {
         final jsonData = jsonDecode(response.body);  // FIXED HERE
         LoginModel loginModel = LoginModel.fromJson(jsonData);
         emit(LoginSuccess(loginModel: loginModel));
+      } else if (response.statusCode == 403) {
+        emit(LoginOnHold());
+      }
+    } on SocketException {
+      emit(LoginInternetError());
+    } on TimeoutException {
+      emit(LoginTimeout());
+    } catch (e) {
+      debugPrint("ERROR => $e");
+      emit(LoginFailed());
+    }
+  }
+
+  constLogoutFun() async {
+    emit(LoginLoading());
+    try {
+      var response = await apiManager.postWithoutRequest(
+          Config.baseUrl + Routes.authLogout
+      );
+
+      debugPrint("response ${response.body}");
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);  // FIXED HERE
+        LogoutModel logoutModel = LogoutModel.fromJson(jsonData);
+        emit(LogoutSuccess(logoutModel: logoutModel));
       } else if (response.statusCode == 403) {
         emit(LoginOnHold());
       }

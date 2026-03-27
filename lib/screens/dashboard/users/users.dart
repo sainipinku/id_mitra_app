@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/providers/school/school_cubit.dart';
+import 'package:idmitra/providers/school/school_state.dart';
 import 'package:idmitra/screens/dashboard/users/users_details_widgets.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
@@ -16,6 +21,7 @@ class Schools extends StatefulWidget {
 
 class _SchoolsState extends State<Schools> {
   TextEditingController searchController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
   final List<String> filters = [
     "All",
     "Partner",
@@ -23,7 +29,7 @@ class _SchoolsState extends State<Schools> {
     "Colleges",
     "Corparte",
   ];
-
+  Timer? _debounce;
   int selectedIndex = 0;
   void openFilter(BuildContext context) {
     showModalBottomSheet(
@@ -37,7 +43,20 @@ class _SchoolsState extends State<Schools> {
       },
     );
   }
+  @override
+  void initState() {
+    super.initState();
 
+    context.read<SchoolCubit>().fetchStudents(search: '');
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+
+        context.read<SchoolCubit>().fetchStudents(isLoadMore: true,search: '');
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,15 +72,44 @@ class _SchoolsState extends State<Schools> {
             const SizedBox(height: 15),
             fillterList(),
             const SizedBox(height: 15),
-            /// STUDENT LIST
-            Expanded(
-              child: ListView.builder(
-                itemCount: 6,
+            BlocBuilder<SchoolCubit, SchoolState>(
+          builder: (context, state) {
+            if (state.loading) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            return Expanded(
+              child: state.students.isEmpty
+                  ? Center(
+                child: Image.asset(
+                  "assets/images/no_data.png",
+                  height: 200,
+                ),
+              )
+                  : ListView.builder(
+                controller: _scrollController,
+                itemCount: state.students.length +
+                    (state.hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
-                  return const UsersDetailsWidgets();
+                  if (index < state.students.length) {
+                    final item = state.students[index];
+                    return UsersDetailsWidgets(
+                      schoolDetailsModel: item,
+                    );
+                  } else {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
                 },
               ),
-            ),
+            );
+          },
+        )
+
           ],
         ),
       ),
@@ -112,7 +160,15 @@ class _SchoolsState extends State<Schools> {
     return TextField(
       controller: searchController,
       style: MyStyles.regularTxt(AppTheme.black_Color,14),
-      onChanged: (value) {},
+      onChanged: (value) {
+        if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+        _debounce = Timer(const Duration(milliseconds: 500), () {
+          context.read<SchoolCubit>().fetchStudents(
+            search: value.trim(),
+          );
+        });
+      },
       decoration: InputDecoration(
         filled: true, // ✅ important
         fillColor: AppTheme.whiteColor, // ✅ background color

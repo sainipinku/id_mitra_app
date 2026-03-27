@@ -284,7 +284,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           Map<String, String> map = {
                             "whatsapp_phone": widget.phone,
                             "otp": pinController.text.trim(),
-                            "user_type": '',
+                            "user_type": 'partner',
                           };
                           print('send data ======>$map');
                           if (formkey.currentState!.validate()) {

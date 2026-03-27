@@ -5,6 +5,7 @@ import 'package:idmitra/api_mamanger/secure_storage.dart';
 
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/screens/auth/login.dart';
+import 'package:idmitra/screens/dashboard/dashboard.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 
@@ -46,11 +47,11 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     var token = await UserSecureStorage.fetchToken();
     print('token----------->$token');
     if (token != null && token.isNotEmpty) {
-     /* navigateAndRemoveUntil(
+      navigateAndRemoveUntil(
         context: context,
-        page: Dashboard(index: 0,),
+        page: Dashboard(),
         transition: PageTransitionType.rightToLeft,
-      );*/
+      );
     } else {
       navigateAndRemoveUntil(
         context: context,

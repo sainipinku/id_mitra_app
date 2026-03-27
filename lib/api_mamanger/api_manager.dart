@@ -160,7 +160,7 @@ Response: ${response.body}
   postWithoutRequest(String url) async {
     var token = await UserSecureStorage.fetchToken();
     http.Response? response;
-
+    print('token------------$token');
     if (token == null) {
       response = await http.post(
         Uri.parse(url.trim()),
@@ -193,18 +193,17 @@ Response: ${response.body}
       return null;
     }
   }
-
   multiRequestRoute(image, String url) async {
     final request = http.MultipartRequest('POST', Uri.parse(url));
 
     if (image != null) {
       request.files.add(
-        await http.MultipartFile.fromPath('profile_photo', image.path),
+        await http.MultipartFile.fromPath('image', image),
       );
     }
 
     // request.fields['user_name'] = userName;
-    // request.fields['user_phone'] = mobileNumber;
+     request.fields['image_type'] = 'photo';
 
     final token = await UserSecureStorage.fetchToken();
 
@@ -220,6 +219,8 @@ Response: ${response.body}
       return http.Response('Error sending request', 500);
     }
   }
+
+
 
   leadsMultiRequestRoute(image, String url) async {
     final request = http.MultipartRequest('POST', Uri.parse(url));
