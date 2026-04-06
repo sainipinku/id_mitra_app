@@ -24,7 +24,7 @@ void main() async{
   );
   runApp(const MyApp());
 }
-
+// get ptint
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
