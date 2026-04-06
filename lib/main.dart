@@ -63,7 +63,6 @@ class MyApp extends StatelessWidget {
                 backgroundColor: AppTheme.appBackgroundColor,
                 elevation: 0,
               ),
-
             ),
             home: Splash(),
           );
