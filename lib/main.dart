@@ -40,6 +40,8 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: GlobalContext.navigatorKey,
 
+
+
             builder: (context, child) {
               return SafeArea(
                 top: true,
