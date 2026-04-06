@@ -51,25 +51,42 @@ class LoginCubit extends Cubit<LoginState> {
   }
   constSendOtp(Map map) async {
     emit(LoginLoading());
+
     try {
       var response = await apiManager.postRequest(
-          map,
-          Config.baseUrl + Routes.sendOtp
+        map,
+        Config.baseUrl + Routes.sendOtp,
       );
 
-      debugPrint("response ${response.body}");
+      debugPrint("STATUS CODE => ${response.statusCode}");
+      debugPrint("RESPONSE BODY => ${response.body}");
+
+      if (response.body.isEmpty) {
+        emit(LoginFailed());
+        return;
+      }
+
+      final jsonData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);  // FIXED HERE
         LoginModel loginModel = LoginModel.fromJson(jsonData);
         emit(LoginSuccess(loginModel: loginModel));
       } else if (response.statusCode == 403) {
         emit(LoginOnHold());
+      } else if (response.statusCode == 404) {
+        final message = jsonData['message'] ?? "User not found";
+        emit(LoginNoFound(message: message));
+      } else {
+        emit(LoginFailed());
       }
     } on SocketException {
       emit(LoginInternetError());
     } on TimeoutException {
       emit(LoginTimeout());
+    } on FormatException {
+      /// 🔥 JSON ERROR FIX
+      debugPrint("Invalid JSON format");
+      emit(LoginFailed());
     } catch (e) {
       debugPrint("ERROR => $e");
       emit(LoginFailed());

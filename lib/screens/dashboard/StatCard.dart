@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+
 class StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -17,8 +18,11 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(width * 0.035), // ✅ responsive padding
+      constraints: const BoxConstraints(minHeight: 120), // ✅ prevents collapse
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -31,26 +35,49 @@ class StatCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, // ✅ no Spacer issue
         children: [
 
+          /// 🔹 TOP ROW
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title,style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis, // ✅ no overflow
+                  style: MyStyles.boldText(
+                    size: width * 0.04, // ✅ responsive font
+                    color: AppTheme.black_Color,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
               CircleAvatar(
-                radius: 20,
+                radius: width * 0.045, // ✅ responsive icon size
                 backgroundColor: color.withOpacity(0.2),
-                child: Icon(icon, size: 20, color: color),
+                child: Icon(
+                  icon,
+                  size: width * 0.045,
+                  color: color,
+                ),
               )
             ],
           ),
 
-          const Spacer(),
-
-          Text(
-            value,
-            style: MyStyles.boldText(size: 25, color: AppTheme.black_Color),
-          )
+          /// 🔹 VALUE TEXT
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: MyStyles.boldText(
+                size: width * 0.065, // ✅ responsive value
+                color: AppTheme.black_Color,
+              ),
+            ),
+          ),
         ],
       ),
     );

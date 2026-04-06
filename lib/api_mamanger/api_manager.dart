@@ -258,8 +258,7 @@ Response: ${response.body}
   Future<ApiResult> multipartApiCall({
     required String url,
     required Map<String, String> fields,
-    required List<File> images,
-    String imageKey = "firm_images",
+    required File? images,
   }) async {
     try {
       final uri = Uri.parse(url);
@@ -279,9 +278,13 @@ Response: ${response.body}
       });
 
       /// Images List
-      for (int i = 0; i < images.length; i++) {
+      /// Images List
+      if (images != null) {
         request.files.add(
-          await http.MultipartFile.fromPath('$imageKey[$i]', images[i].path),
+          await http.MultipartFile.fromPath(
+            'profile_photo',
+            images.path,
+          ),
         );
       }
 

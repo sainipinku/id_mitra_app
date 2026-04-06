@@ -35,7 +35,12 @@ class PartnerDashboardModel {
 class Data {
   Filters? filters;
   Orders? orders;
-  Schools? schools;
+  Employees? schools;
+  SchoolAdmins? users;
+  SchoolAdmins? schoolAdmins;
+  Employees? students;
+  Employees? subPartners;
+  Employees? employees;
   Partner? partner;
   String? period;
   DateRange? dateRange;
@@ -45,6 +50,11 @@ class Data {
     this.filters,
     this.orders,
     this.schools,
+    this.users,
+    this.schoolAdmins,
+    this.students,
+    this.subPartners,
+    this.employees,
     this.partner,
     this.period,
     this.dateRange,
@@ -54,7 +64,12 @@ class Data {
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     filters: json["filters"] == null ? null : Filters.fromJson(json["filters"]),
     orders: json["orders"] == null ? null : Orders.fromJson(json["orders"]),
-    schools: json["schools"] == null ? null : Schools.fromJson(json["schools"]),
+    schools: json["schools"] == null ? null : Employees.fromJson(json["schools"]),
+    users: json["users"] == null ? null : SchoolAdmins.fromJson(json["users"]),
+    schoolAdmins: json["school_admins"] == null ? null : SchoolAdmins.fromJson(json["school_admins"]),
+    students: json["students"] == null ? null : Employees.fromJson(json["students"]),
+    subPartners: json["sub_partners"] == null ? null : Employees.fromJson(json["sub_partners"]),
+    employees: json["employees"] == null ? null : Employees.fromJson(json["employees"]),
     partner: json["partner"] == null ? null : Partner.fromJson(json["partner"]),
     period: json["period"],
     dateRange: json["date_range"] == null ? null : DateRange.fromJson(json["date_range"]),
@@ -65,6 +80,11 @@ class Data {
     "filters": filters?.toJson(),
     "orders": orders?.toJson(),
     "schools": schools?.toJson(),
+    "users": users?.toJson(),
+    "school_admins": schoolAdmins?.toJson(),
+    "students": students?.toJson(),
+    "sub_partners": subPartners?.toJson(),
+    "employees": employees?.toJson(),
     "partner": partner?.toJson(),
     "period": period,
     "date_range": dateRange?.toJson(),
@@ -96,6 +116,30 @@ class DateRange {
   };
 }
 
+class Employees {
+  int? total;
+  String? active;
+  String? inactive;
+
+  Employees({
+    this.total,
+    this.active,
+    this.inactive,
+  });
+
+  factory Employees.fromJson(Map<String, dynamic> json) => Employees(
+    total: json["total"],
+    active: json["active"],
+    inactive: json["inactive"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "total": total,
+    "active": active,
+    "inactive": inactive,
+  };
+}
+
 class Filters {
   String? filter;
   DateTime? from;
@@ -122,9 +166,9 @@ class Filters {
 
 class Orders {
   int? total;
-  dynamic ordersNew;
-  dynamic completeOrders;
-  dynamic pendingOrders;
+  String? ordersNew;
+  String? completeOrders;
+  String? pendingOrders;
 
   Orders({
     this.total,
@@ -172,18 +216,18 @@ class Partner {
   };
 }
 
-class Schools {
+class SchoolAdmins {
   int? total;
-  dynamic active;
-  dynamic inactive;
+  int? active;
+  int? inactive;
 
-  Schools({
+  SchoolAdmins({
     this.total,
     this.active,
     this.inactive,
   });
 
-  factory Schools.fromJson(Map<String, dynamic> json) => Schools(
+  factory SchoolAdmins.fromJson(Map<String, dynamic> json) => SchoolAdmins(
     total: json["total"],
     active: json["active"],
     inactive: json["inactive"],
@@ -199,19 +243,35 @@ class Schools {
 class Summary {
   int? totalOrders;
   int? totalSchools;
+  int? totalUsers;
+  int? totalStudents;
+  int? totalSubPartners;
+  int? totalEmployees;
 
   Summary({
     this.totalOrders,
     this.totalSchools,
+    this.totalUsers,
+    this.totalStudents,
+    this.totalSubPartners,
+    this.totalEmployees,
   });
 
   factory Summary.fromJson(Map<String, dynamic> json) => Summary(
     totalOrders: json["total_orders"],
     totalSchools: json["total_schools"],
+    totalUsers: json["total_users"],
+    totalStudents: json["total_students"],
+    totalSubPartners: json["total_sub_partners"],
+    totalEmployees: json["total_employees"],
   );
 
   Map<String, dynamic> toJson() => {
     "total_orders": totalOrders,
     "total_schools": totalSchools,
+    "total_users": totalUsers,
+    "total_students": totalStudents,
+    "total_sub_partners": totalSubPartners,
+    "total_employees": totalEmployees,
   };
 }

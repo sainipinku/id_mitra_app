@@ -9,8 +9,11 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/config/ScreenSize.dart';
 import 'package:idmitra/config/sharedpref.dart';
+import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
+import 'package:idmitra/screens/WebViewPage/WebViewPage.dart';
 import 'package:idmitra/screens/auth/login.dart';
+import 'package:idmitra/screens/edit_profile/edit_profile.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 class ProfileSetting extends StatefulWidget {
@@ -119,6 +122,7 @@ class _ProfileSettingState extends State<ProfileSetting> {
         },
         child: Column(
           children: [
+
             _profileHeader(),
             const Divider(height: 1),
             Expanded(child: _menuSection(context)),
@@ -131,42 +135,78 @@ class _ProfileSettingState extends State<ProfileSetting> {
 
   // 🔹 SIMPLE HEADER
   Widget _profileHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        children: [
-          SizedBox(height: 40,),
-          const CircleAvatar(
-            radius: 60,
-            backgroundImage: NetworkImage(
-              "https://images.unsplash.com/photo-1502685104226-ee32379fefbe",
+    return BlocBuilder<HomeCubit, HomeState>(
+      builder: (context, state) {
+
+        /// 🔄 LOADING
+        if (state.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        /// ✅ SUCCESS
+        else if (state.dashboard != null) {
+          final data = state.user!.user;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                SizedBox(height: 40,),
+                 CircleAvatar(
+                  radius: 60,
+                  backgroundImage: NetworkImage(
+                    data!.profilePhotoUrl ?? '',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  data!.name ?? '',
+                  style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  data!.email ?? '',
+                  style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+                ),
+                SizedBox(height: 40,),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-           Text(
-            "John Doe",
-            style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
-          ),
-          const SizedBox(height: 4),
-           Text(
-            "doejohn@gmail.com",
-            style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
-          ),
-          SizedBox(height: 40,),
-        ],
-      ),
-    );
+          );
+        }
+
+        /// ❌ ERROR / FALLBACK
+        else {
+          return const Center(
+            child: Text("Something went wrong"),
+          );
+        }
+      },
+    )
+      ;
   }
 
   // 🔹 SIMPLE MENU
   Widget _menuSection(BuildContext context) {
     return ListView(
       children: [
-        _menuItem("Edit Profile", Icons.person_outline, () {}),
+        _menuItem("Edit Profile", Icons.person_outline, () {
+          navigateWithTransition(
+            context: context,
+            page: const EditProfilePage(),
+          );
+        }),
         _divider(),
-        _menuItem("Privacy & Policy", Icons.privacy_tip, () {}),
+        _menuItem("Privacy & Policy", Icons.privacy_tip, () {
+          navigateWithTransition(
+              context: context,
+              page: WebViewPage(url: 'https://idmitra.com/privacy-policy',title: 'Privacy & Policy',));
+        }),
         _divider(),
-        _menuItem("Terms & Conditions", Icons.privacy_tip, () {}),
+        _menuItem("Terms & Conditions", Icons.description, () {
+          navigateWithTransition(
+              context: context,
+              page: WebViewPage(url: 'https://idmitra.com/term-and-condition',title: 'Terms & Conditions',));
+        }),
         _divider(),
         _menuItem("Logout", Icons.logout, () {
           LogoutBottomDilog(buildContext: context,button: (){

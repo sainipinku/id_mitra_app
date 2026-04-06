@@ -45,7 +45,7 @@ class SchoolCubit extends Cubit<SchoolState> {
       emit(state.copyWith(isPaginationLoading: true));
     }
 
-    try {
+
       final response = await apiManager.getRequest(
         "${Config.baseUrl}auth/partner/schools?page=$currentPage&search=$search",
       );
@@ -73,11 +73,6 @@ class SchoolCubit extends Cubit<SchoolState> {
         hasMore: hasMore,
       ));
 
-    } catch (e) {
-      emit(state.copyWith(
-        loading: false,
-        isPaginationLoading: false,
-      ));
     }
-  }
+
 }

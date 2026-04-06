@@ -17,6 +17,10 @@ final class SignUpOtpSuccess extends LoginState {
 }
 
 final class LoginResendSuccess extends LoginState {}
+final class LoginNoFound extends LoginState {
+  final String message;
+  LoginNoFound({required this.message});
+}
 
 final class LoginFailed extends LoginState {}
 

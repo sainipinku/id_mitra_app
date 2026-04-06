@@ -6,6 +6,7 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
+import 'package:idmitra/screens/auth/PasswordTextField.dart';
 import 'package:idmitra/screens/auth/otp.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 
@@ -25,7 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
   initCubit() {
     loginCubit = context.read<LoginCubit>();
   }
-
+  String selectedLoginType = "";
+  final passwordController = TextEditingController();
+  final pinController = TextEditingController();
   @override
   void initState() {
     // TODO: implement initState
@@ -74,7 +77,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ctx: context,
               ),
             );
-          } else if (state is LoginResendSuccess) {
+          } else if (state is LoginNoFound) {
+            Navigator.of(context).pop();
+            final _snackBar = snackBar(
+              state.message,
+              Icons.done,
+              Colors.green,
+            );
+
+            ScaffoldMessenger.of(context).showSnackBar(_snackBar);
+          }
+          else if (state is LoginResendSuccess) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
               'Otp sent successfully',
@@ -170,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Mobile Number",
+                                "Mobile/Email",
                                 style: MyStyles.boldText(
                                   size: 14,
                                   color: AppTheme.black_Color,
@@ -178,12 +191,89 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 8),
 
-                              phoneNumberTextField(controller: phoneController),
+                              nameTextField(controller: phoneController),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedLoginType = "password";
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: selectedLoginType == "password"
+                                              ? AppTheme.btnColor
+                                              : Colors.grey.shade200,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            "Password",
+                                            style: TextStyle(
+                                              color: selectedLoginType == "password"
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedLoginType = "pin";
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: selectedLoginType == "pin"
+                                              ? AppTheme.btnColor
+                                              : Colors.grey.shade200,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            "PIN",
+                                            style: TextStyle(
+                                              color: selectedLoginType == "pin"
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
 
+
+                              Text(
+                                selectedLoginType == "password"
+                                    ? "Enter Password"
+                                    : "Enter 4-digit PIN",
+                                style: MyStyles.boldText(
+                                  size: 14,
+                                  color: AppTheme.black_Color,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              selectedLoginType == "password" ? PasswordTextField(controller: passwordController) : phoneNumberTextField(controller: pinController,hintName: "Enter 4-digit PIN",isRequired: false,digitNo: 4),
                               const SizedBox(height: 20),
 
                               AppButton(
-                                title: "Send OTP",
+                                title: selectedLoginType.isEmpty ? "Send OTP" :  selectedLoginType == "password"
+                                    ? "Login with Password"
+                                    : "Login with PIN" ,
                                 isLoading: false,
                                 color: AppTheme.btnColor,
                                 onTap: () {

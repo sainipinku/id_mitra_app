@@ -84,16 +84,27 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                     MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                   ),
 
+
                   const SizedBox(height: 3),
 
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Icon(Icons.location_on,size: 15,),
-                      Text(
-                        widget.schoolDetailsModel!.address ?? '',
-                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                      Expanded(
+                        child: Text(
+                          widget.schoolDetailsModel!.address ?? '',
+                          style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                        ),
                       ),
-                      SizedBox(width: 5,),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+
+                  Row(
+                    children: [
                       Icon(Icons.calendar_month_outlined,size: 15,),
                       Text(
                         "12 Feb 2026",
@@ -101,9 +112,7 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 3),
-
                   /// STATUS BADGE
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
