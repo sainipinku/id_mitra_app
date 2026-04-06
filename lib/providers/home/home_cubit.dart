@@ -1,0 +1,64 @@
+
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/api_mamanger/UserLocal.dart';
+import 'package:idmitra/api_mamanger/api_manager.dart';
+import 'package:idmitra/api_mamanger/config.dart';
+import 'package:idmitra/api_mamanger/secure_storage.dart';
+import 'package:idmitra/models/LoginModel.dart';
+import 'package:idmitra/models/LogoutModel.dart';
+import 'package:idmitra/models/home/PartnerDashboardModel.dart';
+import 'package:idmitra/models/home/UserDetailsModel.dart';
+
+
+part 'home_state.dart';
+class HomeCubit extends Cubit<HomeState> {
+  HomeCubit() : super(HomeState());
+
+  ApiManager apiManager = ApiManager();
+
+  Future<void> loadHomeData() async {
+    emit(state.copyWith(loading: true));
+
+
+      /// 🔹 API 1 - Dashboard
+      var dashboardResponse = await apiManager.getRequest(
+        Config.baseUrl + Routes.getPartnerDashboardData(),
+      );
+
+      /// 🔹 API 2 - User Details
+      var userResponse = await apiManager.getRequest(
+        Config.baseUrl + Routes.getUserDetails(),
+      );
+
+      if (dashboardResponse.statusCode == 200 &&
+          userResponse.statusCode == 200) {
+
+        final dashboardJson = jsonDecode(dashboardResponse.body);
+        final userJson = jsonDecode(userResponse.body);
+
+        final dashboardModel =
+        PartnerDashboardModel.fromJson(dashboardJson);
+
+        final userModel =
+        UserDetailsModel.fromJson(userJson);
+
+        emit(state.copyWith(
+          loading: false,
+          dashboard: dashboardModel,
+          user: userModel,
+        ));
+      } else if (dashboardResponse.statusCode == 403 ||
+          userResponse.statusCode == 403) {
+        emit(state.copyWith(loading: false, error: "On Hold"));
+      } else {
+        emit(state.copyWith(loading: false, error: "Something went wrong"));
+      }
+
+  }
+}
