@@ -5,8 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/snack_bar_widget.dart';
+import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/config/prefConstatnt.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
+import 'package:idmitra/screens/auth/PasswordTextField.dart';
+import 'package:idmitra/screens/auth/password_screen.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
@@ -19,7 +22,9 @@ import '../../components/my_font_weight.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
-  const OtpVerificationScreen({super.key,required this.phone});
+  final bool alreadyUser;
+  final String loginWithType;
+  const OtpVerificationScreen({super.key,required this.phone,required this.alreadyUser,required this.loginWithType});
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -34,7 +39,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   bool resend = false;
   String? comingSms = 'Unknown';
   var appSignatureID;
-
+  String selectedLoginType = "password";
+  final passwordController = TextEditingController();
+  final pinNumberController = TextEditingController();
   final formkey = GlobalKey<FormState>();
   late BuildContext buildContext;
 
@@ -138,11 +145,21 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   );
                 });
           } else if (state is LoginSuccess) {
-            navigateAndRemoveUntil(
-              context: context,
-              page: Dashboard(),
-              transition: PageTransitionType.rightToLeft,
-            );
+            if(widget.alreadyUser){
+              navigateAndRemoveUntil(
+                context: context,
+                page: PasswordScreen(),
+                transition: PageTransitionType.rightToLeft,
+              );
+
+            }else {
+              navigateAndRemoveUntil(
+                context: context,
+                page: Dashboard(),
+                transition: PageTransitionType.rightToLeft,
+              );
+            }
+
           }
           else if (state is LoginResendSuccess) {
             Navigator.of(context).pop();
@@ -191,16 +208,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
                     /// ICON WITH CIRCLES
                     /// Illustration
+                    widget.alreadyUser ?
                     Image.asset(
                       'assets/images/otp_top_img.png', // <-- add your image
                       height: 220,
-                    ),
+                    ) : Image.asset('assets/images/login_top_img.png'),
 
                     const SizedBox(height: 30),
 
                     /// TITLE
                     Text(
-                      "OTP Verification",
+                      widget.alreadyUser ? "OTP Verification" : "Hello, Welcome",
                       style: MyStyles.boldText(size: 26, color: AppTheme.black_Color ),
                     ),
 
@@ -210,7 +228,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 30),
                       child: Text(
-                        "Enter the 6-digit code sent to +91 ${widget.phone}",
+                        widget.alreadyUser  ? "Enter the 6-digit code sent to +91 ${widget.phone}" : "Login to manage your school identity system.",
                         textAlign: TextAlign.center,
                         style: MyStyles.regularText(size: 14, color: AppTheme.garyColor),
                       ),
@@ -219,6 +237,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     const SizedBox(height: 30),
 
                     /// OTP BOXES
+                    widget.alreadyUser  ?
                     Container(
                       color: Colors.transparent,
                       child: Center(
@@ -267,7 +286,93 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           ),
                         ),
                       ),
+                    ) : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedLoginType = "password";
+                                    passwordController.text = '';
+                                    pinNumberController.text = '';
+                                  });
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: selectedLoginType == "password"
+                                        ? AppTheme.btnColor
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "Password",
+                                      style: TextStyle(
+                                        color: selectedLoginType == "password"
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedLoginType = "pin";
+                                    passwordController.text = '';
+                                    pinNumberController.text = '';
+                                  });
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: selectedLoginType == "pin"
+                                        ? AppTheme.btnColor
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "PIN",
+                                      style: TextStyle(
+                                        color: selectedLoginType == "pin"
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+
+                        Text(
+                          selectedLoginType == "password"
+                              ? "Enter Password"
+                              : "Enter 4-digit PIN",
+                          style: MyStyles.boldText(
+                            size: 14,
+                            color: AppTheme.black_Color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        selectedLoginType == "password" ? PasswordTextField(controller: passwordController) : phoneNumberTextField(controller: pinNumberController,hintName: "Enter 6-digit PIN",isRequired: false,digitNo: 6),
+                      ],
                     ),
+
 
                     const SizedBox(height: 30),
 
@@ -276,16 +381,40 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       width: double.infinity,
                       margin: const EdgeInsets.symmetric(vertical: 16),
                       child: AppButton(
-                        title: "Verify Now",
+                        title:  widget.alreadyUser  ? "Verify Now" :  selectedLoginType == "password"
+                            ? "Login with Password"
+                            : "Login with PIN",
                         isLoading: false,
                         color: AppTheme.btnColor,
                         onTap: () {
+                          Map<String, String> map = {};
+                          if(widget.alreadyUser){
+                            map = {
+                              "whatsapp_phone": widget.phone ?? '',
+                              "otp": pinController.text.trim() ?? '',
+                            };
+                          }else if(selectedLoginType == "password" &&  widget.loginWithType == 'phone'){
+                            map = {
+                              "whatsapp_phone":  widget.phone ?? '',
+                              "password": passwordController.text.trim(),
+                            };
+                          }else if(selectedLoginType == "pin" &&  widget.loginWithType == 'phone'){
+                            map = {
+                              "whatsapp_phone": widget.phone ?? '',
+                              "pin": pinNumberController.text.trim(),
+                            };
+                          }else if(selectedLoginType == "password" &&  widget.loginWithType == 'email'){
+                            map = {
+                              "email": widget.phone ?? '',
+                              "password": passwordController.text.trim(),
+                            };
+                          }else if(selectedLoginType == "pin" &&  widget.loginWithType == 'email'){
+                            map = {
+                              "email": widget.phone ?? '',
+                              "pin": pinNumberController.text.trim(),
+                            };
+                          }
 
-                          Map<String, String> map = {
-                            "whatsapp_phone": widget.phone,
-                            "otp": pinController.text.trim(),
-                            "user_type": 'partner',
-                          };
                           print('send data ======>$map');
                           if (formkey.currentState!.validate()) {
                             loginCubit.constVerifyOtp(map);
@@ -299,6 +428,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     const SizedBox(height: 15),
 
                     /// RESEND TEXT
+                    widget.alreadyUser  ?
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -314,7 +444,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    ) : SizedBox(),
                   ],
                 ),
               ),

@@ -73,6 +73,9 @@ class User {
   dynamic emailVerifyToken;
   dynamic emailTokenValidTime;
   dynamic phone;
+  dynamic lastChangeAt;
+  dynamic lastPinChanged;
+  dynamic lastLogin;
   dynamic phoneVerifiedAt;
   String? whatsappPhone;
   dynamic wphoneVerifiedAt;
@@ -90,14 +93,14 @@ class User {
   dynamic forgetPasswordTokenExpire;
   dynamic passwordResetToken;
   dynamic passwordResetTokenExpire;
-  int? status;
+  dynamic status;
   dynamic g2FaSecret;
   dynamic g2FaVerifiedAt;
-  int? g2FaEnabled;
+  dynamic g2FaEnabled;
   DateTime? createdAt;
   DateTime? updatedAt;
   dynamic deletedAt;
-  int? otp;
+  dynamic otp;
   DateTime? otpExpire;
   List<String>? wantAutomate;
   dynamic liveLocation;
@@ -135,6 +138,9 @@ class User {
     this.walletBalance,
     this.referalBalance,
     this.password,
+    this.lastChangeAt,
+    this.lastPinChanged,
+    this.lastLogin,
     this.forgetPasswordToken,
     this.forgetPasswordTokenExpire,
     this.passwordResetToken,
@@ -185,6 +191,9 @@ class User {
     int? walletBalance,
     int? referalBalance,
     dynamic password,
+    dynamic lastChangeAt,
+    dynamic lastPinChanged,
+    dynamic lastLogin,
     dynamic forgetPasswordToken,
     dynamic forgetPasswordTokenExpire,
     dynamic passwordResetToken,
@@ -234,6 +243,9 @@ class User {
         walletBalance: walletBalance ?? this.walletBalance,
         referalBalance: referalBalance ?? this.referalBalance,
         password: password ?? this.password,
+        lastChangeAt: lastChangeAt ?? this.lastChangeAt,
+        lastPinChanged: lastPinChanged ?? this.lastPinChanged,
+        lastLogin: lastLogin ?? this.lastLogin,
         forgetPasswordToken: forgetPasswordToken ?? this.forgetPasswordToken,
         forgetPasswordTokenExpire: forgetPasswordTokenExpire ?? this.forgetPasswordTokenExpire,
         passwordResetToken: passwordResetToken ?? this.passwordResetToken,
@@ -284,6 +296,9 @@ class User {
     walletBalance: json["wallet_balance"],
     referalBalance: json["referal_balance"],
     password: json["password"],
+    lastChangeAt: json["last_change_at"],
+    lastPinChanged: json["last_pin_changed"],
+    lastLogin: json["last_login"],
     forgetPasswordToken: json["forget_password_token"],
     forgetPasswordTokenExpire: json["forget_password_token_expire"],
     passwordResetToken: json["password_reset_token"],
