@@ -24,7 +24,7 @@ void main() async{
   );
   runApp(const MyApp());
 }
-// get ptint
+// what are you doing
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -39,12 +39,6 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             navigatorKey: GlobalContext.navigatorKey,
-
-
-
-
-
-
             builder: (context, child) {
               return SafeArea(
                 top: true,
