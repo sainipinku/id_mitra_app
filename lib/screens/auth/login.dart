@@ -26,9 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
   initCubit() {
     loginCubit = context.read<LoginCubit>();
   }
-  String selectedLoginType = "";
-  final passwordController = TextEditingController();
-  final pinController = TextEditingController();
   @override
   void initState() {
     // TODO: implement initState
@@ -73,6 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 type: PageTransitionType.rightToLeft,
                 child: OtpVerificationScreen(
                   phone: phoneController.text.trim(),
+                  alreadyUser: state.loginModel.user?.lastChangeAt == null ? true : false,
+                  loginWithType: state.loginWithType,
                 ),
                 ctx: context,
               ),
@@ -192,99 +191,59 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 8),
 
                               nameTextField(controller: phoneController),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          selectedLoginType = "password";
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: selectedLoginType == "password"
-                                              ? AppTheme.btnColor
-                                              : Colors.grey.shade200,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Password",
-                                            style: TextStyle(
-                                              color: selectedLoginType == "password"
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          selectedLoginType = "pin";
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: selectedLoginType == "pin"
-                                              ? AppTheme.btnColor
-                                              : Colors.grey.shade200,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "PIN",
-                                            style: TextStyle(
-                                              color: selectedLoginType == "pin"
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
 
-
-                              Text(
-                                selectedLoginType == "password"
-                                    ? "Enter Password"
-                                    : "Enter 4-digit PIN",
-                                style: MyStyles.boldText(
-                                  size: 14,
-                                  color: AppTheme.black_Color,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              selectedLoginType == "password" ? PasswordTextField(controller: passwordController) : phoneNumberTextField(controller: pinController,hintName: "Enter 4-digit PIN",isRequired: false,digitNo: 4),
                               const SizedBox(height: 20),
 
                               AppButton(
-                                title: selectedLoginType.isEmpty ? "Send OTP" :  selectedLoginType == "password"
-                                    ? "Login with Password"
-                                    : "Login with PIN" ,
+                                title: "Submit" ,
                                 isLoading: false,
                                 color: AppTheme.btnColor,
                                 onTap: () {
-                                  Map<String, String> map = {
-                                    "whatsapp_phone": phoneController.text
-                                        .trim(),
-                                    "user_type": "partner",
-                                  };
+                                  String input = phoneController.text.trim();
+                                  Map<String, String> map = {};
+                                 // Regex for phone (only digits, length 10–15)
+                                  final phoneRegex = RegExp(r'^[0-9]{10,15}$');
 
-                                  if (formkey.currentState!.validate()) {
-                                    loginCubit.constSendOtp(map);
+                                  // Regex for email
+                                  final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                                  if (phoneRegex.hasMatch(input)) {
+                                     map = {
+                                      "whatsapp_phone": phoneController.text.trim(),
+                                    };
+
+                                     if (formkey.currentState!.validate()) {
+                                       loginCubit.constSendOtp(map,'phone');
+                                     }
+                                    // Send OTP using phone
+                                    print("Send OTP to phone: $input");
+
+                                    // Example:
+                                    // api.sendOtp(phone: input);
+
+                                  } else if (emailRegex.hasMatch(input)) {
+                                    map = {
+                                      "email": phoneController.text.trim(),
+                                    };
+
+                                    if (formkey.currentState!.validate()) {
+                                      loginCubit.constSendOtp(map,'email');
+                                    }
+                                    // Send OTP using email
+                                    print("Send OTP to email: $input");
+
+                                    // Example:
+                                    // api.sendOtp(email: input);
+
+                                  } else {
+                                    final _snackBar = snackBar(
+                                      "Enter valid phone number or email",
+                                      Icons.warning,
+                                      Colors.red,
+                                    );
+
+                                    ScaffoldMessenger.of(context).showSnackBar(_snackBar);
+                                    // Invalid input
+                                    print("Enter valid phone number or email");
                                   }
                                 },
                               ),

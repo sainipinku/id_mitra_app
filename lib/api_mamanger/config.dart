@@ -8,6 +8,7 @@ class Config {
 class Routes {
   static String sendOtp = "auth/send-otp";
   static String otpVerify = "auth/verify-otp";
+  static String setCredentails = "auth/profile/set-credentials";
   static String commonStates = "common/states/1";
   static String commonCites(String stateID) => "common/cities/$stateID";
   static String userUploadProfilePhoto = "user/upload-profile-photo";
