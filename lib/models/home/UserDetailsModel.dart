@@ -41,7 +41,7 @@ class User {
   int? creatorId;
   dynamic parentId;
   String? accountType;
-  List<dynamic>? permissions;
+ // List<dynamic>? permissions;
   String? uuid;
   String? name;
   String? firmName;
@@ -53,7 +53,7 @@ class User {
   dynamic otpExpire;
   dynamic fcmToken;
   String? gstNumber;
-  String? businessNature;
+  //String? businessNature;
   int? status;
   DateTime? createdAt;
   DateTime? updatedAt;
@@ -74,7 +74,7 @@ class User {
     this.creatorId,
     this.parentId,
     this.accountType,
-    this.permissions,
+   // this.permissions,
     this.uuid,
     this.name,
     this.firmName,
@@ -86,7 +86,7 @@ class User {
     this.otpExpire,
     this.fcmToken,
     this.gstNumber,
-    this.businessNature,
+  //  this.businessNature,
     this.status,
     this.createdAt,
     this.updatedAt,
@@ -108,7 +108,7 @@ class User {
     creatorId: json["creator_id"],
     parentId: json["parent_id"],
     accountType: json["account_type"],
-    permissions: json["permissions"] == null ? [] : List<dynamic>.from(json["permissions"]!.map((x) => x)),
+  //  permissions: json["permissions"] == null ? [] : List<dynamic>.from(json["permissions"]!.map((x) => x)),
     uuid: json["uuid"],
     name: json["name"],
     firmName: json["firm_name"],
@@ -120,7 +120,7 @@ class User {
     otpExpire: json["otp_expire"],
     fcmToken: json["fcm_token"],
     gstNumber: json["gst_number"],
-    businessNature: json["business_nature"],
+    //businessNature: json["business_nature"],
     status: json["status"],
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
@@ -142,7 +142,7 @@ class User {
     "creator_id": creatorId,
     "parent_id": parentId,
     "account_type": accountType,
-    "permissions": permissions == null ? [] : List<dynamic>.from(permissions!.map((x) => x)),
+   // "permissions": permissions == null ? [] : List<dynamic>.from(permissions!.map((x) => x)),
     "uuid": uuid,
     "name": name,
     "firm_name": firmName,
@@ -154,7 +154,7 @@ class User {
     "otp_expire": otpExpire,
     "fcm_token": fcmToken,
     "gst_number": gstNumber,
-    "business_nature": businessNature,
+    //"business_nature": businessNature,
     "status": status,
     "created_at": createdAt?.toIso8601String(),
     "updated_at": updatedAt?.toIso8601String(),

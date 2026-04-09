@@ -47,7 +47,7 @@ Widget descriptionTextField({
 
 Widget phoneNumberTextField({
   required TextEditingController controller,String? hintName,
-  bool isRequired = true,
+  bool isRequired = true,int? digitNo
 }) {
   return AppTextField(
     controller: controller,
@@ -56,7 +56,7 @@ Widget phoneNumberTextField({
     icon: isRequired
         ? Icons.call : null,
     inputFormatters: [
-      LengthLimitingTextInputFormatter(10),
+      LengthLimitingTextInputFormatter(digitNo ?? 10),
       FilteringTextInputFormatter.digitsOnly,
     ],
     validator: isRequired
@@ -148,7 +148,8 @@ class AppTextField extends StatelessWidget {
   final EdgeInsets scrollPadding;
   final Function(String)? onChanged;
   final int? mxLine;
-
+  final bool obscureText;
+  final Widget? suffixIcon;
   const AppTextField({
     super.key,
     required this.controller,
@@ -159,7 +160,9 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.enabled = true,
     this.scrollPadding = EdgeInsets.zero,
-    this.onChanged,this.mxLine
+    this.onChanged,this.mxLine,
+    this.obscureText = false,
+    this.suffixIcon,
   });
 
   @override
@@ -167,8 +170,7 @@ class AppTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       enabled: enabled,
-      maxLines: mxLine,
-
+      maxLines:  obscureText ? 1 : mxLine, // ✅ FIX,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       scrollPadding: scrollPadding,
@@ -180,22 +182,22 @@ class AppTextField extends StatelessWidget {
       onChanged: onChanged,
       validator: validator,
       decoration: InputDecoration(
-        filled: true,
-        fillColor: AppTheme.whiteColor,
         contentPadding: const EdgeInsets.all(12),
         hintText: hintText,
         prefixIcon: icon != null
             ? Icon(icon, size: 22, color: AppTheme.graySubTitleColor)
             : null,
-        enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
-        focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
-        errorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
-        focusedErrorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
+        suffixIcon: suffixIcon, // 👈 ADD THIS
+        enabledBorder: appBorder(AppTheme.backBtnBgColor, 8),
+        focusedBorder: appBorder(AppTheme.backBtnBgColor, 8),
+        errorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 8),
+        focusedErrorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 8),
         hintStyle: MyStyles.regularText(
           size: 14,
           color: AppTheme.graySubTitleColor,
         ),
       ),
+        obscureText: obscureText
     );
   }
   OutlineInputBorder appBorder(Color color, double radius) {

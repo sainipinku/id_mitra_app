@@ -1,10 +1,14 @@
 class Config {
-  static String baseUrl = "https://idmitra.com/api/";
+  static String devBaseUrl = "http://stag.idmitra.com/api/";
+  static String proBaseUrl = "https://idmitra.com/api/";
+  static String baseUrl = proBaseUrl;
+
 }
 
 class Routes {
   static String sendOtp = "auth/send-otp";
   static String otpVerify = "auth/verify-otp";
+  static String setCredentails = "auth/profile/set-credentials";
   static String commonStates = "common/states/1";
   static String commonCites(String stateID) => "common/cities/$stateID";
   static String userUploadProfilePhoto = "user/upload-profile-photo";
@@ -12,6 +16,7 @@ class Routes {
   static String leadsFatchData = "leads/fatch-data";
   static String addLeadsData = "leads";
   static String addEvents = "events";
+  static String authProfileUpdate = "auth/profile/update";
   static String getPartnerDashboardData() => "auth/partner/dashboard?filter=5_year";
   static String getUserDetails() => "auth/user";
   static String getSchoolList(int pageNo) => "auth/partner/schools?page=$pageNo";

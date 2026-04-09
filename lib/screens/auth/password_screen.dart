@@ -6,22 +6,29 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
+import 'package:idmitra/screens/auth/ConfirmPasswordTextField.dart';
 import 'package:idmitra/screens/auth/PasswordTextField.dart';
-import 'package:idmitra/screens/auth/otp.dart';
+import 'package:idmitra/screens/dashboard/dashboard.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
-
+import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:page_transition/page_transition.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+
+
+class PasswordScreen extends StatefulWidget {
+  const PasswordScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<PasswordScreen> createState() => _PasswordScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  late LoginCubit loginCubit;
+class _PasswordScreenState extends State<PasswordScreen> {
   final formkey = GlobalKey<FormState>();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  final pinController = TextEditingController();
+  final confirmPinController = TextEditingController();
+  late LoginCubit loginCubit;
   late BuildContext buildContext;
   initCubit() {
     loginCubit = context.read<LoginCubit>();
@@ -32,10 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
     initCubit();
     super.initState();
   }
-
   @override
   Widget build(BuildContext context) {
-    TextEditingController phoneController = TextEditingController();
     return Scaffold(
       appBar: AppBar(backgroundColor: AppTheme.appBackgroundColor),
       body: BlocListener<LoginCubit, LoginState>(
@@ -63,18 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
             );
-          } else if (state is LoginSuccess) {
-            Navigator.push(
-              context,
-              PageTransition(
-                type: PageTransitionType.rightToLeft,
-                child: OtpVerificationScreen(
-                  phone: phoneController.text.trim(),
-                  alreadyUser: state.loginModel.user?.lastChangeAt == null ? true : false,
-                  loginWithType: state.loginWithType,
-                ),
-                ctx: context,
-              ),
+          } else if (state is PasswordSuccess) {
+            navigateAndRemoveUntil(
+              context: context,
+              page: Dashboard(),
+              transition: PageTransitionType.rightToLeft,
             );
           } else if (state is LoginNoFound) {
             Navigator.of(context).pop();
@@ -151,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 30),
 
                         Text(
-                          "Hello, Welcome",
+                          "Set Your Security",
                           style: MyStyles.boldText(
                             size: 26,
                             color: AppTheme.black_Color,
@@ -161,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 8),
 
                         Text(
-                          "Login to manage your school identity system.",
+                          "Create a secure password and PIN to protect your account.",
                           textAlign: TextAlign.center,
                           style: MyStyles.regularText(
                             size: 14,
@@ -182,72 +180,73 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Mobile/Email",
+                                "Create Password",
                                 style: MyStyles.boldText(
                                   size: 14,
                                   color: AppTheme.black_Color,
                                 ),
                               ),
-                              const SizedBox(height: 8),
 
-                              nameTextField(controller: phoneController),
 
+                              PasswordTextField(controller: passwordController),
+                              Text(
+                                "Confirm Password",
+                                style: MyStyles.boldText(
+                                  size: 14,
+                                  color: AppTheme.black_Color,
+                                ),
+                              ),
+
+                              ConfirmPasswordTextField(
+                                controller: confirmPasswordController,
+                                passwordController: passwordController,
+                              ),
+                              Text(
+                                "Create PIN",
+                                style: MyStyles.boldText(
+                                  size: 14,
+                                  color: AppTheme.black_Color,
+                                ),
+                              ),
+
+
+                              phoneNumberTextField(controller: pinController,hintName: "Enter 6-digit PIN",isRequired: false,digitNo: 6),
+                              Text(
+                                "Confirm Pin Number",
+                                style: MyStyles.boldText(
+                                  size: 14,
+                                  color: AppTheme.black_Color,
+                                ),
+                              ),
+
+                              phoneNumberTextField(
+                                  controller: confirmPinController,hintName: "Enter 6-digit PIN",isRequired: false,digitNo: 6
+                              ),
                               const SizedBox(height: 20),
 
                               AppButton(
-                                title: "Submit" ,
+                                title: "Save",
                                 isLoading: false,
                                 color: AppTheme.btnColor,
                                 onTap: () {
-                                  String input = phoneController.text.trim();
-                                  Map<String, String> map = {};
-                                 // Regex for phone (only digits, length 10–15)
-                                  final phoneRegex = RegExp(r'^[0-9]{10,15}$');
-
-                                  // Regex for email
-                                  final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                                  if (phoneRegex.hasMatch(input)) {
-                                     map = {
-                                      "whatsapp_phone": phoneController.text.trim(),
+                                  if (formkey.currentState!.validate()) {
+                                    Map<String, String> map = {
+                                      "password": passwordController.text.trim(),
+                                      "password_confirmation": confirmPasswordController.text.trim(),
+                                      "pin": pinController.text.trim(),
+                                      "pin_confirmation": confirmPinController.text.trim(),
                                     };
-
-                                     if (formkey.currentState!.validate()) {
-                                       loginCubit.constSendOtp(map,'phone');
-                                     }
-                                    // Send OTP using phone
-                                    print("Send OTP to phone: $input");
-
-                                    // Example:
-                                    // api.sendOtp(phone: input);
-
-                                  } else if (emailRegex.hasMatch(input)) {
-                                    map = {
-                                      "email": phoneController.text.trim(),
-                                    };
-
                                     if (formkey.currentState!.validate()) {
-                                      loginCubit.constSendOtp(map,'email');
+                                      loginCubit.constGenratePassPinFun(map);
                                     }
-                                    // Send OTP using email
-                                    print("Send OTP to email: $input");
-
-                                    // Example:
-                                    // api.sendOtp(email: input);
-
-                                  } else {
-                                    final _snackBar = snackBar(
-                                      "Enter valid phone number or email",
-                                      Icons.warning,
-                                      Colors.red,
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-                                    // Invalid input
-                                    print("Enter valid phone number or email");
                                   }
                                 },
                               ),
-                            ],
+                            ].map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: e,
+                            ))
+                                .toList(),
                           ),
                         ),
                       ],
@@ -275,15 +274,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  /// Social Button Widget
-  Widget _socialButton({required IconData icon, required Color color}) {
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: Colors.grey.shade200,
-      child: Icon(icon, color: color, size: 28),
     );
   }
 }

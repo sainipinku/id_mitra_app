@@ -49,28 +49,28 @@ class _HomeState extends State<Home> {
 
                     StatCard(
                       title: "Total Users",
-                      value: data?.orders?.total?.toString() ?? "0",
+                      value: data?.users?.total?.toString() ?? "0",
                       icon: Icons.person,
                       color: Colors.blue,
                     ),
 
                     StatCard(
                       title: "Active Users",
-                      value: data?.orders?.total?.toString() ?? "0",
+                      value: data?.users?.active?.toString() ?? "0",
                       icon: Icons.person_outline,
                       color: Colors.green,
                     ),
 
                     StatCard(
                       title: "Total Students",
-                      value: data?.orders?.total?.toString() ?? "0",
+                      value: data?.students?.total?.toString() ?? "0",
                       icon: Icons.school,
                       color: Colors.orange,
                     ),
 
                     StatCard(
                       title: "Total Employee",
-                      value: data?.orders?.total?.toString() ?? "0",
+                      value: data?.employees?.total?.toString() ?? "0",
                       icon: Icons.group,
                       color: Colors.purple,
                     ),
@@ -172,7 +172,6 @@ class _HomeState extends State<Home> {
             );
           }
 
-          /// ❌ ERROR / FALLBACK
           else {
             return const Center(
               child: Text("Something went wrong"),

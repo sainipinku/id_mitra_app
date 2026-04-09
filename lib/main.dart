@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:idmitra/Widgets/AppSize.dart';
 import 'package:idmitra/bloc_provider/bloc_provider.dart';
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/screens/dashboard/users/user_details_page.dart';
 import 'package:idmitra/screens/splash/splash.dart';
 import 'package:idmitra/utils/GlobalContext.dart';
 
@@ -24,7 +25,7 @@ void main() async{
   );
   runApp(const MyApp());
 }
-// what are you doing
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             navigatorKey: GlobalContext.navigatorKey,
+
             builder: (context, child) {
               return SafeArea(
                 top: true,
@@ -62,6 +64,7 @@ class MyApp extends StatelessWidget {
                 backgroundColor: AppTheme.appBackgroundColor,
                 elevation: 0,
               ),
+
             ),
             home: Splash(),
           );

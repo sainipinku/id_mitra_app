@@ -211,8 +211,7 @@ class _StudentCardState extends State<StudentCard> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : (widget.studentDetailsData.profilePhotoUrl != null &&
-                          widget.studentDetailsData.profilePhotoUrl!.isNotEmpty)
+                    : (widget.studentDetailsData.profilePhotoUrl != null && widget.studentDetailsData.profilePhotoUrl!.isNotEmpty)
                     ? Image.network(
                         widget.studentDetailsData.profilePhotoUrl!,
                         height: 60,

@@ -6,6 +6,8 @@ import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
+import '../../edit_profile/image_setting.dart';
+
 class UserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
   UserDetailsPage({super.key,this.schoolDetailsModel});
@@ -20,8 +22,72 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CommonAppBar(title: 'School Details', backgroundColor: Colors.transparent,showText: true,),
+      appBar: CommonAppBar(
+        title: 'School Details',
+        backgroundColor: Colors.transparent,
+        showText: true,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.settings,color: Colors.black,),
 
+            // ✅ FIX: show dropdown below icon
+            offset: const Offset(0, 45),
+
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: 8,
+
+            onSelected: (value) {
+              if (value == 'image_settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ImageSettingsScreen(),
+                  ),
+                );
+              } else if (value == 'profile_settings') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile Settings Clicked')),
+                );
+              }
+            },
+
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'image_settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.image),
+                    SizedBox(width: 10),
+                    Text('Image Settings'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'profile_settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.person),
+                    SizedBox(width: 10),
+                    Text('Profile Settings'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'student_form',
+                child: Row(
+                  children: [
+                    Icon(Icons.assignment),
+                    SizedBox(width: 10),
+                    Text('Student Form'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -85,50 +151,60 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                             color: AppTheme.white20perOpacityColor,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
                             children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
 
-                              /// LEFT INFO
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.location_on,
-                                        size: 14, color: AppTheme.whiteColor),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      widget.schoolDetailsModel?.address ?? '',
-                                      style: MyStyles.regularText(
-                                          size: 12, color: AppTheme.whiteColor),
+                                  /// LEFT INFO
+                                  Expanded(
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      children: [
+                                        Icon(Icons.location_on,
+                                            size: 14, color: AppTheme.whiteColor),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            widget.schoolDetailsModel?.address ?? '',maxLines: 2,
+                                            style: MyStyles.regularText(
+                                                size: 12, color: AppTheme.whiteColor),
+                                          ),
+                                        ),
+
+                                      ],
                                     ),
+                                  ),
 
-                                    const SizedBox(width: 8),
-
-                                    Icon(Icons.calendar_month_outlined,
-                                        size: 14, color: AppTheme.whiteColor),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      "12 Feb 2026",
-                                      style: MyStyles.regularText(
-                                          size: 12, color: AppTheme.whiteColor),
+                                  /// STATUS
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.greenColor,
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
-                                  ],
-                                ),
+                                    child: Text(
+                                      "ACTIVE",
+                                      style: MyStyles.boldText(
+                                          size: 10, color: AppTheme.whiteColor),
+                                    ),
+                                  ),
+                                ],
                               ),
-
-                              /// STATUS
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.greenColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  "ACTIVE",
-                                  style: MyStyles.boldText(
-                                      size: 10, color: AppTheme.whiteColor),
-                                ),
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_month_outlined,
+                                      size: 14, color: AppTheme.whiteColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "12 Feb 2026",
+                                    style: MyStyles.regularText(
+                                        size: 12, color: AppTheme.whiteColor),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

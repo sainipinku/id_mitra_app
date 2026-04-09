@@ -39,9 +39,9 @@ class Dropdown<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+
         borderRadius: const BorderRadius.all(
-          Radius.circular(15),
+          Radius.circular(8),
         ),
         border: Border.all(
           color: AppTheme.backBtnBgColor,
