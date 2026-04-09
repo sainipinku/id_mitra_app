@@ -3,6 +3,7 @@ import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
+import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
@@ -46,9 +47,10 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                     builder: (context) => const ImageSettingsScreen(),
                   ),
                 );
-              } else if (value == 'profile_settings') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile Settings Clicked')),
+              } else if (value == 'student_form') {
+                navigateWithTransition(
+                  context: context,
+                  page: const StudentForm(),
                 );
               }
             },
@@ -71,6 +73,16 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                     Icon(Icons.person),
                     SizedBox(width: 10),
                     Text('Profile Settings'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'student_form',
+                child: Row(
+                  children: [
+                    Icon(Icons.assignment),
+                    SizedBox(width: 10),
+                    Text('Student Form'),
                   ],
                 ),
               ),
