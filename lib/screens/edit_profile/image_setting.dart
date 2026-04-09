@@ -252,11 +252,6 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
     );
   }
 
-
-
-
-
-
   /// Common TextField
   Widget buildTextField(
     String label,

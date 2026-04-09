@@ -292,11 +292,16 @@ class _StudentFormState extends State<StudentForm> {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.backBtnBgColor),
+                              border: Border.all(
+                                color: AppTheme.backBtnBgColor,
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -306,7 +311,8 @@ class _StudentFormState extends State<StudentForm> {
                                   child: Checkbox(
                                     value: isChecked,
                                     activeColor: AppTheme.redBtnBgColor,
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                     onChanged: (val) {
                                       setAddState(() {
                                         if (val == true) {
@@ -319,28 +325,47 @@ class _StudentFormState extends State<StudentForm> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Icon(Icons.drag_indicator, color: Colors.grey, size: 20),
+                                const Icon(
+                                  Icons.drag_indicator,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 6),
-                                Icon(field.icon, size: 18, color: AppTheme.graySubTitleColor),
+                                Icon(
+                                  field.icon,
+                                  size: 18,
+                                  color: AppTheme.graySubTitleColor,
+                                ),
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
                                     field.name,
-                                    style: MyStyles.boldText(size: 13, color: AppTheme.black_Color),
+                                    style: MyStyles.boldText(
+                                      size: 13,
+                                      color: AppTheme.black_Color,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.appBackgroundColor,
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: AppTheme.backBtnBgColor),
+                                    border: Border.all(
+                                      color: AppTheme.backBtnBgColor,
+                                    ),
                                   ),
                                   child: Text(
                                     field.type,
-                                    style: MyStyles.regularText(size: 10, color: AppTheme.graySubTitleColor),
+                                    style: MyStyles.regularText(
+                                      size: 10,
+                                      color: AppTheme.graySubTitleColor,
+                                    ),
                                   ),
                                 ),
                               ],

@@ -6,6 +6,7 @@ import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/providers/school/school_state.dart';
+import 'package:idmitra/screens/admin/admin_dashboard.dart';
 import 'package:idmitra/screens/dashboard/users/users_details_widgets.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
@@ -108,8 +109,13 @@ class _SchoolsState extends State<Schools> {
               ),
             );
           },
-        )
-
+        ),
+      FloatingActionButton(
+        child: Text("Admin"),
+          onPressed: (){
+            Navigator.push(context, MaterialPageRoute(builder: (context)=>AdminDashboard()));
+          }
+      ),
           ],
         ),
       ),
