@@ -172,6 +172,7 @@ class _HomeState extends State<Home> {
             );
           }
 
+          /// ❌ ERROR / FALLBACK
           else {
             return const Center(
               child: Text("Something went wrong"),

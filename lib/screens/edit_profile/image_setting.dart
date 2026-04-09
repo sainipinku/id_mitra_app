@@ -6,6 +6,7 @@ import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/common_widgets/drop_down/drop_down.dart';
 import 'package:idmitra/utils/json_file.dart';
+
 import '../../components/my_font_weight.dart';
 
 class ImageSettingsScreen extends StatefulWidget {
