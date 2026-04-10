@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:idmitra/Widgets/AppTextStyles.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
+import 'package:idmitra/add_student/edit_student.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
@@ -10,8 +11,6 @@ import 'package:idmitra/models/students/StudentsListModel.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:image_picker/image_picker.dart';
-
-import 'edit_student.dart';
 
 class AddNewStudent extends StatefulWidget {
   const AddNewStudent({super.key});

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
+import 'package:idmitra/admin/admin_home.dart';
+import 'package:idmitra/admin/admin_reports.dart';
+import 'package:idmitra/admin/admin_school.dart';
+import 'package:idmitra/admin/admin_setting.dart';
 import 'package:idmitra/components/app_theme.dart';
 
 import 'package:idmitra/utils/MyStyles.dart';
-
-import 'admin_home.dart';
-import 'admin_reports.dart';
-import 'admin_school.dart';
-import 'admin_setting.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
