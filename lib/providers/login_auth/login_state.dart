@@ -12,7 +12,10 @@ final class LoginSuccess extends LoginState {
   final Map<String, dynamic>? schoolData;
   LoginSuccess({required this.loginModel, required this.loginWithType, this.schoolData});
 }
-
+final class ForgetLoginSuccess extends LoginState {
+  final String message;
+  ForgetLoginSuccess({required this.message});
+}
 final class PasswordSuccess extends LoginState {
   final String message;
   PasswordSuccess({required this.message});

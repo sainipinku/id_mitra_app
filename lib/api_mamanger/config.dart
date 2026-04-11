@@ -8,6 +8,8 @@ class Config {
 
 class Routes {
   static String sendOtp = "auth/send-otp";
+  static String forgetPasswordSendOtp = "auth/forgot-password/send-otp";
+  static String forgetPasswordVerifyOtp = "auth/forgot-password/verify-otp";
   static String otpVerify = "auth/verify-otp";
   static String setCredentails = "auth/profile/set-credentials";
   static String commonStates = "common/states/1";

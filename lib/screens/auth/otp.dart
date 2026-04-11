@@ -25,7 +25,8 @@ class OtpVerificationScreen extends StatefulWidget {
   final String phone;
   final bool alreadyUser;
   final String loginWithType;
-  const OtpVerificationScreen({super.key,required this.phone,required this.alreadyUser,required this.loginWithType});
+  final bool forgetPassword;
+  const OtpVerificationScreen({super.key,required this.phone,required this.alreadyUser,required this.loginWithType,required this.forgetPassword});
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -75,8 +76,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
   late LoginCubit loginCubit;
 
+
   initCubit(){
     loginCubit = context.read<LoginCubit>();
+
   }
 
   @override
@@ -146,7 +149,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   );
                 });
           } else if (state is LoginSuccess) {
-            if(widget.alreadyUser){
+            if(widget.alreadyUser || widget.forgetPassword){
               navigateAndRemoveUntil(
                 context: context,
                 page: PasswordScreen(),
@@ -171,6 +174,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               }
             }
 
+          } else if (state is ForgetLoginSuccess) {
+            navigateAndRemoveUntil(
+              context: context,
+              page: PasswordScreen(),
+              transition: PageTransitionType.rightToLeft,
+            );
           }
           else if (state is LoginResendSuccess) {
             Navigator.of(context).pop();
@@ -381,6 +390,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         ),
                         const SizedBox(height: 8),
                         selectedLoginType == "password" ? PasswordTextField(controller: passwordController) : phoneNumberTextField(controller: pinNumberController,hintName: "Enter 6-digit PIN",isRequired: false,digitNo: 6),
+
                       ],
                     ),
 
@@ -398,38 +408,50 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         isLoading: false,
                         color: AppTheme.btnColor,
                         onTap: () {
-                          Map<String, String> map = {};
-                          if(widget.alreadyUser){
-                            map = {
-                              "whatsapp_phone": widget.phone ?? '',
-                              "otp": pinController.text.trim() ?? '',
-                            };
-                          }else if(selectedLoginType == "password" &&  widget.loginWithType == 'phone'){
-                            map = {
-                              "whatsapp_phone":  widget.phone ?? '',
-                              "password": passwordController.text.trim(),
-                            };
-                          }else if(selectedLoginType == "pin" &&  widget.loginWithType == 'phone'){
-                            map = {
-                              "whatsapp_phone": widget.phone ?? '',
-                              "pin": pinNumberController.text.trim(),
-                            };
-                          }else if(selectedLoginType == "password" &&  widget.loginWithType == 'email'){
-                            map = {
-                              "email": widget.phone ?? '',
-                              "password": passwordController.text.trim(),
-                            };
-                          }else if(selectedLoginType == "pin" &&  widget.loginWithType == 'email'){
-                            map = {
-                              "email": widget.phone ?? '',
-                              "pin": pinNumberController.text.trim(),
-                            };
+                          if (formkey.currentState!.validate()) {
+                            if(widget.forgetPassword){
+                              Map<String, String> map = {
+                                "identifier": widget.phone ?? '',
+                                "otp": pinController.text.trim() ?? '',
+                              };
+                              loginCubit.constForgetPasswordVerifyOtp(map);
+                            }else {
+                              Map<String, String> map = {};
+                              if(widget.alreadyUser){
+                                map = {
+                                  "whatsapp_phone": widget.phone ?? '',
+                                  "otp": pinController.text.trim() ?? '',
+                                };
+                              }else if(selectedLoginType == "password" &&  widget.loginWithType == 'phone'){
+                                map = {
+                                  "whatsapp_phone":  widget.phone ?? '',
+                                  "password": passwordController.text.trim(),
+                                };
+                              }else if(selectedLoginType == "pin" &&  widget.loginWithType == 'phone'){
+                                map = {
+                                  "whatsapp_phone": widget.phone ?? '',
+                                  "pin": pinNumberController.text.trim(),
+                                };
+                              }else if(selectedLoginType == "password" &&  widget.loginWithType == 'email'){
+                                map = {
+                                  "email": widget.phone ?? '',
+                                  "password": passwordController.text.trim(),
+                                };
+                              }else if(selectedLoginType == "pin" &&  widget.loginWithType == 'email'){
+                                map = {
+                                  "email": widget.phone ?? '',
+                                  "pin": pinNumberController.text.trim(),
+                                };
+                              }
+                              print('send data ======>$map');
+                              loginCubit.constVerifyOtp(map);
+                            }
+
                           }
 
-                          print('send data ======>$map');
-                          if (formkey.currentState!.validate()) {
-                            loginCubit.constVerifyOtp(map);
-                          }
+
+
+
 
                         },
                       ),
