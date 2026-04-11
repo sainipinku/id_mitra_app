@@ -31,12 +31,33 @@ class LoginCubit extends Cubit<LoginState> {
       if (response.statusCode == 200) {
 
         LoginModel loginModel = LoginModel.fromJson(jsonData);
+        print('Login user school: ${loginModel.user?.school}');
+        print('Login user id: ${loginModel.user?.id}');
+
+        // school data raw jsonData se extract karo
+        final schoolData = (jsonData['user']?['school'] as Map<String, dynamic>?);
+        print('Raw school data: $schoolData');
+
         // Save user locally
         await UserLocal.saveUser(loginModel.user);
 
+        // Save school data locally
+        if (schoolData != null) {
+          await UserLocal.saveSchool(
+            schoolId: schoolData['id']?.toString() ?? loginModel.user?.id?.toString() ?? '',
+            schoolName: schoolData['name']?.toString() ?? '',
+          );
+        } else {
+          // super_admin without school — use user id as fallback
+          await UserLocal.saveSchool(
+            schoolId: loginModel.user?.id?.toString() ?? '',
+            schoolName: loginModel.user?.name ?? '',
+          );
+        }
+
         // Save token securely
         await UserSecureStorage.setToken(jsonData["token"]);
-        emit(LoginSuccess(loginModel: loginModel,loginWithType: ''));
+        emit(LoginSuccess(loginModel: loginModel, loginWithType: '', schoolData: schoolData));
       } else if (response.statusCode == 403 || response.statusCode == 400) {
         final message = jsonData['message'] ?? "User not found";
         emit(LoginOnHold(message: message));

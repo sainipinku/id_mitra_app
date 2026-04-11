@@ -174,8 +174,24 @@ class _HomeState extends State<Home> {
 
           /// ❌ ERROR / FALLBACK
           else {
-            return const Center(
-              child: Text("Something went wrong"),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    state.error ?? "Something went wrong",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<HomeCubit>().loadHomeData(),
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
             );
           }
         },

@@ -50,7 +50,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
               } else if (value == 'student_form') {
                 navigateWithTransition(
                   context: context,
-                  page: const StudentForm(),
+                  page: StudentForm(
+                    schoolDetailsModel: widget.schoolDetailsModel!,
+                  ),
                 );
               }
             },
