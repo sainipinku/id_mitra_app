@@ -170,4 +170,30 @@ class LoginCubit extends Cubit<LoginState> {
       emit(LoginFailed());
     }
   }
+  constForgetPasswordVerifyOtp(Map map) async {
+    emit(LoginLoading());
+    try {
+      var response = await apiManager.postRequest(
+          map, Config.baseUrl + Routes.forgetPasswordVerifyOtp);
+      debugPrint("response${response.body}");
+      final jsonData = jsonDecode(response.body);  // FIXED HERE
+      if (response.statusCode == 200) {
+        final message = jsonData['message'] ?? "User not found";
+        // Save token securely
+        await UserSecureStorage.setToken(jsonData["token"]);
+        emit(ForgetLoginSuccess(message: message));
+      } else if (response.statusCode == 403 || response.statusCode == 400) {
+        final message = jsonData['message'] ?? "User not found";
+        emit(LoginOnHold(message: message));
+      } else {
+        emit(LoginFailed());
+      }
+    } on SocketException {
+      emit(LoginInternetError());
+    } on TimeoutException {
+      emit(LoginTimeout());
+    } catch (e) {
+      emit(LoginFailed());
+    }
+  }
 }

@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/snack_bar_widget.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
-import 'package:idmitra/providers/login_auth/login_cubit.dart';
-import 'package:idmitra/screens/auth/PasswordTextField.dart';
-import 'package:idmitra/screens/auth/forget_password_login.dart';
+import 'package:idmitra/providers/forget_login_auth/forget_login_cubit.dart';
+
 import 'package:idmitra/screens/auth/otp.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
-import 'package:idmitra/utils/navigation_utils.dart';
 
 import 'package:page_transition/page_transition.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class ForgetPasswordLoginScreen extends StatefulWidget {
+  const ForgetPasswordLoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<ForgetPasswordLoginScreen> createState() => _ForgetPasswordLoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  late LoginCubit loginCubit;
+class _ForgetPasswordLoginScreenState extends State<ForgetPasswordLoginScreen> {
+  late ForgetLoginCubit loginCubit;
   final formkey = GlobalKey<FormState>();
   late BuildContext buildContext;
   initCubit() {
-    loginCubit = context.read<LoginCubit>();
+    loginCubit = context.read<ForgetLoginCubit>();
   }
   @override
   void initState() {
@@ -39,10 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     TextEditingController phoneController = TextEditingController();
     return Scaffold(
-      appBar: AppBar(backgroundColor: AppTheme.appBackgroundColor),
-      body: BlocListener<LoginCubit, LoginState>(
+      appBar: CommonAppBar(showText: false,title: 'Forget Password',backgroundColor: Colors.transparent,),
+      body: BlocListener<ForgetLoginCubit, ForgetLoginState>(
         listener: (context, state) {
-          if (state is LoginLoading) {
+          if (state is ForgetLoginLoading) {
             showDialog(
               barrierDismissible: false,
               context: context,
@@ -65,31 +64,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
             );
-          } else if (state is LoginSuccess) {
+          } else if (state is ForgetLoginSuccess) {
             Navigator.push(
               context,
               PageTransition(
                 type: PageTransitionType.rightToLeft,
                 child: OtpVerificationScreen(
                   phone: phoneController.text.trim(),
-                  alreadyUser: state.loginModel.user?.lastChangeAt == null ? true : false,
-                  loginWithType: state.loginWithType,
-                  forgetPassword: false,
+                  alreadyUser: true,
+                  loginWithType: 'phone',
+                  forgetPassword: true,
                 ),
                 ctx: context,
               ),
             );
-          } else if (state is LoginNoFound) {
-            Navigator.of(context).pop();
-            final _snackBar = snackBar(
-              state.message,
-              Icons.done,
-              Colors.green,
-            );
-
-            ScaffoldMessenger.of(context).showSnackBar(_snackBar);
           }
-          else if (state is LoginResendSuccess) {
+          else if (state is ForgetLoginResendSuccess) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
               'Otp sent successfully',
@@ -98,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-          } else if (state is LoginFailed) {
+          } else if (state is ForgetLoginFailed) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
               'Failed to send an OTP.',
@@ -107,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-          } else if (state is LoginOnHold) {
+          } else if (state is ForgetLoginOnHold) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
               'Your account on holding contact with owner!!',
@@ -116,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-          } else if (state is LoginTimeout) {
+          } else if (state is ForgetLoginTimeout) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
               'Time out exception',
@@ -125,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-          } else if (state is LoginInternetError) {
+          } else if (state is ForgetLoginInternetError) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
               'Internet connection failed.',
@@ -154,21 +144,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 30),
 
                         Text(
-                          "Hello, Welcome",
+                          "Forget Password",
                           style: MyStyles.boldText(
                             size: 26,
                             color: AppTheme.black_Color,
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          "Login to manage your school identity system.",
-                          textAlign: TextAlign.center,
-                          style: MyStyles.regularText(
-                            size: 14,
-                            color: AppTheme.garyColor,
                           ),
                         ),
 
@@ -185,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Mobile/Email",
+                                "Mobile Number",
                                 style: MyStyles.boldText(
                                   size: 14,
                                   color: AppTheme.black_Color,
@@ -193,22 +172,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 8),
 
-                              nameTextField(controller: phoneController),
+                              phoneNumberTextField(controller: phoneController),
 
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  TextButton(onPressed: (){
-                                    navigateWithTransition(
-                                      context: context,
-                                      page: const ForgetPasswordLoginScreen(),
-                                    );
-                                  },child: Text( "Forget Password",style: MyStyles.boldText(size: 14, color: AppTheme.redBtnBgColor ),)
-                                   ,
-
-                                  ),
-                                ],
-                              ),
                               const SizedBox(height: 20),
 
                               AppButton(
@@ -216,52 +181,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 isLoading: false,
                                 color: AppTheme.btnColor,
                                 onTap: () {
-                                  String input = phoneController.text.trim();
-                                  Map<String, String> map = {};
-                                 // Regex for phone (only digits, length 10–15)
-                                  final phoneRegex = RegExp(r'^[0-9]{10,15}$');
 
-                                  // Regex for email
-                                  final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                                  if (phoneRegex.hasMatch(input)) {
-                                     map = {
-                                      "whatsapp_phone": phoneController.text.trim(),
-                                    };
-
-                                     if (formkey.currentState!.validate()) {
-                                       loginCubit.constSendOtp(map,'phone');
-                                     }
-                                    // Send OTP using phone
-                                    print("Send OTP to phone: $input");
-
-                                    // Example:
-                                    // api.sendOtp(phone: input);
-
-                                  } else if (emailRegex.hasMatch(input)) {
-                                    map = {
-                                      "email": phoneController.text.trim(),
-                                    };
-
-                                    if (formkey.currentState!.validate()) {
-                                      loginCubit.constSendOtp(map,'email');
-                                    }
-                                    // Send OTP using email
-                                    print("Send OTP to email: $input");
-
-                                    // Example:
-                                    // api.sendOtp(email: input);
-
-                                  } else {
-                                    final _snackBar = snackBar(
-                                      "Enter valid phone number or email",
-                                      Icons.warning,
-                                      Colors.red,
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-                                    // Invalid input
-                                    print("Enter valid phone number or email");
+                                  Map<String, String> map = { "identifier": phoneController.text.trim(),};
+                                  if (formkey.currentState!.validate()) {
+                                    loginCubit.constForgetPasswordSendOtp(map);
                                   }
+
                                 },
                               ),
                             ],

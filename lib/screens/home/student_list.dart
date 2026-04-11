@@ -54,7 +54,10 @@ class _StudentListingPageState extends State<StudentListingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CommonAppBar(title: 'Student Listings',backgroundColor: Colors.transparent,),
-
+      floatingActionButton: FloatingActionButton(
+          child: Icon(Icons.add,),
+          tooltip: 'Add Students',
+          onPressed: (){}),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
