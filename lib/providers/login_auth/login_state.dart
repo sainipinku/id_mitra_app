@@ -11,7 +11,10 @@ final class LoginSuccess extends LoginState {
   final String loginWithType;
   LoginSuccess({required this.loginModel,required this.loginWithType});
 }
-
+final class ForgetLoginSuccess extends LoginState {
+  final String message;
+  ForgetLoginSuccess({required this.message});
+}
 final class PasswordSuccess extends LoginState {
   final String message;
   PasswordSuccess({required this.message});
