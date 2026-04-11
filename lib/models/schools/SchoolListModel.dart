@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'package:idmitra/models/student_form/StudentFormFieldsModel.dart';
+
 SchoolListModel schoolListModelFromJson(String str) => SchoolListModel.fromJson(json.decode(str));
 
 String schoolListModelToJson(SchoolListModel data) => json.encode(data.toJson());
@@ -330,6 +332,9 @@ class SchoolDetailsModel {
   Partner? partner;
   Admin? admin;
   dynamic socialLinks;
+  List<StudentFormField>? studentFormFields;
+  List<StudentFormField>? availableStudentFormFields;
+  String? sig; // signed URL param for student-form-fields web route
 
   SchoolDetailsModel({
     this.id,
@@ -356,6 +361,9 @@ class SchoolDetailsModel {
     this.partner,
     this.admin,
     this.socialLinks,
+    this.studentFormFields,
+    this.availableStudentFormFields,
+    this.sig,
   });
 
   SchoolDetailsModel copyWith({
@@ -383,6 +391,9 @@ class SchoolDetailsModel {
     Partner? partner,
     Admin? admin,
     dynamic socialLinks,
+    List<StudentFormField>? studentFormFields,
+    List<StudentFormField>? availableStudentFormFields,
+    String? sig,
   }) =>
       SchoolDetailsModel(
         id: id ?? this.id,
@@ -409,6 +420,9 @@ class SchoolDetailsModel {
         partner: partner ?? this.partner,
         admin: admin ?? this.admin,
         socialLinks: socialLinks ?? this.socialLinks,
+        studentFormFields: studentFormFields ?? this.studentFormFields,
+        availableStudentFormFields: availableStudentFormFields ?? this.availableStudentFormFields,
+        sig: sig ?? this.sig,
       );
 
   factory SchoolDetailsModel.fromJson(Map<String, dynamic> json) => SchoolDetailsModel(
@@ -436,6 +450,15 @@ class SchoolDetailsModel {
     partner: json["partner"] == null ? null : Partner.fromJson(json["partner"]),
     admin: json["admin"] == null ? null : Admin.fromJson(json["admin"]),
     socialLinks: json["social_links"],
+    studentFormFields: json["student_form_fields"] == null
+        ? []
+        : List<StudentFormField>.from(
+            json["student_form_fields"].map((x) => StudentFormField.fromJson(x))),
+    availableStudentFormFields: json["available_student_form_fields"] == null
+        ? []
+        : List<StudentFormField>.from(
+            json["available_student_form_fields"].map((x) => StudentFormField.fromJson(x))),
+    sig: json["sig"],
   );
 
   Map<String, dynamic> toJson() => {
@@ -463,6 +486,12 @@ class SchoolDetailsModel {
     "partner": partner?.toJson(),
     "admin": admin?.toJson(),
     "social_links": socialLinks,
+    "student_form_fields": studentFormFields == null
+        ? []
+        : List<dynamic>.from(studentFormFields!.map((x) => x.toJson())),
+    "available_student_form_fields": availableStudentFormFields == null
+        ? []
+        : List<dynamic>.from(availableStudentFormFields!.map((x) => x.toJson())),
   };
 }
 

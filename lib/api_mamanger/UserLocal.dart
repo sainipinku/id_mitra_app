@@ -12,6 +12,21 @@ class UserLocal {
     prefs.setString("gender", user.gender ?? "");
     prefs.setString("profileImage", user.profilePhotoUrl ?? "");
     prefs.setString("userId", user.id.toString() ?? "");
+    prefs.setString("designation", user.designation ?? "");
+  }
+
+  static Future saveSchool({required String schoolId, required String schoolName}) async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString("schoolId", schoolId);
+    prefs.setString("schoolName", schoolName);
+  }
+
+  static Future<Map<String, String?>> getSchool() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      "schoolId": prefs.getString("schoolId"),
+      "schoolName": prefs.getString("schoolName"),
+    };
   }
 
   static Future<Map<String, dynamic>> getUser() async {

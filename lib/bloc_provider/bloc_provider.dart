@@ -5,6 +5,7 @@ import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/providers/manage_profile/manage_profile_cubit.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
+import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 
 
@@ -18,5 +19,6 @@ class BlocProviders {
     BlocProvider<SchoolCubit>(create: (context) => SchoolCubit()),
     BlocProvider<ManageProfileCubit>(create: (context) => ManageProfileCubit()),
     BlocProvider<StudentsCubit>(create: (context) => StudentsCubit()),
+    BlocProvider<StudentFormCubit>(create: (context) => StudentFormCubit()),
   ];
 }

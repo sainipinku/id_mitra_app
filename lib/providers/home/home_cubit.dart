@@ -25,7 +25,7 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> loadHomeData() async {
     emit(state.copyWith(loading: true));
 
-
+    try {
       /// 🔹 API 1 - Dashboard
       var dashboardResponse = await apiManager.getRequest(
         Config.baseUrl + Routes.getPartnerDashboardData(),
@@ -36,17 +36,20 @@ class HomeCubit extends Cubit<HomeState> {
         Config.baseUrl + Routes.getUserDetails(),
       );
 
+      /// Null check — agar koi bhi response null hai toh error emit karo
+      if (dashboardResponse == null || userResponse == null) {
+        emit(state.copyWith(loading: false, error: "Server se response nahi mila"));
+        return;
+      }
+
       if (dashboardResponse.statusCode == 200 &&
           userResponse.statusCode == 200) {
 
         final dashboardJson = jsonDecode(dashboardResponse.body);
         final userJson = jsonDecode(userResponse.body);
 
-        final dashboardModel =
-        PartnerDashboardModel.fromJson(dashboardJson);
-
-        final userModel =
-        UserDetailsModel.fromJson(userJson);
+        final dashboardModel = PartnerDashboardModel.fromJson(dashboardJson);
+        final userModel = UserDetailsModel.fromJson(userJson);
 
         emit(state.copyWith(
           loading: false,
@@ -56,9 +59,16 @@ class HomeCubit extends Cubit<HomeState> {
       } else if (dashboardResponse.statusCode == 403 ||
           userResponse.statusCode == 403) {
         emit(state.copyWith(loading: false, error: "On Hold"));
+      } else if (dashboardResponse.statusCode == 404) {
+        emit(state.copyWith(loading: false, error: "Dashboard API not found (404) — backend se check karein"));
       } else {
-        emit(state.copyWith(loading: false, error: "Something went wrong"));
+        emit(state.copyWith(
+          loading: false,
+          error: "Something went wrong (${dashboardResponse.statusCode})",
+        ));
       }
-
+    } catch (e) {
+      emit(state.copyWith(loading: false, error: "Error: ${e.toString()}"));
+    }
   }
 }

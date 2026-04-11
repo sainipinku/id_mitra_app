@@ -9,7 +9,8 @@ final class LoginLoading extends LoginState {}
 final class LoginSuccess extends LoginState {
   final LoginModel loginModel;
   final String loginWithType;
-  LoginSuccess({required this.loginModel,required this.loginWithType});
+  final Map<String, dynamic>? schoolData;
+  LoginSuccess({required this.loginModel, required this.loginWithType, this.schoolData});
 }
 final class ForgetLoginSuccess extends LoginState {
   final String message;
