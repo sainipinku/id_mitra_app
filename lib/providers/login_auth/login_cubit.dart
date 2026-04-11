@@ -41,6 +41,20 @@ class LoginCubit extends Cubit<LoginState> {
         // Save user locally
         await UserLocal.saveUser(loginModel.user);
 
+        // Save school data locally
+        if (schoolData != null) {
+          await UserLocal.saveSchool(
+            schoolId: schoolData['id']?.toString() ?? loginModel.user?.id?.toString() ?? '',
+            schoolName: schoolData['name']?.toString() ?? '',
+          );
+        } else {
+          // super_admin without school — use user id as fallback
+          await UserLocal.saveSchool(
+            schoolId: loginModel.user?.id?.toString() ?? '',
+            schoolName: loginModel.user?.name ?? '',
+          );
+        }
+
         // Save token securely
         await UserSecureStorage.setToken(jsonData["token"]);
         emit(LoginSuccess(loginModel: loginModel, loginWithType: '', schoolData: schoolData));

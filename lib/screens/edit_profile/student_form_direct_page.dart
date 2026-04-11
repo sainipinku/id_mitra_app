@@ -4,7 +4,7 @@ import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 
-/// Used when super_admin logs in directly
+// Used when super_admin logs in directly
 class StudentFormDirectPage extends StatelessWidget {
   final String schoolName;
   final String schoolId;

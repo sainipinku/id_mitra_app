@@ -10,8 +10,8 @@ import 'package:idmitra/config/prefConstatnt.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/PasswordTextField.dart';
 import 'package:idmitra/screens/auth/password_screen.dart';
+import 'package:idmitra/screens/admin/admin_dashboard.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
-import 'package:idmitra/screens/edit_profile/student_form_direct_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
@@ -157,16 +157,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               final designation = user?.designation ?? '';
 
               if (designation == 'super_admin') {
-                final school = state.schoolData ?? user?.school;
-                final schoolName = school?['name']?.toString() ?? '';
-                final schoolId = (school?['id'] ?? user?.id)?.toString() ?? '';
-
                 navigateAndRemoveUntil(
                   context: context,
-                  page: StudentFormDirectPage(
-                    schoolName: schoolName,
-                    schoolId: schoolId,
-                  ),
+                  page: const AdminDashboard(),
                   transition: PageTransitionType.rightToLeft,
                 );
               } else {

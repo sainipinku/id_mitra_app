@@ -71,154 +71,271 @@ class _StudentFormState extends State<StudentForm> {
       isScrollControlled: true,
       backgroundColor: AppTheme.whiteColor,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setAdd) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-              child: Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Add Multiple Fields',
-                      style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
-                  const SizedBox(height: 4),
-                  Text('Select one or more fields to add to the student registration form',
-                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                ])),
-                GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close)),
-              ]),
-            ),
-            const SizedBox(height: 16),
-            // Search
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: searchCtrl,
-                onChanged: (v) => setAdd(() {
-                  filtered = pool
-                      .where((f) => f['label']!.toLowerCase().contains(v.toLowerCase()))
-                      .toList();
-                  selected.clear();
-                }),
-                decoration: InputDecoration(
-                  filled: true, fillColor: AppTheme.whiteColor,
-                  contentPadding: const EdgeInsets.all(12),
-                  hintText: 'Search by field name...',
-                  prefixIcon: const Icon(Icons.search),
-                  enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.backBtnBgColor),
-                      borderRadius: BorderRadius.circular(15)),
-                  focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.backBtnBgColor),
-                      borderRadius: BorderRadius.circular(15)),
-                  hintStyle: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Add Multiple Fields',
+                            style: MyStyles.boldText(
+                              size: 16,
+                              color: AppTheme.black_Color,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Select one or more fields to add to the student registration form',
+                            style: MyStyles.regularText(
+                              size: 12,
+                              color: AppTheme.graySubTitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            // Select All
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Select Fields',
-                    style: MyStyles.regularText(size: 13, color: AppTheme.black_Color)),
-                GestureDetector(
-                  onTap: () => setAdd(() => selected.length == filtered.length
-                      ? selected.clear()
-                      : selected.addAll(List.generate(filtered.length, (i) => i))),
-                  child: Text('Select All',
-                      style: MyStyles.regularText(size: 13, color: AppTheme.btnColor)),
-                ),
-              ]),
-            ),
-            // List
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(child: Text('No more fields available',
-                      style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor)))
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (_, i) {
-                        final f = filtered[i];
-                        final checked = selected.contains(i);
-                        return GestureDetector(
-                          onTap: () => setAdd(() => checked ? selected.remove(i) : selected.add(i)),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.backBtnBgColor),
-                            ),
-                            child: Row(children: [
-                              SizedBox(height: 24, width: 24,
-                                child: Checkbox(
-                                  value: checked,
-                                  activeColor: AppTheme.redBtnBgColor,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  onChanged: (v) => setAdd(() => v == true ? selected.add(i) : selected.remove(i)),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(f['label']!,
-                                    style: MyStyles.boldText(size: 13, color: AppTheme.black_Color)),
-                                Text('Type: ${f['type']}',
-                                    style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
-                              ])),
-                            ]),
+              const SizedBox(height: 16),
+              // Search
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: searchCtrl,
+                  onChanged: (v) => setAdd(() {
+                    filtered = pool
+                        .where(
+                          (f) => f['label']!.toLowerCase().contains(
+                            v.toLowerCase(),
                           ),
-                        );
-                      },
+                        )
+                        .toList();
+                    selected.clear();
+                  }),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppTheme.whiteColor,
+                    contentPadding: const EdgeInsets.all(12),
+                    hintText: 'Search by field name...',
+                    prefixIcon: const Icon(Icons.search),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.backBtnBgColor),
+                      borderRadius: BorderRadius.circular(15),
                     ),
-            ),
-            // Footer
-            Container(
-              padding: const EdgeInsets.all(16), color: Colors.white,
-              child: Row(children: [
-                Text('${selected.length} field(s) selected',
-                    style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                const Spacer(),
-                SizedBox(
-                  width: 150,
-                  child: AppButton(
-                    title: '+ Add ${selected.length} Fields',
-                    isLoading: false,
-                    color: selected.isEmpty ? AppTheme.backBtnBgColor : AppTheme.btnColor,
-                    height: 42,
-                    onTap: selected.isEmpty ? () {} : () {
-                      setSheet(() {
-                        for (final i in selected) {
-                          final f = filtered[i];
-                          tempFields.add(_EditableField(
-                            name: f['name']!, label: f['label']!, type: f['type']!));
-                        }
-                      });
-                      Navigator.pop(ctx);
-                    },
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.backBtnBgColor),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    hintStyle: MyStyles.regularText(
+                      size: 14,
+                      color: AppTheme.graySubTitleColor,
+                    ),
                   ),
                 ),
-              ]),
-            ),
-          ]),
+              ),
+              const SizedBox(height: 8),
+              // Select All
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Fields',
+                      style: MyStyles.regularText(
+                        size: 13,
+                        color: AppTheme.black_Color,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setAdd(
+                        () => selected.length == filtered.length
+                            ? selected.clear()
+                            : selected.addAll(
+                                List.generate(filtered.length, (i) => i),
+                              ),
+                      ),
+                      child: Text(
+                        'Select All',
+                        style: MyStyles.regularText(
+                          size: 13,
+                          color: AppTheme.btnColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // List
+              Expanded(
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No more fields available',
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) {
+                          final f = filtered[i];
+                          final checked = selected.contains(i);
+                          return GestureDetector(
+                            onTap: () => setAdd(
+                              () => checked
+                                  ? selected.remove(i)
+                                  : selected.add(i),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppTheme.backBtnBgColor,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: Checkbox(
+                                      value: checked,
+                                      activeColor: AppTheme.redBtnBgColor,
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      onChanged: (v) => setAdd(
+                                        () => v == true
+                                            ? selected.add(i)
+                                            : selected.remove(i),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          f['label']!,
+                                          style: MyStyles.boldText(
+                                            size: 13,
+                                            color: AppTheme.black_Color,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Type: ${f['type']}',
+                                          style: MyStyles.regularText(
+                                            size: 11,
+                                            color: AppTheme.graySubTitleColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              // Footer
+              Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.white,
+                child: Row(
+                  children: [
+                    Text(
+                      '${selected.length} field(s) selected',
+                      style: MyStyles.regularText(
+                        size: 12,
+                        color: AppTheme.graySubTitleColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      width: 150,
+                      child: AppButton(
+                        title: '+ Add ${selected.length} Fields',
+                        isLoading: false,
+                        color: selected.isEmpty
+                            ? AppTheme.backBtnBgColor
+                            : AppTheme.btnColor,
+                        height: 42,
+                        onTap: selected.isEmpty
+                            ? () {}
+                            : () {
+                                setSheet(() {
+                                  for (final i in selected) {
+                                    final f = filtered[i];
+                                    tempFields.add(
+                                      _EditableField(
+                                        name: f['name']!,
+                                        label: f['label']!,
+                                        type: f['type']!,
+                                      ),
+                                    );
+                                  }
+                                });
+                                Navigator.pop(ctx);
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-
-  void _openConfigure(List<StudentFormField> currentFields, String schoolName, List<StudentFormField> availableFields) {
+  void _openConfigure(
+    List<StudentFormField> currentFields,
+    String schoolName,
+    List<StudentFormField> availableFields,
+  ) {
     final List<_EditableField> tempFields = currentFields
-        .map((f) => _EditableField(
-              name: f.name,
-              label: f.label,
-              type: f.type,
-              isRequired: f.required,
-            ))
+        .map(
+          (f) => _EditableField(
+            name: f.name,
+            label: f.label,
+            type: f.type,
+            isRequired: f.required,
+          ),
+        )
         .toList();
 
     final cubit = context.read<StudentFormCubit>();
@@ -228,212 +345,297 @@ class _StudentFormState extends State<StudentForm> {
       isScrollControlled: true,
       backgroundColor: AppTheme.whiteColor,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (_) => BlocProvider.value(
         value: cubit,
         child: StatefulBuilder(
-        builder: (ctx, setSheet) {
-          final reqCount = tempFields.where((f) => f.isRequired).length;
-          return SizedBox(
-            height: MediaQuery.of(context).size.height * 0.85,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                child: Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Configure Student Form Fields',
-                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
-                      const SizedBox(height: 4),
-                      Text('$schoolName • ${tempFields.length} fields ($reqCount required)',
-                          style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                    ]),
-                  ),
-                  GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: const Icon(Icons.close)),
-                ]),
-              ),
-              const Divider(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Expanded(child: Text('Drag and drop to reorder fields',
-                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor))),
-                  SizedBox(
-                    width: 120,
-                    child: AppButton(
-                      title: 'Add Field',
-                      isLoading: false,
-                      color: AppTheme.btnColor,
-                      height: 36,
-                      onTap: () => _openAddFields(setSheet, tempFields, availableFields),
+          builder: (ctx, setSheet) {
+            final reqCount = tempFields.where((f) => f.isRequired).length;
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.85,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Configure Student Form Fields',
+                                style: MyStyles.boldText(
+                                  size: 16,
+                                  color: AppTheme.black_Color,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$schoolName • ${tempFields.length} fields ($reqCount required)',
+                                style: MyStyles.regularText(
+                                  size: 12,
+                                  color: AppTheme.graySubTitleColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: const Icon(Icons.close),
+                        ),
+                      ],
                     ),
                   ),
-                ]),
-              ),
-              const SizedBox(height: 12),
-
-              Expanded(
-                child: tempFields.isEmpty
-                    ? Center(
-                        child: Text('No fields added yet',
+                  const Divider(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Drag and drop to reorder fields',
                             style: MyStyles.regularText(
-                                size: 14, color: AppTheme.graySubTitleColor)))
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: tempFields.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) {
-                          final f = tempFields[i];
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.backBtnBgColor),
+                              size: 12,
+                              color: AppTheme.graySubTitleColor,
                             ),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(children: [
-                                    const Icon(Icons.drag_indicator,
-                                        color: Colors.grey, size: 20),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(f.label,
-                                          style: MyStyles.boldText(
-                                              size: 13, color: AppTheme.black_Color),
-                                          overflow: TextOverflow.ellipsis),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    _typeBadge(f.type),
-                                  ]),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(children: [
-                                        SizedBox(
-                                          height: 24,
-                                          width: 24,
-                                          child: Checkbox(
-                                            value: f.isRequired,
-                                            activeColor: AppTheme.redBtnBgColor,
-                                            materialTapTargetSize:
-                                                MaterialTapTargetSize.shrinkWrap,
-                                            onChanged: (v) =>
-                                                setSheet(() => f.isRequired = v ?? false),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 120,
+                          child: AppButton(
+                            title: 'Add Field',
+                            isLoading: false,
+                            color: AppTheme.btnColor,
+                            height: 36,
+                            onTap: () => _openAddFields(
+                              setSheet,
+                              tempFields,
+                              availableFields,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: tempFields.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No fields added yet',
+                              style: MyStyles.regularText(
+                                size: 14,
+                                color: AppTheme.graySubTitleColor,
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: tempFields.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (_, i) {
+                              final f = tempFields[i];
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppTheme.backBtnBgColor,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.drag_indicator,
+                                          color: Colors.grey,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            f.label,
+                                            style: MyStyles.boldText(
+                                              size: 13,
+                                              color: AppTheme.black_Color,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         const SizedBox(width: 6),
-                                        Text('Required',
-                                            style: MyStyles.regularText(
-                                              size: 12,
-                                              color: f.isRequired
-                                                  ? AppTheme.redBtnBgColor
-                                                  : AppTheme.graySubTitleColor,
-                                            )),
-                                      ]),
-                                      GestureDetector(
-                                        onTap: () =>
-                                            setSheet(() => tempFields.removeAt(i)),
-                                        child: const Icon(Icons.delete_outline,
-                                            color: Colors.grey, size: 20),
-                                      ),
-                                    ],
-                                  ),
-                                ]),
-                          );
-                        },
-                      ),
-              ),
+                                        _typeBadge(f.type),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: Checkbox(
+                                                value: f.isRequired,
+                                                activeColor:
+                                                    AppTheme.redBtnBgColor,
+                                                materialTapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                                onChanged: (v) => setSheet(
+                                                  () =>
+                                                      f.isRequired = v ?? false,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Required',
+                                              style: MyStyles.regularText(
+                                                size: 12,
+                                                color: f.isRequired
+                                                    ? AppTheme.redBtnBgColor
+                                                    : AppTheme
+                                                          .graySubTitleColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => setSheet(
+                                            () => tempFields.removeAt(i),
+                                          ),
+                                          child: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.grey,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
 
-              // Footer
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.white,
-                child: Row(children: [
-                  Expanded(
-                    child: AppButton(
-                      title: 'Cancel',
-                      isLoading: false,
-                      color: AppTheme.backBtnBgColor,
-                      onTap: () => Navigator.pop(ctx),
+                  // Footer
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Colors.white,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            title: 'Cancel',
+                            isLoading: false,
+                            color: AppTheme.backBtnBgColor,
+                            onTap: () => Navigator.pop(ctx),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child:
+                              BlocConsumer<StudentFormCubit, StudentFormState>(
+                                listener: (context, state) {
+                                  if (state.successMessage != null) {
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(state.successMessage!),
+                                        backgroundColor: Colors.green,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                    // Clear message after showing
+                                    context
+                                        .read<StudentFormCubit>()
+                                        .clearMessages();
+                                  }
+                                  if (state.error != null &&
+                                      !state.loading &&
+                                      !state.saving) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(state.error!),
+                                        backgroundColor: Colors.red,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                    context
+                                        .read<StudentFormCubit>()
+                                        .clearMessages();
+                                  }
+                                },
+                                builder: (context, state) => AppButton(
+                                  title: 'Save Config..',
+                                  isLoading: state.saving,
+                                  color: AppTheme.btnColor,
+                                  onTap: state.saving
+                                      ? () {}
+                                      : () {
+                                          final updated = tempFields
+                                              .asMap()
+                                              .entries
+                                              .map(
+                                                (e) => StudentFormField(
+                                                  name: e.value.name,
+                                                  label: e.value.label,
+                                                  group: '',
+                                                  groupLabel: '',
+                                                  type: e.value.type,
+                                                  required: e.value.isRequired,
+                                                  order: e.key + 1,
+                                                ),
+                                              )
+                                              .toList();
+                                          context
+                                              .read<StudentFormCubit>()
+                                              .updateStudentFormFields(updated);
+                                        },
+                                ),
+                              ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: BlocConsumer<StudentFormCubit, StudentFormState>(
-                      listener: (context, state) {
-                        if (state.successMessage != null) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(state.successMessage!),
-                            backgroundColor: Colors.green,
-                            duration: const Duration(seconds: 3),
-                          ));
-                          // Clear message after showing
-                          context.read<StudentFormCubit>().clearMessages();
-                        }
-                        if (state.error != null && !state.loading && !state.saving) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(state.error!),
-                            backgroundColor: Colors.red,
-                            duration: const Duration(seconds: 3),
-                          ));
-                          context.read<StudentFormCubit>().clearMessages();
-                        }
-                      },
-                      builder: (context, state) => AppButton(
-                        title: 'Save Config..',
-                        isLoading: state.saving,
-                        color: AppTheme.btnColor,
-                        onTap: state.saving
-                            ? () {}
-                            : () {
-                                final updated = tempFields
-                                    .asMap()
-                                    .entries
-                                    .map((e) => StudentFormField(
-                                          name: e.value.name,
-                                          label: e.value.label,
-                                          group: '',
-                                          groupLabel: '',
-                                          type: e.value.type,
-                                          required: e.value.isRequired,
-                                          order: e.key + 1,
-                                        ))
-                                    .toList();
-                                context
-                                    .read<StudentFormCubit>()
-                                    .updateStudentFormFields(updated);
-                              },
-                      ),
-                    ),
-                  ),
-                ]),
+                ],
               ),
-            ]),
-          );
-        },
-      ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _typeBadge(String type) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppTheme.appBackgroundColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.backBtnBgColor),
-        ),
-        child: Text(type,
-            style: MyStyles.regularText(size: 10, color: AppTheme.graySubTitleColor)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    decoration: BoxDecoration(
+      color: AppTheme.appBackgroundColor,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: AppTheme.backBtnBgColor),
+    ),
+    child: Text(
+      type,
+      style: MyStyles.regularText(size: 10, color: AppTheme.graySubTitleColor),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -451,8 +653,10 @@ class _StudentFormState extends State<StudentForm> {
 
           if (state.error != null && state.fields.isEmpty) {
             return Center(
-              child: Text(state.error!,
-                  style: MyStyles.regularText(size: 14, color: Colors.red)),
+              child: Text(
+                state.error!,
+                style: MyStyles.regularText(size: 14, color: Colors.red),
+              ),
             );
           }
 
@@ -462,89 +666,132 @@ class _StudentFormState extends State<StudentForm> {
 
           if (state.error != null && state.fields.isEmpty) {
             return Center(
-              child: Text(state.error!,
-                  style: MyStyles.regularText(size: 14, color: Colors.red)),
+              child: Text(
+                state.error!,
+                style: MyStyles.regularText(size: 14, color: Colors.red),
+              ),
             );
           }
 
-          final fields = state.fields;          final schoolName = state.schoolName.isNotEmpty
+          final fields = state.fields;
+          final schoolName = state.schoolName.isNotEmpty
               ? state.schoolName
               : widget.schoolDetailsModel.name ?? '';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Student Form Fields',
-                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
-                      const SizedBox(height: 4),
-                      Text('Configure which fields show on the Add Student form',
-                          style: MyStyles.regularText(
-                              size: 12, color: AppTheme.graySubTitleColor)),
-                    ]),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 110,
-                    child: AppButton(
-                      title: 'Configure',
-                      isLoading: false,
-                      color: AppTheme.btnColor,
-                      height: 40,
-                      onTap: () => _openConfigure(fields, schoolName, state.availableFields),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Student Form Fields',
+                            style: MyStyles.boldText(
+                              size: 16,
+                              color: AppTheme.black_Color,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Configure which fields show on the Add Student form',
+                            style: MyStyles.regularText(
+                              size: 12,
+                              color: AppTheme.graySubTitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.05), blurRadius: 8)
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 110,
+                      child: AppButton(
+                        title: 'Configure',
+                        isLoading: false,
+                        color: AppTheme.btnColor,
+                        height: 40,
+                        onTap: () => _openConfigure(
+                          fields,
+                          schoolName,
+                          state.availableFields,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Current Fields (${fields.length})',
-                      style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
-                  const SizedBox(height: 12),
-                  fields.isEmpty
-                      ? Text('No fields configured',
-                          style: MyStyles.regularText(
-                              size: 13, color: AppTheme.graySubTitleColor))
-                      : Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: fields
-                              .map((f) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.appBackgroundColor,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                          color: AppTheme.backBtnBgColor),
-                                    ),
-                                    child: Text(
-                                      f.required ? '${f.label} *' : f.label,
-                                      style: MyStyles.regularText(
-                                          size: 12, color: AppTheme.black_Color),
-                                    ),
-                                  ))
-                              .toList(),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Fields (${fields.length})',
+                        style: MyStyles.boldText(
+                          size: 14,
+                          color: AppTheme.black_Color,
                         ),
-                ]),
-              ),
-            ]),
+                      ),
+                      const SizedBox(height: 12),
+                      fields.isEmpty
+                          ? Text(
+                              'No fields configured',
+                              style: MyStyles.regularText(
+                                size: 13,
+                                color: AppTheme.graySubTitleColor,
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: fields
+                                  .map(
+                                    (f) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.appBackgroundColor,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: AppTheme.backBtnBgColor,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        f.required ? '${f.label} *' : f.label,
+                                        style: MyStyles.regularText(
+                                          size: 12,
+                                          color: AppTheme.black_Color,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
