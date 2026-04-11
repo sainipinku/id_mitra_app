@@ -8,7 +8,6 @@ import 'package:idmitra/models/student_form/StudentFormFieldsModel.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 
-// Mutable field for configure sheet
 class _EditableField {
   final String name;
   final String label;
@@ -34,21 +33,30 @@ class _StudentFormState extends State<StudentForm> {
   @override
   void initState() {
     super.initState();
-    // Load data directly from SchoolDetailsModel - no extra API call
-    context.read<StudentFormCubit>().loadFromModel(
-      fields: widget.schoolDetailsModel.studentFormFields ?? [],
-      schoolName: widget.schoolDetailsModel.name ?? '',
-      schoolId: widget.schoolDetailsModel.id.toString(),
-    );
+    final currentState = context.read<StudentFormCubit>().state;
+    if (currentState.fields.isEmpty && !currentState.loading) {
+      final sig = widget.schoolDetailsModel.sig ?? '';
+      if (sig.isNotEmpty) {
+        context.read<StudentFormCubit>().loadFromModelWithSig(
+          fields: widget.schoolDetailsModel.studentFormFields ?? [],
+          schoolName: widget.schoolDetailsModel.name ?? '',
+          sig: sig,
+        );
+      } else {
+        context.read<StudentFormCubit>().loadFromModel(
+          fields: widget.schoolDetailsModel.studentFormFields ?? [],
+          schoolName: widget.schoolDetailsModel.name ?? '',
+          schoolId: widget.schoolDetailsModel.id.toString(),
+        );
+      }
+    }
   }
 
-  // ── Add Fields sheet ─────────────────────────────────────────────────────
   void _openAddFields(
     StateSetter setSheet,
     List<_EditableField> tempFields,
     List<StudentFormField> apiAvailable,
   ) {
-    // Only API available fields - exclude already added ones
     final List<Map<String, String>> pool = apiAvailable
         .where((f) => !tempFields.any((t) => t.name == f.name))
         .map((f) => {'name': f.name, 'label': f.label, 'type': f.type})
@@ -202,7 +210,7 @@ class _StudentFormState extends State<StudentForm> {
     );
   }
 
-  // ── Configure sheet ───────────────────────────────────────────────────────
+
   void _openConfigure(List<StudentFormField> currentFields, String schoolName, List<StudentFormField> availableFields) {
     final List<_EditableField> tempFields = currentFields
         .map((f) => _EditableField(
@@ -213,13 +221,17 @@ class _StudentFormState extends State<StudentForm> {
             ))
         .toList();
 
+    final cubit = context.read<StudentFormCubit>();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.whiteColor,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (_) => StatefulBuilder(
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: StatefulBuilder(
         builder: (ctx, setSheet) {
           final reqCount = tempFields.where((f) => f.isRequired).length;
           return SizedBox(
@@ -252,7 +264,7 @@ class _StudentFormState extends State<StudentForm> {
                   SizedBox(
                     width: 120,
                     child: AppButton(
-                      title: '+ Add Fields',
+                      title: 'Add Field',
                       isLoading: false,
                       color: AppTheme.btnColor,
                       height: 36,
@@ -263,7 +275,6 @@ class _StudentFormState extends State<StudentForm> {
               ),
               const SizedBox(height: 12),
 
-              // Fields list
               Expanded(
                 child: tempFields.isEmpty
                     ? Center(
@@ -364,6 +375,8 @@ class _StudentFormState extends State<StudentForm> {
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 3),
                           ));
+                          // Clear message after showing
+                          context.read<StudentFormCubit>().clearMessages();
                         }
                         if (state.error != null && !state.loading && !state.saving) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -371,10 +384,11 @@ class _StudentFormState extends State<StudentForm> {
                             backgroundColor: Colors.red,
                             duration: const Duration(seconds: 3),
                           ));
+                          context.read<StudentFormCubit>().clearMessages();
                         }
                       },
                       builder: (context, state) => AppButton(
-                        title: 'Save Configuration',
+                        title: 'Save Config..',
                         isLoading: state.saving,
                         color: AppTheme.btnColor,
                         onTap: state.saving
@@ -406,6 +420,7 @@ class _StudentFormState extends State<StudentForm> {
           );
         },
       ),
+      ),
     );
   }
 
@@ -430,8 +445,29 @@ class _StudentFormState extends State<StudentForm> {
       ),
       body: BlocBuilder<StudentFormCubit, StudentFormState>(
         builder: (context, state) {
-          final fields = state.fields;
-          final schoolName = state.schoolName.isNotEmpty
+          if (state.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state.error != null && state.fields.isEmpty) {
+            return Center(
+              child: Text(state.error!,
+                  style: MyStyles.regularText(size: 14, color: Colors.red)),
+            );
+          }
+
+          if (state.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state.error != null && state.fields.isEmpty) {
+            return Center(
+              child: Text(state.error!,
+                  style: MyStyles.regularText(size: 14, color: Colors.red)),
+            );
+          }
+
+          final fields = state.fields;          final schoolName = state.schoolName.isNotEmpty
               ? state.schoolName
               : widget.schoolDetailsModel.name ?? '';
 

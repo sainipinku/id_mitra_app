@@ -106,6 +106,9 @@ class User {
   dynamic liveLocation;
   String? registeredTimeHuman;
   String? profilePhotoUrl;
+  String? designation;
+  String? sig;
+  Map<String, dynamic>? school;
 
   User({
     this.id,
@@ -158,6 +161,9 @@ class User {
     this.liveLocation,
     this.registeredTimeHuman,
     this.profilePhotoUrl,
+    this.designation,
+    this.sig,
+    this.school,
   });
 
   User copyWith({
@@ -316,6 +322,9 @@ class User {
     liveLocation: json["live_location"],
     registeredTimeHuman: json["registered_time_human"],
     profilePhotoUrl: json["profile_photo_url"],
+    designation: json["designation"],
+    sig: json["sig"],
+    school: json["school"] == null ? null : Map<String, dynamic>.from(json["school"]),
   );
 
   Map<String, dynamic> toJson() => {

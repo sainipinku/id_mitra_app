@@ -8,15 +8,10 @@ class StudentFormFieldsModel {
     required this.availableStudentFormFields,
     required this.schoolName,
   });
-
-  /// Handles both:
-  /// 1. Inertia response: { "props": { "school": { "student_form_fields": [...], "available_student_form_fields": [...] } } }
-  /// 2. Direct API response: { "data": { "student_form_fields": [...], "available_student_form_fields": [...] } }
   factory StudentFormFieldsModel.fromJson(Map<String, dynamic> json) {
     Map<String, dynamic> school = {};
 
     if (json.containsKey('props')) {
-      // Inertia web response
       school = json["props"]?["school"] ?? {};
     } else if (json.containsKey('data')) {
       // Direct API response

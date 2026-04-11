@@ -52,13 +52,6 @@ class SchoolCubit extends Cubit<SchoolState> {
 
       final jsonData = jsonDecode(response.body);
 
-      // Debug: print sig field from first school
-      final firstSchool = jsonData["data"]?["schools"]?["data"]?[0];
-      if (firstSchool != null) {
-        print('=== SCHOOL KEYS: ${(firstSchool as Map).keys.toList()}');
-        print('=== SIG: ${firstSchool["sig"]}');
-      }
-
       List list = jsonData["data"]?["schools"]?["data"] ?? [];
 
       List<SchoolDetailsModel> newList =

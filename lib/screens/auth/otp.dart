@@ -11,6 +11,7 @@ import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/PasswordTextField.dart';
 import 'package:idmitra/screens/auth/password_screen.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
+import 'package:idmitra/screens/edit_profile/student_form_direct_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
@@ -151,13 +152,30 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 page: PasswordScreen(),
                 transition: PageTransitionType.rightToLeft,
               );
+            } else {
+              final user = state.loginModel.user;
+              final designation = user?.designation ?? '';
 
-            }else {
-              navigateAndRemoveUntil(
-                context: context,
-                page: Dashboard(),
-                transition: PageTransitionType.rightToLeft,
-              );
+              if (designation == 'super_admin') {
+                final school = state.schoolData ?? user?.school;
+                final schoolName = school?['name']?.toString() ?? '';
+                final schoolId = (school?['id'] ?? user?.id)?.toString() ?? '';
+
+                navigateAndRemoveUntil(
+                  context: context,
+                  page: StudentFormDirectPage(
+                    schoolName: schoolName,
+                    schoolId: schoolId,
+                  ),
+                  transition: PageTransitionType.rightToLeft,
+                );
+              } else {
+                navigateAndRemoveUntil(
+                  context: context,
+                  page: Dashboard(),
+                  transition: PageTransitionType.rightToLeft,
+                );
+              }
             }
 
           }
