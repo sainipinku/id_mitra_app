@@ -54,10 +54,10 @@ class _StudentListingPageState extends State<StudentListingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CommonAppBar(title: 'Student Listings',backgroundColor: Colors.transparent,),
-      floatingActionButton: FloatingActionButton(
+   /*   floatingActionButton: FloatingActionButton(
           child: Icon(Icons.add,),
           tooltip: 'Add Students',
-          onPressed: (){}),
+          onPressed: (){}),*/
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -134,7 +134,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                       if (index < state.studentsList.length) {
                         final item = state.studentsList[index];
                         return StudentCard(
-                           studentDetailsData: item,
+                           studentData: item,
                         );
                       } else {
                         return const Padding(

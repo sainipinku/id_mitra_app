@@ -12,7 +12,8 @@ import 'package:idmitra/screens/dashboard/setting.dart';
 import 'package:idmitra/screens/home/student_list.dart';
 
 class Dashboard extends StatefulWidget {
-  const Dashboard({super.key});
+  int index;
+   Dashboard({super.key,required this.index});
 
   @override
   State<Dashboard> createState() =>
@@ -41,6 +42,7 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.index;
     homeCubit = context.read<HomeCubit>();
     homeCubit.loadHomeData();
   }
@@ -87,7 +89,7 @@ class _DashboardState extends State<Dashboard> {
                     BottomNavigationBarItem(
                         icon: svgIcon(icon: 'assets/icons/home/report.svg', clr: _selectedIndex == 1 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Reports"),
                     BottomNavigationBarItem(
-                        icon: svgIcon(icon: 'assets/icons/home/school.svg', clr: _selectedIndex == 2 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Users"),
+                        icon: svgIcon(icon: 'assets/icons/home/school.svg', clr: _selectedIndex == 2 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Schools"),
 
                   ],
                 ),

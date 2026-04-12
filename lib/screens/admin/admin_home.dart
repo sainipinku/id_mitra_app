@@ -22,12 +22,18 @@ class _AdminHomeState extends State<AdminHome> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Expanded(child: StatCard(title: "Total Students", value: "1240", icon: Icons.school, color: Colors.orange)),
+            children:  [
+              Expanded(child: StatCard(title: "Total Students", value: "1240", icon: Icons.school, color: Colors.orange,  button: (){
+
+              },)),
               SizedBox(width: 12),
-              Expanded(child: StatCard(title: "Total Staff", value: "85", icon: Icons.group, color: Colors.blue)),
+              Expanded(child: StatCard(title: "Total Staff", value: "85", icon: Icons.group, color: Colors.blue,  button: (){
+
+              },)),
               SizedBox(width: 12),
-              Expanded(child: StatCard(title: "Total Orders", value: "1240", icon: Icons.receipt_long, color: Colors.indigo)),
+              Expanded(child: StatCard(title: "Total Orders", value: "1240", icon: Icons.receipt_long, color: Colors.indigo,  button: (){
+
+              },)),
             ],
           ),
 
