@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
+import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
+import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
+import 'package:idmitra/utils/navigation_utils.dart';
 
 class StudentListingPage extends StatefulWidget {
   String schoolId;
@@ -55,9 +59,26 @@ class _StudentListingPageState extends State<StudentListingPage> {
     return Scaffold(
       appBar: CommonAppBar(title: 'Student Listings',backgroundColor: Colors.transparent,),
       floatingActionButton: FloatingActionButton(
-          child: Icon(Icons.add,),
+          backgroundColor: AppTheme.btnColor,
+          child: const Icon(Icons.add, color: Colors.white),
           tooltip: 'Add Students',
-          onPressed: (){}),
+          onPressed: () async {
+            final school = await UserLocal.getSchool();
+            final schoolId = school['schoolId'] ?? widget.schoolId;
+            final schoolName = school['schoolName'] ?? '';
+            if (!mounted) return;
+            navigateWithTransition(
+              context: context,
+              page: BlocProvider(
+                create: (_) => StudentFormCubit()
+                  ..loadFromSchoolId(
+                    schoolId: schoolId,
+                    schoolName: schoolName,
+                  ),
+                child: const AddStudentFormPage(),
+              ),
+            );
+          }),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

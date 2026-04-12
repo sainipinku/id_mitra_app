@@ -46,7 +46,7 @@ class _StudentFormState extends State<StudentForm> {
         context.read<StudentFormCubit>().loadFromModel(
           fields: widget.schoolDetailsModel.studentFormFields ?? [],
           schoolName: widget.schoolDetailsModel.name ?? '',
-          schoolId: widget.schoolDetailsModel.id.toString(),
+          schoolId: widget.schoolDetailsModel.id?.toString() ?? '',
         );
       }
     }
@@ -339,6 +339,9 @@ class _StudentFormState extends State<StudentForm> {
         .toList();
 
     final cubit = context.read<StudentFormCubit>();
+    // capture navigator before opening sheet
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -349,276 +352,269 @@ class _StudentFormState extends State<StudentForm> {
       ),
       builder: (_) => BlocProvider.value(
         value: cubit,
-        child: StatefulBuilder(
-          builder: (ctx, setSheet) {
-            final reqCount = tempFields.where((f) => f.isRequired).length;
-            return SizedBox(
-              height: MediaQuery.of(context).size.height * 0.85,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Configure Student Form Fields',
-                                style: MyStyles.boldText(
-                                  size: 16,
-                                  color: AppTheme.black_Color,
+        child: BlocListener<StudentFormCubit, StudentFormState>(
+          listener: (listenerCtx, state) {
+            if (state.successMessage != null) {
+              // close bottom sheet
+              navigator.pop();
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(state.successMessage!),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              cubit.clearMessages();
+            }
+            if (state.error != null && !state.loading && !state.saving) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(state.error!),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              cubit.clearMessages();
+            }
+          },
+          child: StatefulBuilder(
+            builder: (ctx, setSheet) {
+              final reqCount = tempFields.where((f) => f.isRequired).length;
+              return SizedBox(
+                height: MediaQuery.of(context).size.height * 0.85,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Configure Student Form Fields',
+                                  style: MyStyles.boldText(
+                                    size: 16,
+                                    color: AppTheme.black_Color,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$schoolName • ${tempFields.length} fields ($reqCount required)',
-                                style: MyStyles.regularText(
-                                  size: 12,
-                                  color: AppTheme.graySubTitleColor,
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$schoolName • ${tempFields.length} fields ($reqCount required)',
+                                  style: MyStyles.regularText(
+                                    size: 12,
+                                    color: AppTheme.graySubTitleColor,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(ctx),
-                          child: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Drag and drop to reorder fields',
-                            style: MyStyles.regularText(
-                              size: 12,
-                              color: AppTheme.graySubTitleColor,
+                              ],
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: 120,
-                          child: AppButton(
-                            title: 'Add Field',
-                            isLoading: false,
-                            color: AppTheme.btnColor,
-                            height: 36,
-                            onTap: () => _openAddFields(
-                              setSheet,
-                              tempFields,
-                              availableFields,
-                            ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: const Icon(Icons.close),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Expanded(
-                    child: tempFields.isEmpty
-                        ? Center(
+                    const Divider(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
                             child: Text(
-                              'No fields added yet',
+                              'Drag and drop to reorder fields',
                               style: MyStyles.regularText(
-                                size: 14,
+                                size: 12,
                                 color: AppTheme.graySubTitleColor,
                               ),
                             ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: tempFields.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (_, i) {
-                              final f = tempFields[i];
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
+                          ),
+                          SizedBox(
+                            width: 120,
+                            child: AppButton(
+                              title: 'Add Field',
+                              isLoading: false,
+                              color: AppTheme.btnColor,
+                              height: 36,
+                              onTap: () => _openAddFields(
+                                setSheet,
+                                tempFields,
+                                availableFields,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Expanded(
+                      child: tempFields.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No fields added yet',
+                                style: MyStyles.regularText(
+                                  size: 14,
+                                  color: AppTheme.graySubTitleColor,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppTheme.backBtnBgColor,
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: tempFields.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (_, i) {
+                                final f = tempFields[i];
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.drag_indicator,
-                                          color: Colors.grey,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Flexible(
-                                          child: Text(
-                                            f.label,
-                                            style: MyStyles.boldText(
-                                              size: 13,
-                                              color: AppTheme.black_Color,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        _typeBadge(f.type),
-                                      ],
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppTheme.backBtnBgColor,
                                     ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            SizedBox(
-                                              height: 24,
-                                              width: 24,
-                                              child: Checkbox(
-                                                value: f.isRequired,
-                                                activeColor:
-                                                    AppTheme.redBtnBgColor,
-                                                materialTapTargetSize:
-                                                    MaterialTapTargetSize
-                                                        .shrinkWrap,
-                                                onChanged: (v) => setSheet(
-                                                  () =>
-                                                      f.isRequired = v ?? false,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Required',
-                                              style: MyStyles.regularText(
-                                                size: 12,
-                                                color: f.isRequired
-                                                    ? AppTheme.redBtnBgColor
-                                                    : AppTheme
-                                                          .graySubTitleColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        GestureDetector(
-                                          onTap: () => setSheet(
-                                            () => tempFields.removeAt(i),
-                                          ),
-                                          child: const Icon(
-                                            Icons.delete_outline,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.drag_indicator,
                                             color: Colors.grey,
                                             size: 20,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-
-                  // Footer
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.white,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            title: 'Cancel',
-                            isLoading: false,
-                            color: AppTheme.backBtnBgColor,
-                            onTap: () => Navigator.pop(ctx),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child:
-                              BlocConsumer<StudentFormCubit, StudentFormState>(
-                                listener: (context, state) {
-                                  if (state.successMessage != null) {
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(state.successMessage!),
-                                        backgroundColor: Colors.green,
-                                        duration: const Duration(seconds: 3),
+                                          const SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              f.label,
+                                              style: MyStyles.boldText(
+                                                size: 13,
+                                                color: AppTheme.black_Color,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          _typeBadge(f.type),
+                                        ],
                                       ),
-                                    );
-                                    // Clear message after showing
-                                    context
-                                        .read<StudentFormCubit>()
-                                        .clearMessages();
-                                  }
-                                  if (state.error != null &&
-                                      !state.loading &&
-                                      !state.saving) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(state.error!),
-                                        backgroundColor: Colors.red,
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
-                                    context
-                                        .read<StudentFormCubit>()
-                                        .clearMessages();
-                                  }
-                                },
-                                builder: (context, state) => AppButton(
-                                  title: 'Save Config..',
-                                  isLoading: state.saving,
-                                  color: AppTheme.btnColor,
-                                  onTap: state.saving
-                                      ? () {}
-                                      : () {
-                                          final updated = tempFields
-                                              .asMap()
-                                              .entries
-                                              .map(
-                                                (e) => StudentFormField(
-                                                  name: e.value.name,
-                                                  label: e.value.label,
-                                                  group: '',
-                                                  groupLabel: '',
-                                                  type: e.value.type,
-                                                  required: e.value.isRequired,
-                                                  order: e.key + 1,
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              SizedBox(
+                                                height: 24,
+                                                width: 24,
+                                                child: Checkbox(
+                                                  value: f.isRequired,
+                                                  activeColor:
+                                                      AppTheme.redBtnBgColor,
+                                                  materialTapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                  onChanged: (v) => setSheet(
+                                                    () =>
+                                                        f.isRequired = v ?? false,
+                                                  ),
                                                 ),
-                                              )
-                                              .toList();
-                                          context
-                                              .read<StudentFormCubit>()
-                                              .updateStudentFormFields(updated);
-                                        },
-                                ),
-                              ),
-                        ),
-                      ],
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Required',
+                                                style: MyStyles.regularText(
+                                                  size: 12,
+                                                  color: f.isRequired
+                                                      ? AppTheme.redBtnBgColor
+                                                      : AppTheme
+                                                            .graySubTitleColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          GestureDetector(
+                                            onTap: () => setSheet(
+                                              () => tempFields.removeAt(i),
+                                            ),
+                                            child: const Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.grey,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
+
+                    // Footer
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      color: Colors.white,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: AppButton(
+                              title: 'Cancel',
+                              isLoading: false,
+                              color: AppTheme.backBtnBgColor,
+                              onTap: () => Navigator.pop(ctx),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: BlocBuilder<StudentFormCubit, StudentFormState>(
+                              builder: (_, state) => AppButton(
+                                title: 'Save Config',
+                                isLoading: state.saving,
+                                color: AppTheme.btnColor,
+                                onTap: state.saving
+                                    ? () {}
+                                    : () {
+                                        final updated = tempFields
+                                            .asMap()
+                                            .entries
+                                            .map(
+                                              (e) => StudentFormField(
+                                                name: e.value.name,
+                                                label: e.value.label,
+                                                group: '',
+                                                groupLabel: '',
+                                                type: e.value.type,
+                                                required: e.value.isRequired,
+                                                order: e.key + 1,
+                                              ),
+                                            )
+                                            .toList();
+                                        cubit.updateStudentFormFields(updated);
+                                      },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

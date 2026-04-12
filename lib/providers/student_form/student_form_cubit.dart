@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
+import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 import 'package:idmitra/models/student_form/StudentFormFieldsModel.dart';
@@ -120,6 +121,7 @@ class StudentFormCubit extends Cubit<StudentFormState> {
     required String schoolName,
     required String schoolId,
   }) {
+    _schoolId = schoolId; // ← ensure schoolId is always set
     emit(state.copyWith(
       fields: fields,
       availableFields: _masterAvailableFields,
@@ -163,8 +165,20 @@ class StudentFormCubit extends Cubit<StudentFormState> {
   Future<void> updateStudentFormFields(List<StudentFormField> updatedFields) async {
     emit(state.copyWith(saving: true, error: null, successMessage: null));
 
+    // fallback: read schoolId from SharedPreferences if not set in memory
+    if (_schoolId.isEmpty) {
+      final school = await UserLocal.getSchool();
+      _schoolId = school['schoolId'] ?? '';
+    }
+
+    if (_schoolId.isEmpty) {
+      emit(state.copyWith(saving: false, error: 'School ID not found. Please reopen this screen.'));
+      return;
+    }
+
     final token = await UserSecureStorage.fetchToken();
     final url = '${Config.baseUrl}auth/school/$_schoolId/form-fields/student';
+    print('Update URL: $url');
 
     final response = await http.put(
       Uri.parse(url),
