@@ -168,7 +168,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               } else {
                 navigateAndRemoveUntil(
                   context: context,
-                  page: Dashboard(),
+                  page: Dashboard(index: 0,),
                   transition: PageTransitionType.rightToLeft,
                 );
               }

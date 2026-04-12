@@ -71,7 +71,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
           } else if (state is PasswordSuccess) {
             navigateAndRemoveUntil(
               context: context,
-              page: Dashboard(),
+              page: Dashboard(index: 0,),
               transition: PageTransitionType.rightToLeft,
             );
           } else if (state is LoginNoFound) {

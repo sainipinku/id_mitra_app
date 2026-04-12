@@ -49,7 +49,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     if (token != null && token.isNotEmpty) {
       navigateAndRemoveUntil(
         context: context,
-        page: Dashboard(),
+        page: Dashboard(index: 0,),
         transition: PageTransitionType.rightToLeft,
       );
     } else {
