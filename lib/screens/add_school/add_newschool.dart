@@ -404,7 +404,7 @@ class _AddNewSchoolPageState extends State<AddNewSchoolPage> {
                       });
                       navigateWithTransition(
                         context: context,
-                        page: Dashboard(),
+                        page: Dashboard(index: 0,),
                       );
                     },
                   ),

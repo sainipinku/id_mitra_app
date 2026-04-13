@@ -13,14 +13,15 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
 class StudentCard extends StatefulWidget {
-  StudentDetailsData studentDetailsData;
-  StudentCard({super.key, required this.studentDetailsData});
+  StudentDetailsData studentData;
+  StudentCard({super.key, required this.studentData});
 
   @override
   State<StudentCard> createState() => _StudentCardState();
 }
 
 class _StudentCardState extends State<StudentCard> {
+  late StudentDetailsData studentDetailsData;
   File? studentProfileImageFile;
   CroppedFile? croppedProfileFile;
   bool isUploading = false;
@@ -77,14 +78,14 @@ class _StudentCardState extends State<StudentCard> {
       try {
         var response = await ApiManager().multiRequestRoute(
           croppedFile.path,
-          Config.baseUrl + Routes.updateStudentProfile(widget.studentDetailsData.uuid ?? ''),
+          Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
         );
-        print('proifle---------${Config.baseUrl + Routes.updateStudentProfile(widget.studentDetailsData.uuid ?? '')}');
+        print('proifle---------${Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? '')}');
         if (response.statusCode == 200) {
           final jsonData = jsonDecode(response.body);
           print('proifle---------${jsonData['data']['profile_photo_url']}');
           setState(() {
-            widget.studentDetailsData = widget.studentDetailsData.copyWith(
+            studentDetailsData = studentDetailsData.copyWith(
               profilePhotoUrl: jsonData['data']['profile_photo_url'],
             );
           });
@@ -148,7 +149,7 @@ class _StudentCardState extends State<StudentCard> {
                   setState(() {
                     studentProfileImageFile = null;
                     croppedProfileFile = null;
-                    widget.studentDetailsData = widget.studentDetailsData
+                    studentDetailsData = studentDetailsData
                         .copyWith(profilePhotoUrl: "");
                   });
                   Navigator.pop(context);
@@ -186,7 +187,12 @@ class _StudentCardState extends State<StudentCard> {
       color: Colors.grey.shade300,
     );
   }
-
+  @override
+  void initState() {
+    // TODO: implement initState
+    studentDetailsData = widget.studentData;
+    super.initState();
+  }
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -211,9 +217,9 @@ class _StudentCardState extends State<StudentCard> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : (widget.studentDetailsData.profilePhotoUrl != null && widget.studentDetailsData.profilePhotoUrl!.isNotEmpty)
+                    : (studentDetailsData.profilePhotoUrl != null && studentDetailsData.profilePhotoUrl!.isNotEmpty)
                     ? Image.network(
-                        widget.studentDetailsData.profilePhotoUrl!,
+                        studentDetailsData.profilePhotoUrl!,
                         height: 60,
                         width: 60,
                         fit: BoxFit.cover,
@@ -227,7 +233,14 @@ class _StudentCardState extends State<StudentCard> {
                 bottom: 0,
                 right: 0,
                 child: InkWell(
-                  onTap: () => showPicker(context),
+                  onTap: () {
+                    if (studentDetailsData.photo != null &&
+                        studentDetailsData.photo!.isNotEmpty) {
+                      _showImagePreview(context, studentDetailsData.profilePhotoUrl!);
+                    } else {
+                      showPicker(context);
+                    }
+                  },
                   child: Container(
                     height: 22,
                     width: 22,
@@ -236,8 +249,8 @@ class _StudentCardState extends State<StudentCard> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: const Icon(
-                      Icons.camera_alt,
+                    child:  Icon(
+                      studentDetailsData.photo != null ? Icons.preview : Icons.camera_alt,
                       size: 12,
                       color: Colors.white,
                     ),
@@ -257,7 +270,7 @@ class _StudentCardState extends State<StudentCard> {
                 Row(
                   children: [
                     Text(
-                      widget.studentDetailsData.name ?? '',
+                      studentDetailsData.name ?? '',
                       style: MyStyles.boldText(
                         size: 16,
                         color: AppTheme.black_Color,
@@ -265,7 +278,7 @@ class _StudentCardState extends State<StudentCard> {
                     ),
                     SizedBox(width: 5),
                     Text(
-                      "• ${widget.studentDetailsData.datumClass?.nameWithprefix ?? ''}-${widget.studentDetailsData.section?.name ?? ''}",
+                      "• ${studentDetailsData.datumClass?.nameWithprefix ?? ''}-${studentDetailsData.section?.name ?? ''}",
                       style: MyStyles.boldText(
                         size: 16,
                         color: AppTheme.btnColor,
@@ -275,7 +288,7 @@ class _StudentCardState extends State<StudentCard> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  "Father name : ${widget.studentDetailsData.fatherName ?? ''}",
+                  "Father name : ${studentDetailsData.fatherName ?? ''}",
                   style: MyStyles.regularText(
                     size: 12,
                     color: AppTheme.graySubTitleColor,
@@ -283,7 +296,7 @@ class _StudentCardState extends State<StudentCard> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  "Missing details: ${widget.studentDetailsData.missingFields
+                  "Missing details: ${studentDetailsData.missingFields
                       ?.map((e) => _formatField(e.toString()))
                       .join(', ') ?? ''}",
                   style: MyStyles.regularText(
@@ -316,6 +329,41 @@ class _StudentCardState extends State<StudentCard> {
       width: 60,
       color: Colors.grey.shade300,
       child: const Icon(Icons.person, color: Colors.grey),
+    );
+  }
+  void _showImagePreview(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return Dialog(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 🔹 Image Preview
+              Image.network(
+                imageUrl,
+                height: 250,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+
+              const SizedBox(height: 10),
+
+              // 🔹 Edit Button
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context); // dialog close
+                  showPicker(context);    // open camera/gallery
+                },
+                icon: Icon(Icons.edit),
+                label: Text("Edit Profile Image"),
+              ),
+
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
     );
   }
 }

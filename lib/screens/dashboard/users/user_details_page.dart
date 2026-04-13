@@ -30,7 +30,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         backgroundColor: Colors.transparent,
         showText: true,
         actions: [
-          PopupMenuButton<String>(
+         /* PopupMenuButton<String>(
             icon: const Icon(Icons.settings,color: Colors.black,),
 
             // ✅ FIX: show dropdown below icon
@@ -100,7 +100,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                 ),
               ),
             ],
-          ),
+          ),*/
         ],
       ),
       body: SingleChildScrollView(

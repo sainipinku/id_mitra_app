@@ -5,6 +5,7 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/screens/SelectRolePage/SelectRolePage.dart';
 import 'package:idmitra/screens/dashboard/StatCard.dart';
+import 'package:idmitra/screens/dashboard/dashboard.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
@@ -48,17 +49,27 @@ class _HomeState extends State<Home> {
                   children: [
 
                     StatCard(
-                      title: "Total Users",
-                      value: data?.users?.total?.toString() ?? "0",
+                      title: "Total Schools",
+                      value: data?.schools?.total?.toString() ?? "0",
                       icon: Icons.person,
                       color: Colors.blue,
+                      button: (){
+                        navigateWithTransition(
+                          context: context,
+                          page: Dashboard(index: 2,),
+
+                        );
+                      },
                     ),
 
                     StatCard(
-                      title: "Active Users",
-                      value: data?.users?.active?.toString() ?? "0",
+                      title: "Active Schools",
+                      value: data?.schools?.active?.toString() ?? "0",
                       icon: Icons.person_outline,
                       color: Colors.green,
+                      button: (){
+
+                      },
                     ),
 
                     StatCard(
@@ -66,6 +77,9 @@ class _HomeState extends State<Home> {
                       value: data?.students?.total?.toString() ?? "0",
                       icon: Icons.school,
                       color: Colors.orange,
+                      button: (){
+
+                      },
                     ),
 
                     StatCard(
@@ -73,6 +87,9 @@ class _HomeState extends State<Home> {
                       value: data?.employees?.total?.toString() ?? "0",
                       icon: Icons.group,
                       color: Colors.purple,
+                      button: (){
+
+                      },
                     ),
                   ],
                 ),
@@ -80,7 +97,7 @@ class _HomeState extends State<Home> {
                 const SizedBox(height: 20),
 
                 /// 🔹 QUICK ACTIONS CARD
-                Container(
+                /*Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -167,7 +184,7 @@ class _HomeState extends State<Home> {
                       ),
                     ],
                   ),
-                ),
+                ),*/
               ],
             );
           }

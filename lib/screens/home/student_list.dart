@@ -166,7 +166,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                       if (index < state.studentsList.length) {
                         final item = state.studentsList[index];
                         return StudentCard(
-                           studentDetailsData: item,
+                           studentData: item,
                         );
                       } else {
                         return const Padding(
