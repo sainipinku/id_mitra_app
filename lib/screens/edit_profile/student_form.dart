@@ -151,7 +151,6 @@ class _StudentFormState extends State<StudentForm> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Select All
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -355,7 +354,6 @@ class _StudentFormState extends State<StudentForm> {
         child: BlocListener<StudentFormCubit, StudentFormState>(
           listener: (listenerCtx, state) {
             if (state.successMessage != null) {
-              // close bottom sheet
               navigator.pop();
               messenger.showSnackBar(
                 SnackBar(
@@ -565,8 +563,11 @@ class _StudentFormState extends State<StudentForm> {
 
                     // Footer
                     Container(
-                      padding: const EdgeInsets.all(16),
-                      color: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(top: BorderSide(color: AppTheme.backBtnBgColor)),
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -574,6 +575,7 @@ class _StudentFormState extends State<StudentForm> {
                               title: 'Cancel',
                               isLoading: false,
                               color: AppTheme.backBtnBgColor,
+                              height: 42,
                               onTap: () => Navigator.pop(ctx),
                             ),
                           ),
@@ -581,9 +583,10 @@ class _StudentFormState extends State<StudentForm> {
                           Expanded(
                             child: BlocBuilder<StudentFormCubit, StudentFormState>(
                               builder: (_, state) => AppButton(
-                                title: 'Save Config',
+                                title: state.saving ? 'Saving...' : 'Save Configure',
                                 isLoading: state.saving,
                                 color: AppTheme.btnColor,
+                                height: 42,
                                 onTap: state.saving
                                     ? () {}
                                     : () {

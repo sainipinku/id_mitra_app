@@ -163,15 +163,19 @@ class AppTextField extends StatelessWidget {
     this.onChanged,this.mxLine,
     this.obscureText = false,
     this.suffixIcon,
+    this.textCapitalization = TextCapitalization.none,
   });
+
+  final TextCapitalization textCapitalization;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
       enabled: enabled,
-      maxLines:  obscureText ? 1 : mxLine, // ✅ FIX,
+      maxLines:  obscureText ? 1 : mxLine,
       keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
       inputFormatters: inputFormatters,
       scrollPadding: scrollPadding,
       cursorColor: AppTheme.graySubTitleColor,

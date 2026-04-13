@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
-import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
@@ -14,6 +13,10 @@ import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
+
+import '../../providers/add_student/add_student_cubit.dart';
+import '../../providers/student_form/student_form_data_cubit.dart';
+
 
 class StudentListingPage extends StatefulWidget {
   String schoolId;
@@ -62,20 +65,28 @@ class _StudentListingPageState extends State<StudentListingPage> {
           backgroundColor: AppTheme.btnColor,
           child: const Icon(Icons.add, color: Colors.white),
           tooltip: 'Add Students',
-          onPressed: () async {
-            final school = await UserLocal.getSchool();
-            final schoolId = school['schoolId'] ?? widget.schoolId;
-            final schoolName = school['schoolName'] ?? '';
-            if (!mounted) return;
+          onPressed: () {
+            final schoolId = widget.schoolId;
+            print('Opening AddStudentForm for schoolId: $schoolId');
             navigateWithTransition(
               context: context,
-              page: BlocProvider(
-                create: (_) => StudentFormCubit()
-                  ..loadFromSchoolId(
-                    schoolId: schoolId,
-                    schoolName: schoolName,
+              page: MultiBlocProvider(
+                providers: [
+                  BlocProvider(
+                    create: (_) => StudentFormCubit()
+                      ..loadFromSchoolId(
+                        schoolId: schoolId,
+                        schoolName: '',
+                      ),
                   ),
-                child: const AddStudentFormPage(),
+                  BlocProvider(
+                    create: (_) => StudentFormDataCubit()..load(schoolId),
+                  ),
+                  BlocProvider(
+                    create: (_) => AddStudentCubit(),
+                  ),
+                ],
+                child: AddStudentFormPage(schoolId: schoolId),
               ),
             );
           }),
