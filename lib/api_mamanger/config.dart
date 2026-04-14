@@ -24,6 +24,8 @@ class Routes {
   static String getUserDetails() => "auth/user";
   static String getSchoolList(int pageNo) => "auth/partner/schools?page=$pageNo";
   static String updateStudentProfile(String studentID) => "auth/school/students/$studentID/image";
+  static String deleteStudent(String schoolId, String studentID) => "auth/school/$schoolId/students/$studentID";
+  static String updateStudent(String schoolId, String studentID) => "auth/school/$schoolId/students/$studentID";
   static String updateEventLeadsStatus(String eventId) => "events/$eventId/set-active-lead";
   static String getLeadsList(String name,String status) => "leads?search=$name&status=$status";
   static String getEventsList(String name,String status,int pageNo) => "events?search=$name&status=$status&page=$pageNo";
@@ -31,6 +33,7 @@ class Routes {
   static String getSchoolFormFields(String schoolId) => "auth/school/$schoolId/form-fields";
   static String updateSchoolStudentFormFields(String schoolId) => "auth/school/$schoolId/form-fields/student";
   static String updateLeadsStatus(String leadsId,String status) => "leads/$leadsId/change-status/$status";
+  static String toggleStudentStatus(String schoolId, String studentId) => "auth/school/$schoolId/students/$studentId/status";
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";
   static String getSubCategoryProductById(String subCatId) => "product/subcategory/$subCatId";
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
+import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
@@ -28,7 +30,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         backgroundColor: Colors.transparent,
         showText: true,
         actions: [
-         /* PopupMenuButton<String>(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.settings,color: Colors.black,),
 
             // ✅ FIX: show dropdown below icon
@@ -48,10 +50,19 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                   ),
                 );
               } else if (value == 'student_form') {
+                final schoolId = widget.schoolDetailsModel?.id?.toString() ?? '';
+                final schoolName = widget.schoolDetailsModel?.name ?? '';
                 navigateWithTransition(
                   context: context,
-                  page: StudentForm(
-                    schoolDetailsModel: widget.schoolDetailsModel!,
+                  page: BlocProvider(
+                    create: (_) => StudentFormCubit()
+                      ..loadFromSchoolId(
+                        schoolId: schoolId,
+                        schoolName: schoolName,
+                      ),
+                    child: StudentForm(
+                      schoolDetailsModel: widget.schoolDetailsModel!,
+                    ),
                   ),
                 );
               }
@@ -89,7 +100,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                 ),
               ),
             ],
-          ),*/
+          ),
         ],
       ),
       body: SingleChildScrollView(
