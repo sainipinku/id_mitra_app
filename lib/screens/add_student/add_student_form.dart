@@ -9,6 +9,8 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/models/student_form/StudentFormFieldsModel.dart';
+import 'package:idmitra/models/students/StudentsListModel.dart'
+    hide ClassOption;
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/utils/common_widgets/LogoUploadView.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
@@ -28,8 +30,8 @@ const List<String> _kGenderOptions = [
 ];
 const List<String> _kTransportOptions = [
   'Select Mode',
-  'Self Pickup',
-  'School Transport',
+  'self_pickup',
+  'school_transport',
 ];
 const List<String> _kBloodGroupOptions = [
   'Select Blood Group',
@@ -46,7 +48,12 @@ const List<String> _kRteOptions = ['-Select-', 'Yes', 'No'];
 
 class AddStudentFormPage extends StatefulWidget {
   final String schoolId;
-  const AddStudentFormPage({super.key, required this.schoolId});
+  final StudentDetailsData? editStudent;
+  const AddStudentFormPage({
+    super.key,
+    required this.schoolId,
+    this.editStudent,
+  });
 
   @override
   State<AddStudentFormPage> createState() => _AddStudentFormPageState();
@@ -65,6 +72,12 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Pre-fill fields if editing
+    if (widget.editStudent != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _prefillStudent(widget.editStudent!),
+      );
+    }
   }
 
   @override
@@ -80,6 +93,76 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
       _selectVal.clear();
       _files.clear();
     });
+  }
+
+  void _prefillStudent(StudentDetailsData s) {
+    setState(() {
+      // Text fields — field name matches _buildBody keys
+      _setCtrl('student_name', s.name);
+      _setCtrl('student_email', s.email?.toString());
+      _setCtrl('student_phone', s.phone?.toString());
+      _setCtrl('student_whatsapp', s.whatsappPhone?.toString());
+      _setCtrl('landline_number', s.landLineNo?.toString());
+      _setCtrl('aadhar_card_number', s.aadharNo?.toString());
+      _setCtrl('uid_number', s.uidNo?.toString());
+      _setCtrl('nic_id', s.studentNicId?.toString());
+      _setCtrl('caste', s.caste?.toString());
+      _setCtrl('religion', s.religion?.toString());
+      _setCtrl('address', s.address);
+      _setCtrl('pincode', s.pincode?.toString());
+      _setCtrl('registration_number', s.regNo?.toString());
+      _setCtrl('roll_number', s.rollNo?.toString());
+      _setCtrl('admission_number', s.admissionNo?.toString());
+      _setCtrl('sr_number', s.srNo);
+      _setCtrl('rfid_number', s.rfidNo?.toString());
+      _setCtrl('father_name', s.fatherName);
+      _setCtrl('father_email', s.fatherEmail?.toString());
+      _setCtrl('father_phone', s.fatherPhone);
+      _setCtrl('father_whatsapp', s.fatherWphone?.toString());
+      _setCtrl('mother_name', s.motherName);
+      _setCtrl('mother_email', s.motherEmail?.toString());
+      _setCtrl('mother_phone', s.motherPhone?.toString());
+      _setCtrl('mother_whatsapp', s.motherWphone?.toString());
+
+      if (s.dob != null && s.dob!.isNotEmpty) {
+        final parts = s.dob!.split('-');
+        if (parts.length == 3) {
+          _setCtrl('date_of_birth', '${parts[2]}.${parts[1]}.${parts[0]}');
+        } else {
+          _setCtrl('date_of_birth', s.dob);
+        }
+      }
+
+      if (s.gender != null) {
+        _selectVal['gender'] = _capitalizeFirst(s.gender.toString());
+      }
+      if (s.bloodGroup != null) {
+        _selectVal['blood_group'] = s.bloodGroup.toString();
+      }
+      if (s.transportMode != null) {
+        _selectVal['transport_mode'] = s.transportMode.toString();
+      }
+      if (s.isRteStudent != null) {
+        _selectVal['is_rte_student'] = s.isRteStudent.toString();
+      }
+      if (s.schoolSessionId != null) _selectVal['session'] = s.schoolSessionId;
+      if (s.schoolClassId != null) _selectVal['class'] = s.schoolClassId;
+      if (s.schoolClassSectionId != null) {
+        _selectVal['class_section'] = s.schoolClassSectionId;
+      }
+      if (s.schoolHouseId != null) _selectVal['house'] = s.schoolHouseId;
+    });
+  }
+
+  void _setCtrl(String key, String? value) {
+    if (value == null || value.isEmpty) return;
+    _ctrl.putIfAbsent(key, () => TextEditingController());
+    _ctrl[key]!.text = value;
+  }
+
+  String _capitalizeFirst(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1).toLowerCase();
   }
 
   void _showImagePicker(String fieldName) {
@@ -320,6 +403,26 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
     );
   }
 
+  Widget _transportDropdown() {
+    const items = [
+      {'label': 'Self Pickup', 'value': 'self_pickup'},
+      {'label': 'School Transport', 'value': 'school_transport'},
+    ];
+    final val = (_selectVal['transport_mode'] as String?);
+    final selected = items.any((i) => i['value'] == val)
+        ? items.firstWhere((i) => i['value'] == val)
+        : null;
+    return Dropdown<Map<String, String>>(
+      value: selected,
+      items: items,
+      hintText: 'Select Mode',
+      onChange: (v) =>
+          setState(() => _selectVal['transport_mode'] = v?['value']),
+      displayText: (_, o) => o['label']!,
+      showClearButton: false,
+    );
+  }
+
   Widget _loadingTile(String text) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
     decoration: BoxDecoration(
@@ -381,22 +484,82 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                             color: Colors.black54,
                           ),
                           padding: const EdgeInsets.all(4),
-                          child: const Icon(Icons.close, size: 14, color: Colors.white),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              : _existingImageUrl(name) != null
+              ? Stack(
                   children: [
-                    const Icon(Icons.camera_alt, color: Colors.grey, size: 22),
-                    const SizedBox(height: 4),
-                    Text('Add Photo',
-                        style: MyStyles.regularText(size: 11, color: Colors.grey)),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        _existingImageUrl(name)!,
+                        width: double.infinity,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _photoPlaceholder(),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black54,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ],
-                ),
+                )
+              : _photoPlaceholder(),
         ),
+      ),
+    ],
+  );
+
+  String? _existingImageUrl(String fieldName) {
+    final s = widget.editStudent;
+    if (s == null) return null;
+    switch (fieldName) {
+      case 'student_photo':
+        return s.profilePhotoUrl;
+      case 'student_signature':
+        return s.signatureUrl?.toString();
+      case 'father_photo':
+        return s.fatherPhotoUrl;
+      case 'father_signature':
+        return s.fatherSignatureUrl?.toString();
+      case 'mother_photo':
+        return s.motherPhotoUrl;
+      case 'mother_signature':
+        return s.motherSignatureUrl?.toString();
+      default:
+        return null;
+    }
+  }
+
+  Widget _photoPlaceholder() => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const Icon(Icons.camera_alt, color: Colors.grey, size: 22),
+      const SizedBox(height: 4),
+      Text(
+        'Add Photo',
+        style: MyStyles.regularText(size: 11, color: Colors.grey),
       ),
     ],
   );
@@ -512,7 +675,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
       case 'gender':
         return _stringDropdown(name, _kGenderOptions);
       case 'transport_mode':
-        return _stringDropdown(name, _kTransportOptions);
+        return _transportDropdown();
       case 'blood_group':
         return _stringDropdown(name, _kBloodGroupOptions);
       case 'is_rte_student':
@@ -643,9 +806,9 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
     for (final f in fields) {
       String g = f.groupLabel.isNotEmpty ? f.groupLabel : 'Other';
       // Normalize group labels
-      if (g == 'School')  g = 'Academic Details';
+      if (g == 'School') g = 'Academic Details';
       if (g == 'Student') g = 'Personal Details';
-      if (g == 'Parent')  g = 'Parent Details';
+      if (g == 'Parent') g = 'Parent Details';
       if (g == 'Address') g = 'Address Details';
       grouped.putIfAbsent(g, () => []).add(f);
     }
@@ -689,7 +852,9 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 
             return Scaffold(
               appBar: CommonAppBar(
-                title: 'Add Student',
+                title: widget.editStudent != null
+                    ? 'Edit Student'
+                    : 'Add Student',
                 backgroundColor: Colors.transparent,
                 showText: true,
               ),
@@ -770,7 +935,9 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                                   SnackBar(
                                     content: Text(
                                       state.message ??
-                                          'Student added successfully',
+                                          (widget.editStudent != null
+                                              ? 'Student updated successfully'
+                                              : 'Student added successfully'),
                                     ),
                                     backgroundColor: Colors.green,
                                   ),
@@ -787,20 +954,32 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                               }
                             },
                             builder: (ctx, state) => AppButton(
-                              title: 'Submit',
+                              title: widget.editStudent != null
+                                  ? 'Update'
+                                  : 'Submit',
                               isLoading: state.loading,
                               color: AppTheme.btnColor,
                               onTap: state.loading
                                   ? () {}
                                   : () {
-                                      if (_formKey.currentState?.validate() ??
-                                          false) {
-                                        final allFields = {
-                                          ..._ctrl.map(
-                                            (k, v) => MapEntry(k, v.text),
-                                          ),
-                                          ..._selectVal,
-                                        };
+                                      final allFields = {
+                                        ..._ctrl.map(
+                                          (k, v) => MapEntry(k, v.text),
+                                        ),
+                                        ..._selectVal,
+                                      };
+                                      if (widget.editStudent != null) {
+                                        ctx
+                                            .read<AddStudentCubit>()
+                                            .updateStudent(
+                                              studentUuid:
+                                                  widget.editStudent!.uuid ??
+                                                  '',
+                                              schoolId: widget.schoolId,
+                                              fields: allFields,
+                                              files: _files,
+                                            );
+                                      } else {
                                         ctx.read<AddStudentCubit>().submit(
                                           schoolId: widget.schoolId,
                                           fields: allFields,
@@ -824,12 +1003,12 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
   }
 }
 
-// Converts / or - to . while typing date
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    // Replace / and - with .
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final text = newValue.text.replaceAll('/', '.').replaceAll('-', '.');
     return newValue.copyWith(
       text: text,

@@ -65,8 +65,8 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
         final data = json['data'] ?? {};
-        print('profile_photo_url: ${data['profile_photo_url']}');
-        print('signature_url: ${data['signature_url']}');
+        print('status code-----${response.statusCode} and base url----$url');
+        print('response body: ${response.body}');
         emit(
           AddStudentState(
             success: true,
@@ -88,6 +88,71 @@ class AddStudentCubit extends Cubit<AddStudentState> {
               .take(3)
               .join('\n');
           errorMsg = errList;
+        }
+        emit(AddStudentState(error: errorMsg));
+      }
+    } catch (e) {
+      emit(AddStudentState(error: e.toString()));
+    }
+  }
+
+  Future<void> updateStudent({
+    required String studentUuid,
+    required String schoolId,
+    required Map<String, dynamic> fields,
+    required Map<String, File?> files,
+  }) async {
+    emit(const AddStudentState(loading: true));
+    try {
+      final token = await UserSecureStorage.fetchToken();
+      final url = '${Config.baseUrl}${Routes.updateStudent(schoolId, studentUuid)}';
+
+      final body = _buildBody(schoolId, fields);
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+      // Laravel _method spoofing for PUT
+      request.fields['_method'] = 'PUT';
+
+      body.forEach((k, v) {
+        if (v != null) request.fields[k] = v.toString();
+      });
+
+      final fileMap = {
+        'student_photo': 'student_photo',
+        'student_signature': 'student_signature',
+        'father_photo': 'father_photo',
+        'father_signature': 'father_signature',
+        'mother_photo': 'mother_photo',
+        'mother_signature': 'mother_signature',
+      };
+      for (final entry in fileMap.entries) {
+        final file = files[entry.key];
+        if (file != null) {
+          request.files.add(
+            await http.MultipartFile.fromPath(entry.value, file.path),
+          );
+        }
+      }
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        emit(AddStudentState(
+          success: true,
+          message: json['message'] ?? 'Student updated successfully',
+        ));
+      } else {
+        Map<String, dynamic> json = {};
+        try { json = jsonDecode(response.body); } catch (_) {}
+        String errorMsg = json['message'] ?? 'Failed: ${response.statusCode}';
+        final errors = json['errors'] as Map<String, dynamic>?;
+        if (errors != null && errors.isNotEmpty) {
+          errorMsg = errors.values
+              .expand((v) => v is List ? v : [v])
+              .take(3)
+              .join('\n');
         }
         emit(AddStudentState(error: errorMsg));
       }

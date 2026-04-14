@@ -65,12 +65,9 @@ class ApiManager {
       },
     );
     print("""
-API CALL DETAILS
--------------------------
 URL: $url
 Status Code: ${response.statusCode}
 Response: ${response.body}
--------------------------
 """);
     var jsonResponse = json.decode(response.body);
     if (response.statusCode == 201 ||

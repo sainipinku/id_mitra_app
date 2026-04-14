@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -75,7 +76,57 @@ class StudentsCubit extends Cubit<StudentsState> {
         page: currentPage + 1,
         hasMore: hasMore,
       ));
+  }
 
+  Future<bool> deleteStudent(String studentUuid, String schoolId) async {
+    try {
+      final result = await apiManager.deleteRequest(
+        "${Config.baseUrl}${Routes.deleteStudent(schoolId, studentUuid)}",
+      );
+      if (result.statusCode == 200) {
+        final updated = state.studentsList
+            .where((s) => s.uuid != studentUuid)
+            .toList();
+        emit(state.copyWith(studentsList: updated));
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Delete error: $e");
+    }
+    return false;
+  }
 
+  Future<bool> toggleStudentStatus(String studentUuid, String schoolId, int currentStatus) async {
+    try {
+      final token = await UserSecureStorage.fetchToken();
+      final url = "${Config.baseUrl}${Routes.toggleStudentStatus(schoolId, studentUuid)}";
+      final newStatusStr = currentStatus == 1 ? false : true;
+
+      final result = await http.patch(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'status': newStatusStr}),
+      );
+
+      debugPrint('Student update status: ${result.statusCode} - ${result.body}');
+
+      if (result.statusCode == 200 || result.statusCode == 201) {
+        final json = jsonDecode(result.body);
+        final newStatus = (json['data']['status'] as int?) ?? (currentStatus == 1 ? 0 : 1);
+        final updated = state.studentsList.map((s) {
+          if (s.uuid == studentUuid) return s.copyWith(status: newStatus);
+          return s;
+        }).toList();
+        emit(state.copyWith(studentsList: updated));
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Toggle status error: $e");
+    }
+    return false;
   }
 }

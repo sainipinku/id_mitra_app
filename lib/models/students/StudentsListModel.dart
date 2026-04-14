@@ -254,13 +254,38 @@ class StudentDetailsData {
     String? profilePhotoUrl,
     String? name,
     String? fatherName,
-    // add other fields if needed
+    int? status,
   }) {
     return StudentDetailsData(
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       name: name ?? this.name,
       fatherName: fatherName ?? this.fatherName,
+      status: status ?? this.status,
       // copy all remaining fields
+      id: id, uuid: uuid, schoolId: schoolId, uidNo: uidNo, srNo: srNo,
+      panNo: panNo, email: email, phone: phone, whatsappPhone: whatsappPhone,
+      landLineNo: landLineNo, photo: photo, signature: signature,
+      barcodePhoto: barcodePhoto, dob: dob, dobTimestamp: dobTimestamp,
+      gender: gender, bloodGroup: bloodGroup, schoolClassId: schoolClassId,
+      schoolHouseId: schoolHouseId, schoolSessionId: schoolSessionId,
+      schoolClassSectionId: schoolClassSectionId, transportMode: transportMode,
+      regNo: regNo, rollNo: rollNo, aadharNo: aadharNo, admissionNo: admissionNo,
+      rfidNo: rfidNo, countryId: countryId, stateId: stateId, cityId: cityId,
+      address: address, pincode: pincode, loginId: loginId,
+      createdAt: createdAt, updatedAt: updatedAt, deletedAt: deletedAt,
+      fatherEmail: fatherEmail, fatherPhone: fatherPhone, fatherWphone: fatherWphone,
+      fatherPhoto: fatherPhoto, fatherSignature: fatherSignature,
+      motherName: motherName, motherEmail: motherEmail, motherPhone: motherPhone,
+      motherWphone: motherWphone, motherPhoto: motherPhoto, motherSignature: motherSignature,
+      relation: relation, missingFields: missingFields, guardianName: guardianName,
+      guardianEmail: guardianEmail, guardianPhone: guardianPhone,
+      guardianWhatsappPhone: guardianWhatsappPhone, guardianPhoto: guardianPhoto,
+      guardianSignature: guardianSignature, studentNicId: studentNicId,
+      caste: caste, isRteStudent: isRteStudent, religion: religion,
+      pdfProfilePhotoUrl: pdfProfilePhotoUrl, signatureUrl: signatureUrl,
+      fatherPhotoUrl: fatherPhotoUrl, fatherSignatureUrl: fatherSignatureUrl,
+      motherPhotoUrl: motherPhotoUrl, motherSignatureUrl: motherSignatureUrl,
+      session: session, datumClass: datumClass, house: house, section: section,
     );
   }
   factory StudentDetailsData.fromJson(Map<String, dynamic> json) => StudentDetailsData(

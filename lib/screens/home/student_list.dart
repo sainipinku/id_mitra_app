@@ -6,21 +6,19 @@ import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/models/students/StudentsListModel.dart';
+import 'package:idmitra/providers/add_student/add_student_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
+import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
-import 'package:idmitra/utils/navigation_utils.dart';
-
-import '../../providers/add_student/add_student_cubit.dart';
-import '../../providers/student_form/student_form_data_cubit.dart';
-
 
 class StudentListingPage extends StatefulWidget {
   String schoolId;
-  StudentListingPage({super.key,required this.schoolId});
+  StudentListingPage({super.key, required this.schoolId});
 
   @override
   State<StudentListingPage> createState() => _StudentListingPageState();
@@ -31,6 +29,63 @@ class _StudentListingPageState extends State<StudentListingPage> {
   ScrollController _scrollController = ScrollController();
   Timer? _debounce;
   int selectedIndex = 0;
+
+  void _navigateToAddStudent(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => StudentFormCubit()
+                ..loadFromSchoolId(schoolId: widget.schoolId, schoolName: ''),
+            ),
+            BlocProvider(
+              create: (_) => StudentFormDataCubit()..load(widget.schoolId),
+            ),
+            BlocProvider(create: (_) => AddStudentCubit()),
+          ],
+          child: AddStudentFormPage(schoolId: widget.schoolId),
+        ),
+      ),
+    ).then((_) {
+      context.read<StudentsCubit>().fetchStudents(
+        search: searchController.text.trim(),
+        schoolId: widget.schoolId,
+      );
+    });
+  }
+
+  void _navigateToEdit(BuildContext context, StudentDetailsData student) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => StudentFormCubit()
+                ..loadFromSchoolId(schoolId: widget.schoolId, schoolName: ''),
+            ),
+            BlocProvider(
+              create: (_) => StudentFormDataCubit()..load(widget.schoolId),
+            ),
+            BlocProvider(create: (_) => AddStudentCubit()),
+          ],
+          child: AddStudentFormPage(
+            schoolId: widget.schoolId,
+            editStudent: student,
+          ),
+        ),
+      ),
+    ).then((_) {
+      // Refresh list after edit
+      context.read<StudentsCubit>().fetchStudents(
+        search: searchController.text.trim(),
+        schoolId: widget.schoolId,
+      );
+    });
+  }
+
   void openFilter(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -43,58 +98,45 @@ class _StudentListingPageState extends State<StudentListingPage> {
       },
     );
   }
+
   @override
   void initState() {
     super.initState();
 
-    context.read<StudentsCubit>().fetchStudents(search: '',schoolId: widget.schoolId);
+    context.read<StudentsCubit>().fetchStudents(
+      search: '',
+      schoolId: widget.schoolId,
+    );
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
-
-        context.read<StudentsCubit>().fetchStudents(isLoadMore: true,search: '',schoolId: widget.schoolId);
+        context.read<StudentsCubit>().fetchStudents(
+          isLoadMore: true,
+          search: '',
+          schoolId: widget.schoolId,
+        );
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CommonAppBar(title: 'Student Listings',backgroundColor: Colors.transparent,),
+      appBar: CommonAppBar(
+        title: 'Student Listings',
+        backgroundColor: Colors.transparent,
+      ),
       floatingActionButton: FloatingActionButton(
-          backgroundColor: AppTheme.btnColor,
-          child: const Icon(Icons.add, color: Colors.white),
-          tooltip: 'Add Students',
-          onPressed: () {
-            final schoolId = widget.schoolId;
-            print('Opening AddStudentForm for schoolId: $schoolId');
-            navigateWithTransition(
-              context: context,
-              page: MultiBlocProvider(
-                providers: [
-                  BlocProvider(
-                    create: (_) => StudentFormCubit()
-                      ..loadFromSchoolId(
-                        schoolId: schoolId,
-                        schoolName: '',
-                      ),
-                  ),
-                  BlocProvider(
-                    create: (_) => StudentFormDataCubit()..load(schoolId),
-                  ),
-                  BlocProvider(
-                    create: (_) => AddStudentCubit(),
-                  ),
-                ],
-                child: AddStudentFormPage(schoolId: schoolId),
-              ),
-            );
-          }),
+        backgroundColor: AppTheme.btnColor,
+        tooltip: 'Add Student',
+        onPressed: () => _navigateToAddStudent(context),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
             /// SCHOOL DROPDOWN + FILTER
             /*Row(
               children: [
@@ -137,7 +179,6 @@ class _StudentListingPageState extends State<StudentListingPage> {
               ],
             ),*/
 
-
             /// SEARCH BAR
             _searchBar(),
 
@@ -153,35 +194,36 @@ class _StudentListingPageState extends State<StudentListingPage> {
                 return Expanded(
                   child: state.studentsList.isEmpty
                       ? Center(
-                    child: Image.asset(
-                      "assets/images/no_data.png",
-                      height: 200,
-                    ),
-                  )
-                      : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: state.studentsList.length +
-                        (state.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index < state.studentsList.length) {
-                        final item = state.studentsList[index];
-                        return StudentCard(
-                           studentData: item,
-                        );
-                      } else {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                            child: CircularProgressIndicator(),
+                          child: Image.asset(
+                            "assets/images/no_data.png",
+                            height: 200,
                           ),
-                        );
-                      }
-                    },
-                  ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          itemCount:
+                              state.studentsList.length +
+                              (state.hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index < state.studentsList.length) {
+                              final item = state.studentsList[index];
+                              return StudentCard(
+                                studentData: item,
+                                onEdit: () => _navigateToEdit(context, item),
+                              );
+                            } else {
+                              return const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+                          },
+                        ),
                 );
               },
-            )
-
+            ),
           ],
         ),
       ),
@@ -197,7 +239,8 @@ class _StudentListingPageState extends State<StudentListingPage> {
 
         _debounce = Timer(const Duration(milliseconds: 500), () {
           context.read<StudentsCubit>().fetchStudents(
-            search: value.trim(),schoolId: widget.schoolId
+            search: value.trim(),
+            schoolId: widget.schoolId,
           );
         });
       },

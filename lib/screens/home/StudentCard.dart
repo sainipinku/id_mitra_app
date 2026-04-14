@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -9,12 +10,17 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/helpers/keyboard.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
+import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:idmitra/utils/common_widgets/app_button.dart';
+import '../../providers/students/students_state.dart';
+
 class StudentCard extends StatefulWidget {
   StudentDetailsData studentData;
-  StudentCard({super.key, required this.studentData});
+  final VoidCallback? onEdit;
+  StudentCard({super.key, required this.studentData, this.onEdit});
 
   @override
   State<StudentCard> createState() => _StudentCardState();
@@ -78,9 +84,12 @@ class _StudentCardState extends State<StudentCard> {
       try {
         var response = await ApiManager().multiRequestRoute(
           croppedFile.path,
-          Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
+          Config.baseUrl +
+              Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
         );
-        print('proifle---------${Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? '')}');
+        print(
+          'proifle---------${Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? '')}',
+        );
         if (response.statusCode == 200) {
           final jsonData = jsonDecode(response.body);
           print('proifle---------${jsonData['data']['profile_photo_url']}');
@@ -149,8 +158,9 @@ class _StudentCardState extends State<StudentCard> {
                   setState(() {
                     studentProfileImageFile = null;
                     croppedProfileFile = null;
-                    studentDetailsData = studentDetailsData
-                        .copyWith(profilePhotoUrl: "");
+                    studentDetailsData = studentDetailsData.copyWith(
+                      profilePhotoUrl: "",
+                    );
                   });
                   Navigator.pop(context);
                 },
@@ -187,12 +197,13 @@ class _StudentCardState extends State<StudentCard> {
       color: Colors.grey.shade300,
     );
   }
+
   @override
   void initState() {
-    // TODO: implement initState
     studentDetailsData = widget.studentData;
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -217,7 +228,8 @@ class _StudentCardState extends State<StudentCard> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : (studentDetailsData.profilePhotoUrl != null && studentDetailsData.profilePhotoUrl!.isNotEmpty)
+                    : (studentDetailsData.profilePhotoUrl != null &&
+                          studentDetailsData.profilePhotoUrl!.isNotEmpty)
                     ? Image.network(
                         studentDetailsData.profilePhotoUrl!,
                         height: 60,
@@ -236,7 +248,10 @@ class _StudentCardState extends State<StudentCard> {
                   onTap: () {
                     if (studentDetailsData.photo != null &&
                         studentDetailsData.photo!.isNotEmpty) {
-                      _showImagePreview(context, studentDetailsData.profilePhotoUrl!);
+                      _showImagePreview(
+                        context,
+                        studentDetailsData.profilePhotoUrl!,
+                      );
                     } else {
                       showPicker(context);
                     }
@@ -249,8 +264,10 @@ class _StudentCardState extends State<StudentCard> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child:  Icon(
-                      studentDetailsData.photo != null ? Icons.preview : Icons.camera_alt,
+                    child: Icon(
+                      studentDetailsData.photo != null
+                          ? Icons.preview
+                          : Icons.camera_alt,
                       size: 12,
                       color: Colors.white,
                     ),
@@ -261,8 +278,6 @@ class _StudentCardState extends State<StudentCard> {
           ),
 
           const SizedBox(width: 12),
-
-          /// STUDENT DETAILS
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,9 +311,7 @@ class _StudentCardState extends State<StudentCard> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  "Missing details: ${studentDetailsData.missingFields
-                      ?.map((e) => _formatField(e.toString()))
-                      .join(', ') ?? ''}",
+                  "Missing details: ${studentDetailsData.missingFields?.map((e) => _formatField(e.toString())).join(', ') ?? ''}",
                   style: MyStyles.regularText(
                     size: 12,
                     color: AppTheme.redBtnBgColor,
@@ -308,21 +321,207 @@ class _StudentCardState extends State<StudentCard> {
             ),
           ),
 
-          /// STATUS BADGE Container( padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration( color: AppTheme.activeBtn10perOpacityColor, borderRadius: BorderRadius.circular(20), ), child: Text( "ACTIVE", style: MyStyles.boldText(size: 10, color: AppTheme.activeBtn), ), ) ], ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.grey),
+            onSelected: (value) async {
+              if (value == 'edit') {
+                widget.onEdit?.call();
+              } else if (value == 'delete') {
+                _confirmDelete(context);
+              } else if (value == 'toggle') {
+                final success = await context
+                    .read<StudentsCubit>()
+                    .toggleStudentStatus(
+                      studentDetailsData.uuid ?? '',
+                      studentDetailsData.schoolId?.toString() ?? '',
+                      studentDetailsData.status ?? 0,
+                    );
+                if (success) {
+                  final updated = context
+                      .read<StudentsCubit>()
+                      .state
+                      .studentsList
+                      .firstWhere(
+                        (s) => s.uuid == studentDetailsData.uuid,
+                        orElse: () => studentDetailsData,
+                      );
+                  setState(() => studentDetailsData = updated);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? 'Status updated' : 'Failed to update status',
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                }
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Edit'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'toggle',
+                child: Row(
+                  children: [
+                    Icon(
+                      (studentDetailsData.status ?? 0) == 1
+                          ? Icons.toggle_on
+                          : Icons.toggle_off,
+                      size: 22,
+                      color: (studentDetailsData.status ?? 0) == 1
+                          ? Colors.green
+                          : Colors.red,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      (studentDetailsData.status ?? 0) == 1
+                          ? 'Deactivate'
+                          : 'Activate',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+
   String _formatField(String text) {
     return text
-        .replaceAll('_', ' ') // remove underscore
+        .replaceAll('_', ' ')
         .split(' ')
-        .map((word) =>
-    word.isNotEmpty
-        ? word[0].toUpperCase() + word.substring(1).toLowerCase()
-        : '')
+        .map(
+          (word) => word.isNotEmpty
+              ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+              : '',
+        )
         .join(' ');
   }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 50,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Are you sure you want to\ndelete this student?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton(
+                      title: "Yes, I'm sure",
+                      color: Colors.red,
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final success = await context
+                            .read<StudentsCubit>()
+                            .deleteStudent(
+                              studentDetailsData.uuid ?? '',
+                              studentDetailsData.schoolId?.toString() ?? '',
+                            );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Student deleted successfully'
+                                    : 'Failed to delete student',
+                              ),
+                              backgroundColor: success
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AppButton(
+                      title: 'No, cancel',
+                      color: Colors.grey.shade300,
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _placeholder() {
     return Container(
       height: 60,
@@ -331,6 +530,7 @@ class _StudentCardState extends State<StudentCard> {
       child: const Icon(Icons.person, color: Colors.grey),
     );
   }
+
   void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -339,7 +539,6 @@ class _StudentCardState extends State<StudentCard> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 🔹 Image Preview
               Image.network(
                 imageUrl,
                 height: 250,
@@ -348,12 +547,10 @@ class _StudentCardState extends State<StudentCard> {
               ),
 
               const SizedBox(height: 10),
-
-              // 🔹 Edit Button
               TextButton.icon(
                 onPressed: () {
-                  Navigator.pop(context); // dialog close
-                  showPicker(context);    // open camera/gallery
+                  Navigator.pop(context);
+                  showPicker(context);
                 },
                 icon: Icon(Icons.edit),
                 label: Text("Edit Profile Image"),
