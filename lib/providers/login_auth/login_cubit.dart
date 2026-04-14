@@ -22,7 +22,7 @@ class LoginCubit extends Cubit<LoginState> {
   ApiManager apiManager = ApiManager();
 
   constVerifyOtp(Map map) async {
-    emit(LoginLoading());
+    emit(OTPVerifyLoading());
     try {
       var response = await apiManager.postRequest(
           map, Config.baseUrl + Routes.otpVerify);
@@ -58,9 +58,9 @@ class LoginCubit extends Cubit<LoginState> {
         // Save token securely
         await UserSecureStorage.setToken(jsonData["token"]);
         emit(LoginSuccess(loginModel: loginModel, loginWithType: '', schoolData: schoolData));
-      } else if (response.statusCode == 403 || response.statusCode == 400) {
+      } else if (response.statusCode == 403 || response.statusCode == 400 || response.statusCode == 401) {
         final message = jsonData['message'] ?? "User not found";
-        emit(LoginOnHold(message: message));
+        emit(OtpVerifyOnHold(message: message));
       } else {
         emit(LoginFailed());
       }

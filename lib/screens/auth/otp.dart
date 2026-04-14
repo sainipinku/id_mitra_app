@@ -124,7 +124,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       appBar: CommonAppBar(showText: false,title: '',backgroundColor: Colors.transparent,),
       body: BlocListener<LoginCubit, LoginState>(
         listener: (context, state) {
-          if (state is LoginLoading) {
+          if (state is OTPVerifyLoading) {
             showDialog(
                 barrierDismissible: false,
                 context: context,
@@ -193,10 +193,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             snackBar('Failed to send an OTP.', Icons.warning, Colors.red);
 
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
-          } else if (state is LoginOnHold) {
+          } else if (state is OtpVerifyOnHold) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
-                'Your account on holding contact with owner!!',
+                state.message,
                 Icons.warning,
                 Colors.red);
 

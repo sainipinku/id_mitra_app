@@ -25,16 +25,34 @@ class _StudentListingPageState extends State<StudentListingPage> {
   Timer? _debounce;
   int selectedIndex = 0;
   void openFilter(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      backgroundColor: AppTheme.whiteColor,
+      shape: const RoundedRectangleBorder( // <-- SEE HERE
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(25.0),
+        ),
       ),
-      builder: (context) {
-        return const FilterBottomSheet();
+      builder: (BuildContext context) {
+        return  StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState){
+              setState((){});
+              return SingleChildScrollView(
+                child: AnimatedPadding(
+                  duration: const Duration(milliseconds: 100),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                  child: FilterBottomSheet(),
+                )
+                ,
+              );
+            }
+        );
       },
+
     );
+
   }
   @override
   void initState() {
@@ -64,26 +82,11 @@ class _StudentListingPageState extends State<StudentListingPage> {
           children: [
 
             /// SCHOOL DROPDOWN + FILTER
-            /*Row(
+            Row(
               children: [
 
                 Expanded(
-                  child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: AppTheme.graySubTitleColor,width: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Xavier school Se. sec.sch..."),
-                        Icon(Icons.keyboard_arrow_down)
-                      ],
-                    ),
-                  ),
+                  child: _searchBar(),
                 ),
 
                 const SizedBox(width: 10),
@@ -103,11 +106,8 @@ class _StudentListingPageState extends State<StudentListingPage> {
                   ),
                 )
               ],
-            ),*/
+            ),
 
-
-            /// SEARCH BAR
-            _searchBar(),
 
             const SizedBox(height: 15),
 

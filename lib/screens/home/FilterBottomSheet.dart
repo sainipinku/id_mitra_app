@@ -17,35 +17,36 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      height: 420,
-      child: Column(
-        children: [
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
 
-          /// HEADER
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Filters",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              )
-            ],
-          ),
+            /// HEADER
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Filters",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                )
+              ],
+            ),
 
-          const Divider(),
+            const Divider(),
 
-          Expanded(
-            child: Row(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
 
                 /// LEFT MENU
@@ -140,33 +141,33 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 )
               ],
             ),
-          ),
 
-          /// BUTTONS
-          Row(
-            children: [
+            /// BUTTONS
+            Row(
+              children: [
 
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text("Reset"),
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {},
+                    child: const Text("Reset"),
                   ),
-                  onPressed: () {},
-                  child: const Text("Apply Filter"),
                 ),
-              )
-            ],
-          )
-        ],
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                    ),
+                    onPressed: () {},
+                    child: const Text("Apply Filter"),
+                  ),
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
   }

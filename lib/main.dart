@@ -34,6 +34,7 @@ class MyApp extends StatelessWidget {
     AppSize.init(context);
     return MultiBlocProvider(
       providers: BlocProviders.providers,
+
       child: ScreenUtilInit(
         designSize: const Size(375, 812),  // FIXED DESIGN SIZE
         builder: (context, child) {
@@ -42,11 +43,12 @@ class MyApp extends StatelessWidget {
             navigatorKey: GlobalContext.navigatorKey,
 
             builder: (context, child) {
-              return SafeArea(
-                top: true,
-                bottom: true,
-                child: child ?? const SizedBox(),
+              return MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: TextScaler.linear(1.0)),
+                child: child!,
               );
+
             },
             theme: ThemeData(
               useMaterial3: false,
