@@ -14,6 +14,7 @@ import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:idmitra/screens/home/student_profile_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import '../../providers/students/students_state.dart';
 
@@ -284,19 +285,25 @@ class _StudentCardState extends State<StudentCard> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      studentDetailsData.name ?? '',
-                      style: MyStyles.boldText(
-                        size: 16,
-                        color: AppTheme.black_Color,
+                    Flexible(
+                      child: Text(
+                        studentDetailsData.name ?? '',
+                        style: MyStyles.boldText(
+                          size: 16,
+                          color: AppTheme.black_Color,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     SizedBox(width: 5),
-                    Text(
-                      "• ${studentDetailsData.datumClass?.nameWithprefix ?? ''}-${studentDetailsData.section?.name ?? ''}",
-                      style: MyStyles.boldText(
-                        size: 16,
-                        color: AppTheme.btnColor,
+                    Flexible(
+                      child: Text(
+                        "• ${studentDetailsData.datumClass?.nameWithprefix ?? ''}-${studentDetailsData.section?.name ?? ''}",
+                        style: MyStyles.boldText(
+                          size: 16,
+                          color: AppTheme.btnColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -324,7 +331,15 @@ class _StudentCardState extends State<StudentCard> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.grey),
             onSelected: (value) async {
-              if (value == 'edit') {
+              if (value == 'view') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        StudentProfilePage(student: studentDetailsData),
+                  ),
+                );
+              } else if (value == 'edit') {
                 widget.onEdit?.call();
               } else if (value == 'delete') {
                 _confirmDelete(context);
@@ -361,6 +376,16 @@ class _StudentCardState extends State<StudentCard> {
               }
             },
             itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'view',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 18, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('View Profile'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'edit',
                 child: Row(
