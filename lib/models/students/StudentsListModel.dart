@@ -605,7 +605,7 @@ class Session {
   int? id;
   String? uuid;
   int? schoolId;
-  SessionName? name;
+  String? name;
   DateTime? sessionStart;
   DateTime? sessionEnd;
   int? status;
@@ -628,11 +628,12 @@ class Session {
     this.deletedAt,
   });
 
+
   factory Session.fromJson(Map<String, dynamic> json) => Session(
     id: json["id"],
     uuid: json["uuid"],
     schoolId: json["school_id"],
-    name: sessionNameValues.map[json["name"]]!,
+    name: json["name"],
     sessionStart: json["session_start"] == null ? null : DateTime.parse(json["session_start"]),
     sessionEnd: json["session_end"] == null ? null : DateTime.parse(json["session_end"]),
     status: json["status"],
@@ -646,7 +647,7 @@ class Session {
     "id": id,
     "uuid": uuid,
     "school_id": schoolId,
-    "name": sessionNameValues.reverse[name],
+    "name": name,
     "session_start": sessionStart?.toIso8601String(),
     "session_end": sessionEnd?.toIso8601String(),
     "status": status,
@@ -657,13 +658,6 @@ class Session {
   };
 }
 
-enum SessionName {
-  THE_20252026
-}
-
-final sessionNameValues = EnumValues({
-  "2025-2026": SessionName.THE_20252026
-});
 
 class Link {
   String? url;
