@@ -149,7 +149,6 @@ class _StudentListingPageState extends State<StudentListingPage> {
     return Scaffold(
       appBar: CommonAppBar(
         title: 'Student Listings',
-        backgroundColor: Colors.transparent,
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.btnColor,

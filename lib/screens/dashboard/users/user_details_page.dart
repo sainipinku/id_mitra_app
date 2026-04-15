@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/config/ScreenSize.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
@@ -27,7 +28,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     return Scaffold(
       appBar: CommonAppBar(
         title: 'School Details',
-        backgroundColor: Colors.transparent,
         showText: true,
         actions: [
           PopupMenuButton<String>(
@@ -107,7 +107,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             /// 🔹 TOP CARD (IMAGE + LOGO)
             Stack(
               clipBehavior: Clip.none,
@@ -116,30 +116,23 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
                 /// 🔹 CARD CONTAINER (with radius)
                 Container(
-                  height: 160,
+                  height: ScreenSize.hp(context, 18),
                   decoration: BoxDecoration(
+                    color: AppTheme.whiteColor,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   clipBehavior: Clip.hardEdge,
                   child: Stack(
                     children: [
 
-                      /// IMAGE
-                      Positioned.fill(
-                        child: Image.network(
-                    widget.schoolDetailsModel?.logoUrl ?? '',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image, size: 40);
-                    },
-                  )
-
-                      ),
-
                       /// DARK OVERLAY
                       Positioned.fill(
                         child: Container(
-                          color: Colors.black.withOpacity(0.3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.whiteColor,
+                            border: Border.all(color: AppTheme.backBtnBgColor),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
                         ),
                       ),
 
@@ -150,7 +143,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                           textAlign: TextAlign.center,
                           style: MyStyles.boldText(
                             size: 20,
-                            color: AppTheme.whiteColor,
+                            color: AppTheme.black_Color,
                           ),
                         ),
                       ),
@@ -179,13 +172,13 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
                                         Icon(Icons.location_on,
-                                            size: 14, color: AppTheme.whiteColor),
+                                            size: 14, color: AppTheme.black_Color),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             widget.schoolDetailsModel?.address ?? '',maxLines: 2,
                                             style: MyStyles.regularText(
-                                                size: 12, color: AppTheme.whiteColor),
+                                                size: 12, color: AppTheme.black_Color),
                                           ),
                                         ),
 
@@ -212,12 +205,12 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                               Row(
                                 children: [
                                   Icon(Icons.calendar_month_outlined,
-                                      size: 14, color: AppTheme.whiteColor),
+                                      size: 14, color: AppTheme.black_Color),
                                   const SizedBox(width: 4),
                                   Text(
                                     "12 Feb 2026",
                                     style: MyStyles.regularText(
-                                        size: 12, color: AppTheme.whiteColor),
+                                        size: 12, color: AppTheme.black_Color),
                                   ),
                                 ],
                               ),
@@ -255,20 +248,20 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
               ],
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 10),
 
             /// 🔹 STATS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                statCard(title: "STUDENTS", value: "1,250",callBtn: (){
+                statCard(title: "STUDENTS", value: "${widget.schoolDetailsModel?.studentCount ?? ''}",callBtn: (){
                   navigateWithTransition(
                     context: context,
                     page: StudentListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? '',),
                   );
                 }),
-                statCard(title: "STAFF", value: "85",callBtn: (){}),
-                statCard(title: "TOTAL ORDERS", value: "11,00",callBtn: (){}),
+                statCard(title: "STAFF", value: "${widget.schoolDetailsModel?.staffCount ?? ''}",callBtn: (){}),
+                statCard(title: "TOTAL ORDERS", value: "${widget.schoolDetailsModel?.orderCount ?? ''}",callBtn: (){}),
               ],
             ),
 
@@ -346,9 +339,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    "109/43, Gaya Building, Yusuf Meharali Road, Mandvi",
-                    style: TextStyle(fontSize: 13),
+                   Text(
+                    widget.schoolDetailsModel?.address ?? '',
+                    style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
                   ),
                 ],
               ),
