@@ -4,17 +4,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
+import 'package:idmitra/models/students/StudentsListModel.dart';
 
 class AddStudentState {
   final bool loading;
   final bool success;
   final String? error;
   final String? message;
+  final StudentDetailsData? newStudent;
   const AddStudentState({
     this.loading = false,
     this.success = false,
     this.error,
     this.message,
+    this.newStudent,
   });
 }
 
@@ -67,10 +70,17 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         final data = json['data'] ?? {};
         print('status code-----${response.statusCode} and base url----$url');
         print('response body: ${response.body}');
+        StudentDetailsData? newStudent;
+        try {
+          if (data is Map<String, dynamic>) {
+            newStudent = StudentDetailsData.fromJson(data);
+          }
+        } catch (_) {}
         emit(
           AddStudentState(
             success: true,
             message: json['message'] ?? 'Student added successfully',
+            newStudent: newStudent,
           ),
         );
       } else {

@@ -78,6 +78,12 @@ class StudentsCubit extends Cubit<StudentsState> {
       ));
   }
 
+  void prependStudent(StudentDetailsData student) {
+    emit(state.copyWith(
+      studentsList: [student, ...state.studentsList],
+    ));
+  }
+
   Future<bool> deleteStudent(String studentUuid, String schoolId) async {
     try {
       final result = await apiManager.deleteRequest(
