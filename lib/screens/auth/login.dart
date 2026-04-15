@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else if (state is LoginOnHold) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(
-              'Your account on holding contact with owner!!',
+              state.message ?? 'Your account on holding contact with owner!!',
               Icons.warning,
               Colors.red,
             );

@@ -24,7 +24,6 @@ class _SchoolsState extends State<Schools> {
   ScrollController _scrollController = ScrollController();
   final List<String> filters = [
     "All",
-    "Partner",
     "Schools",
     "Colleges",
     "Corparte",
