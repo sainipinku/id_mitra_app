@@ -48,41 +48,15 @@ class _StudentListingPageState extends State<StudentListingPage> {
           child: AddStudentFormPage(schoolId: widget.schoolId),
         ),
       ),
-    ).then((_) {
-      context.read<StudentsCubit>().fetchStudents(
-        search: searchController.text.trim(),
-        schoolId: widget.schoolId,
-      );
-    });
-  }
-
-  void _navigateToEdit(BuildContext context, StudentDetailsData student) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (_) => StudentFormCubit()
-                ..loadFromSchoolId(schoolId: widget.schoolId, schoolName: ''),
-            ),
-            BlocProvider(
-              create: (_) => StudentFormDataCubit()..load(widget.schoolId),
-            ),
-            BlocProvider(create: (_) => AddStudentCubit()),
-          ],
-          child: AddStudentFormPage(
-            schoolId: widget.schoolId,
-            editStudent: student,
-          ),
-        ),
-      ),
-    ).then((_) {
-      // Refresh list after edit
-      context.read<StudentsCubit>().fetchStudents(
-        search: searchController.text.trim(),
-        schoolId: widget.schoolId,
-      );
+    ).then((result) {
+      if (result != null && result is StudentDetailsData) {
+        context.read<StudentsCubit>().prependStudent(result);
+      } else {
+        context.read<StudentsCubit>().fetchStudents(
+          search: searchController.text.trim(),
+          schoolId: widget.schoolId,
+        );
+      }
     });
   }
 
@@ -218,7 +192,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                                 final item = state.studentsList[index];
                                 return StudentCard(
                                   studentData: item,
-                                  onEdit: () => _navigateToEdit(context, item),
+                                  schoolId: widget.schoolId,
                                 );
                               } else {
                                 return const Padding(
