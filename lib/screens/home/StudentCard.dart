@@ -20,8 +20,9 @@ import '../../providers/students/students_state.dart';
 
 class StudentCard extends StatefulWidget {
   StudentDetailsData studentData;
+  final String schoolId;
   final VoidCallback? onEdit;
-  StudentCard({super.key, required this.studentData, this.onEdit});
+  StudentCard({super.key, required this.studentData, required this.schoolId, this.onEdit});
 
   @override
   State<StudentCard> createState() => _StudentCardState();
@@ -207,7 +208,19 @@ class _StudentCardState extends State<StudentCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StudentProfilePage(
+                student: studentDetailsData,
+                schoolId: widget.schoolId,
+              ),
+          ),
+        );
+      },
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -219,7 +232,19 @@ class _StudentCardState extends State<StudentCard> {
           /// 👤 PROFILE IMAGE
           Stack(
             children: [
-              ClipRRect(
+              GestureDetector(
+                onTap: () {
+                  if (studentDetailsData.photo != null &&
+                      studentDetailsData.photo!.isNotEmpty) {
+                    _showImagePreview(
+                      context,
+                      studentDetailsData.profilePhotoUrl!,
+                    );
+                  } else {
+                    showPicker(context);
+                  }
+                },
+                child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: isUploading
                     ? const SizedBox(
@@ -239,6 +264,7 @@ class _StudentCardState extends State<StudentCard> {
                         errorBuilder: (_, __, ___) => _placeholder(),
                       )
                     : _placeholder(),
+              ),
               ),
 
               /// 📸 Edit Icon
@@ -331,17 +357,7 @@ class _StudentCardState extends State<StudentCard> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.grey),
             onSelected: (value) async {
-              if (value == 'view') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        StudentProfilePage(student: studentDetailsData),
-                  ),
-                );
-              } else if (value == 'edit') {
-                widget.onEdit?.call();
-              } else if (value == 'delete') {
+              if (value == 'delete') {
                 _confirmDelete(context);
               } else if (value == 'toggle') {
                 final success = await context
@@ -376,26 +392,6 @@ class _StudentCardState extends State<StudentCard> {
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'view',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_outline, size: 18, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('View Profile'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 18, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Edit'),
-                  ],
-                ),
-              ),
               const PopupMenuItem(
                 value: 'delete',
                 child: Row(
@@ -432,6 +428,7 @@ class _StudentCardState extends State<StudentCard> {
           ),
         ],
       ),
+    ),
     );
   }
 

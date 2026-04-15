@@ -72,12 +72,39 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Pre-fill fields if editing
     if (widget.editStudent != null) {
+      _additionalExpanded = _hasAdditionalData(widget.editStudent!);
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _prefillStudent(widget.editStudent!),
       );
     }
+  }
+
+  bool _hasAdditionalData(StudentDetailsData s) {
+    return [
+      s.phone,
+      s.whatsappPhone?.toString(),
+      s.landLineNo?.toString(),
+      s.aadharNo?.toString(),
+      s.uidNo?.toString(),
+      s.studentNicId?.toString(),
+      s.caste?.toString(),
+      s.religion?.toString(),
+      s.isRteStudent?.toString(),
+      s.fatherEmail?.toString(),
+      s.fatherWphone?.toString(),
+      s.motherEmail?.toString(),
+      s.motherPhone?.toString(),
+      s.motherWphone?.toString(),
+      s.pincode?.toString(),
+      s.regNo?.toString(),
+      s.rollNo?.toString(),
+      s.admissionNo?.toString(),
+      s.srNo,
+      s.rfidNo?.toString(),
+      s.transportMode?.toString(),
+      s.schoolHouseId?.toString(),
+    ].any((v) => v != null && v.isNotEmpty);
   }
 
   @override
@@ -763,35 +790,44 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 
   Widget _mainInfoTab(
     List<StudentFormField> currentFields,
+    List<StudentFormField> additionalFields,
     StudentFormDataModel? data,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Form(
         key: _formKey,
-        child: _sectionCard(
-          title: 'Main Information',
-          child: currentFields.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'No fields configured. Please configure student form fields first.',
-                      style: MyStyles.regularText(
-                        size: 13,
-                        color: AppTheme.graySubTitleColor,
+        child: Column(
+          children: [
+            _sectionCard(
+              title: 'Main Information',
+              child: currentFields.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'No fields configured. Please configure student form fields first.',
+                          style: MyStyles.regularText(
+                            size: 13,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : _twoColGrid(currentFields, data),
+                    )
+                  : _twoColGrid(currentFields, data),
+            ),
+            if (additionalFields.isNotEmpty)
+              _additionalCollapsible(additionalFields, data),
+          ],
         ),
       ),
     );
   }
 
-  Widget _additionalInfoTab(
+  bool _additionalExpanded = false;
+
+  Widget _additionalCollapsible(
     List<StudentFormField> fields,
     StudentFormDataModel? data,
   ) {
@@ -805,7 +841,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
     final Map<String, List<StudentFormField>> grouped = {};
     for (final f in fields) {
       String g = f.groupLabel.isNotEmpty ? f.groupLabel : 'Other';
-      // Normalize group labels
       if (g == 'School') g = 'Academic Details';
       if (g == 'Student') g = 'Personal Details';
       if (g == 'Parent') g = 'Parent Details';
@@ -823,17 +858,60 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
         return ai.compareTo(bi);
       });
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.backBtnBgColor),
+      ),
       child: Column(
-        children: sortedKeys
-            .map(
-              (key) => _sectionCard(
-                title: key,
-                child: _twoColGrid(grouped[key]!, data),
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () =>
+                setState(() => _additionalExpanded = !_additionalExpanded),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Additional Information',
+                      style: MyStyles.boldText(
+                        size: 15,
+                        color: AppTheme.black_Color,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _additionalExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: AppTheme.graySubTitleColor,
+                  ),
+                ],
               ),
-            )
-            .toList(),
+            ),
+          ),
+          if (_additionalExpanded) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: sortedKeys
+                    .map(
+                      (key) => _sectionCard(
+                        title: key,
+                        child: _twoColGrid(grouped[key]!, data),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -884,7 +962,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                       ),
                       tabs: const [
                         Tab(text: 'Main Information'),
-                        Tab(text: 'Additional Information'),
+                        Tab(text: 'Other Student'),
                       ],
                     ),
                   ),
@@ -904,12 +982,12 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                         : TabBarView(
                             controller: _tabController,
                             children: [
-                              _mainInfoTab(currentFields, data),
-                              additionalFields.isEmpty
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                  : _additionalInfoTab(additionalFields, data),
+                              _mainInfoTab(
+                                currentFields,
+                                additionalFields,
+                                data,
+                              ),
+                              const SizedBox.shrink(),
                             ],
                           ),
                   ),
@@ -942,7 +1020,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                                Navigator.pop(context);
+                                Navigator.pop(context, state.newStudent);
                               }
                               if (state.error != null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
