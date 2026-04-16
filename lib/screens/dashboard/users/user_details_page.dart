@@ -5,11 +5,16 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
+import 'package:idmitra/providers/orders/orders_state.dart';
+import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/screens/home/student_list.dart';
+import 'package:idmitra/screens/orders/orders_page.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 import '../../edit_profile/image_setting.dart';
+import '../../staff/staff_list.dart';
 
 class UserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
@@ -22,6 +27,30 @@ class UserDetailsPage extends StatefulWidget {
 class _UserDetailsPageState extends State<UserDetailsPage> {
   List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
   int selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => OrdersCubit()
+        ..fetchStatistics()
+        ..fetchStaffOrdersTotal(),
+      child: _UserDetailsBody(schoolDetailsModel: widget.schoolDetailsModel),
+    );
+  }
+}
+
+class _UserDetailsBody extends StatefulWidget {
+  final SchoolDetailsModel? schoolDetailsModel;
+  const _UserDetailsBody({this.schoolDetailsModel});
+
+  @override
+  State<_UserDetailsBody> createState() => _UserDetailsBodyState();
+}
+
+class _UserDetailsBodyState extends State<_UserDetailsBody> {
+  List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
+  int selectedIndex = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,14 +290,67 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                statCard(title: "STUDENTS", value: "1,250",callBtn: (){
+                statCard(title: "STUDENTS", value: "1,250", callBtn: () {
                   navigateWithTransition(
                     context: context,
-                    page: StudentListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? '',),
+                    page: StudentListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? ''),
                   );
                 }),
-                statCard(title: "STAFF", value: "85",callBtn: (){}),
-                statCard(title: "TOTAL ORDERS", value: "11,00",callBtn: (){}),
+                statCard(title: "STAFF", value: "10", callBtn: () {
+                  navigateWithTransition(
+                    context: context,
+                    page: StaffListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? ''),
+                  );
+                }),
+                Expanded(
+                  child: BlocBuilder<OrdersCubit, OrdersState>(
+                    buildWhen: (p, c) =>
+                        p.statistics != c.statistics ||
+                        p.staffTotal != c.staffTotal ||
+                        p.statsLoading != c.statsLoading ||
+                        p.staffTotalLoading != c.staffTotalLoading,
+                    builder: (context, state) {
+                      final studentOrders = state.statistics?.totalOrders ?? 0;
+                      final staffOrders = state.staffTotal;
+                      final total = studentOrders + staffOrders;
+                      final isLoading = state.statsLoading || state.staffTotalLoading;
+                      return GestureDetector(
+                        onTap: () => navigateWithTransition(
+                          context: context,
+                          page: OrdersPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? ''),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            color: AppTheme.whiteColor,
+                            border: Border.all(color: AppTheme.backBtnBgColor),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                "TOTAL ORDERS",
+                                style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+                              ),
+                              const SizedBox(height: 6),
+                              isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : Text(
+                                      '$total',
+                                      style: MyStyles.boldText(size: 20, color: AppTheme.btnColor),
+                                    ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
 

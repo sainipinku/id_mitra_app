@@ -34,6 +34,15 @@ class Routes {
   static String updateSchoolStudentFormFields(String schoolId) => "auth/school/$schoolId/form-fields/student";
   static String updateLeadsStatus(String leadsId,String status) => "leads/$leadsId/change-status/$status";
   static String toggleStudentStatus(String schoolId, String studentId) => "auth/school/$schoolId/students/$studentId/status";
+  static String getOrders({int page = 1, String? status, String? search}) {
+    var url = "auth/partner/orders?page=$page";
+    if (status != null && status.isNotEmpty) url += "&status=$status";
+    if (search != null && search.isNotEmpty) url += "&search=$search";
+    return url;
+  }
+  static String getOrderDetail(String uuid) => "auth/partner/orders/$uuid";
+  static String updateOrderStatus(String uuid) => "auth/partner/orders/$uuid/status";
+  static String getOrderStatistics() => "auth/partner/orders/statistics/summary";
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";
   static String getSubCategoryProductById(String subCatId) => "product/subcategory/$subCatId";
 }
