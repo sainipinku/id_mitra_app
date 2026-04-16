@@ -248,7 +248,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 30),
                       child: Text(
-                        widget.alreadyUser  ? "Enter the 6-digit code sent to +91 ${widget.phone}" : "Login to manage your school identity system.",
+                        widget.alreadyUser  ? "Enter the 6-digit code sent to ${widget.loginWithType == 'phone' ? "+91 ${widget.phone}" : widget.phone}" : "Login to manage your school identity system.",
                         textAlign: TextAlign.center,
                         style: MyStyles.regularText(size: 14, color: AppTheme.garyColor),
                       ),
