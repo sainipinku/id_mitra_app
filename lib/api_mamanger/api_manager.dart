@@ -53,6 +53,31 @@ class ApiManager {
     }
   }
 
+  patchRequestWithBody(String url, Map<String, dynamic> body) async {
+    var token = await UserSecureStorage.fetchToken();
+
+    var response = await http.patch(
+      Uri.parse(url),
+      body: jsonEncode(body),
+      headers: {
+        "Authorization": "Bearer $token",
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
+    print('status code-----${response.statusCode} and base url----${url}');
+    if (response.statusCode == 201 ||
+        response.statusCode == 200 ||
+        response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.statusCode == 203 ||
+        response.statusCode == 400) {
+      return response;
+    } else {
+      return null;
+    }
+  }
+
   Future<ApiResult> deleteRequest(String url) async {
     var token = await UserSecureStorage.fetchToken();
 
