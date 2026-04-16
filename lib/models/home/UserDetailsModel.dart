@@ -132,8 +132,8 @@ class User {
     receivedAtFormatted: json["received_at_formatted"],
     receivedAt: json["received_at"],
     receivedAtHuman: json["received_at_human"],
-    address: json["address"] == null ? null : Address.fromJson(json["address"]),
-    creator: json["creator"] == null ? null : Creator.fromJson(json["creator"]),
+    address: json["address"] is Map ? Address.fromJson(json["address"] as Map<String, dynamic>) : null,
+    creator: json["creator"] is Map ? Creator.fromJson(json["creator"] as Map<String, dynamic>) : null,
     schools: json["schools"] == null ? [] : List<dynamic>.from(json["schools"]!.map((x) => x)),
   );
 

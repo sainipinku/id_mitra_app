@@ -54,17 +54,10 @@ class OrderModel {
   }
 
   String get statusLabel {
-    switch (status) {
-      case 'order_created': return 'Order Created';
-      case 're_order': return 'Re-Order';
-      case 'work_in_process': return 'Work In Process';
-      case 'printing': return 'Printing';
-      case 'dispatched': return 'Dispatched';
-      case 'delivered': return 'Delivered';
-      case 'completed': return 'Completed';
-      case 'cancelled': return 'Cancelled';
-      default: return status.replaceAll('_', ' ');
-    }
+    return kOrderStatuses
+        .firstWhere((s) => s.value == status,
+            orElse: () => OrderStatusOption(status, status.replaceAll('_', ' ')))
+        .label;
   }
 
   String get typeLabel {
@@ -163,6 +156,29 @@ class OrderStudent {
     );
   }
 }
+
+class OrderStatusOption {
+  final String value;
+  final String label;
+  const OrderStatusOption(this.value, this.label);
+}
+
+const kOrderStatuses = [
+  OrderStatusOption('order_created', 'Order Created'),
+  OrderStatusOption('re_order', 'Re-Order'),
+  OrderStatusOption('work_in_process', 'Work In Process'),
+  OrderStatusOption('completed', 'Completed'),
+  OrderStatusOption('cancelled', 'Cancelled'),
+];
+
+const kOrderFilterStatuses = [
+  OrderStatusOption('', 'Filter By Status'),
+  OrderStatusOption('order_created', 'Order Created'),
+  OrderStatusOption('re_order', 'Re-Order'),
+  OrderStatusOption('work_in_process', 'Work In Process'),
+  OrderStatusOption('completed', 'Completed'),
+  OrderStatusOption('cancelled', 'Cancelled'),
+];
 
 class OrderStatistics {
   final int totalOrders;

@@ -343,6 +343,7 @@ class _StudentCardState extends State<StudentCard> {
                   ),
                 ),
                 const SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
                   "Missing details: ${studentDetailsData.missingFields?.map((e) => _formatField(e.toString())).join(', ') ?? ''}",
                   style: MyStyles.regularText(

@@ -1,0 +1,164 @@
+import 'package:flutter/material.dart';
+import 'package:idmitra/Widgets/svg_file.dart';
+import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/utils/MyStyles.dart';
+import 'staff_home.dart';
+import 'staff_reports.dart';
+import 'staff_school.dart';
+import 'staff_setting.dart';
+
+class StaffDashboard extends StatefulWidget {
+  const StaffDashboard({super.key});
+
+  @override
+  State<StaffDashboard> createState() => _StaffDashboardState();
+}
+
+class _StaffDashboardState extends State<StaffDashboard> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _widgetOptions = [
+    StaffHome(),
+    StaffReports(),
+    StaffSchool(),
+    StaffSetting(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: _staffAppBar(context),
+      body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.white,
+                elevation: 0,
+                currentIndex: _selectedIndex,
+                onTap: _onItemTapped,
+                selectedItemColor: AppTheme.btnColor,
+                unselectedItemColor: AppTheme.black_Color,
+                showUnselectedLabels: true,
+                items: [
+                  BottomNavigationBarItem(
+                    icon: svgIcon(icon: 'assets/icons/home/home.svg', clr: _selectedIndex == 0 ? AppTheme.btnColor : AppTheme.black_Color),
+                    label: "Dashboard",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: svgIcon(icon: 'assets/icons/home/report.svg', clr: _selectedIndex == 1 ? AppTheme.btnColor : AppTheme.black_Color),
+                    label: "Message",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: svgIcon(icon: 'assets/icons/home/school.svg', clr: _selectedIndex == 2 ? AppTheme.btnColor : AppTheme.black_Color),
+                    label: "History",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: svgIcon(icon: 'assets/icons/home/user-profile.svg', clr: _selectedIndex == 3 ? AppTheme.btnColor : AppTheme.black_Color),
+                    label: "Setting",
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _staffAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: 0,
+      title: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 20,
+              backgroundColor: Color(0xFFE0E0E0),
+              child: Icon(Icons.person, color: Colors.grey),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Staff", style: MyStyles.boldTxt(AppTheme.black_Color, 20)),
+                  Text("ID Mitra Staff", style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 14)),
+                ],
+              ),
+            ),
+            Stack(
+              children: [
+                IconButton(
+                  icon: Container(
+                    height: 70,
+                    width: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.btn10perOpacityColor,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(3.0),
+                      child: svgIcon(icon: 'assets/icons/home/notification.svg', clr: AppTheme.btnColor),
+                    ),
+                  ),
+                  onPressed: () {},
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    child: const Text("1", style: TextStyle(color: Colors.white, fontSize: 10)),
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: Container(
+                height: 70,
+                width: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.btn10perOpacityColor,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: svgIcon(icon: 'assets/icons/home/user-profile.svg', clr: AppTheme.btnColor),
+                ),
+              ),
+              onPressed: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

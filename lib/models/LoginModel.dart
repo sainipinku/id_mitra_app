@@ -58,6 +58,7 @@ class LoginModel {
 class User {
   int? id;
   String? uuid;
+  String? accountType;
   dynamic businessTypeId;
   dynamic countryId;
   dynamic stateId;
@@ -113,6 +114,7 @@ class User {
   User({
     this.id,
     this.uuid,
+    this.accountType,
     this.businessTypeId,
     this.countryId,
     this.stateId,
@@ -274,6 +276,7 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) => User(
     id: json["id"],
     uuid: json["uuid"],
+    accountType: json["account_type"],
     businessTypeId: json["business_type_id"],
     countryId: json["country_id"],
     stateId: json["state_id"],

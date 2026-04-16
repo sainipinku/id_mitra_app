@@ -67,7 +67,8 @@ class HomeCubit extends Cubit<HomeState> {
           error: "Something went wrong (${dashboardResponse.statusCode})",
         ));
       }
-    } catch (e) {
+    } catch (e, st) {
+      print('HomeCubit error: $e\n$st');
       emit(state.copyWith(loading: false, error: "Error: ${e.toString()}"));
     }
   }

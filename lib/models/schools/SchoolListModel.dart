@@ -325,6 +325,9 @@ class SchoolDetailsModel {
   DateTime? createdAt;
   DateTime? updatedAt;
   dynamic deletedAt;
+  int? studentCount;
+  int? staffCount;
+  int? orderCount;
   String? logoUrl;
   dynamic currentSession;
   SchoolStorage? schoolStorage;
@@ -354,6 +357,9 @@ class SchoolDetailsModel {
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
+    this.studentCount,
+    this.staffCount,
+    this.orderCount,
     this.logoUrl,
     this.currentSession,
     this.schoolStorage,
@@ -384,6 +390,9 @@ class SchoolDetailsModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     dynamic deletedAt,
+    int? studentCount,
+    int? staffCount,
+    int? orderCount,
     String? logoUrl,
     dynamic currentSession,
     SchoolStorage? schoolStorage,
@@ -413,6 +422,9 @@ class SchoolDetailsModel {
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         deletedAt: deletedAt ?? this.deletedAt,
+        studentCount: studentCount ?? this.studentCount,
+        staffCount: staffCount ?? this.staffCount,
+        orderCount: orderCount ?? this.orderCount,
         logoUrl: logoUrl ?? this.logoUrl,
         currentSession: currentSession ?? this.currentSession,
         schoolStorage: schoolStorage ?? this.schoolStorage,
@@ -443,6 +455,9 @@ class SchoolDetailsModel {
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
+    studentCount: json["student_count"],
+    staffCount: json["staff_count"],
+    orderCount: json["order_count"],
     logoUrl: json["logo_url"],
     currentSession: json["current_session"],
     schoolStorage: json["school_storage"] == null ? null : SchoolStorage.fromJson(json["school_storage"]),

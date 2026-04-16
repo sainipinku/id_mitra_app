@@ -12,6 +12,7 @@ import 'package:idmitra/screens/auth/PasswordTextField.dart';
 import 'package:idmitra/screens/auth/password_screen.dart';
 import 'package:idmitra/screens/admin/admin_dashboard.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
+import 'package:idmitra/screens/staff/staff_dashboard.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
@@ -158,17 +159,30 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             } else {
               final user = state.loginModel.user;
               final designation = user?.designation ?? '';
+              final accountType = user?.accountType ?? '';
+              final schoolId = user?.school; // staff ke paas school object hota hai
+              print('Login designation: $designation, accountType: $accountType, school: $schoolId');
 
-              if (designation == 'super_admin') {
+              // partner → partner Dashboard
+              // school staff (has school_id / school object, not partner) → StaffDashboard
+              // school_admin / super_admin → AdminDashboard
+              if (designation == 'partner' || accountType == 'partner') {
                 navigateAndRemoveUntil(
                   context: context,
-                  page: const AdminDashboard(),
+                  page: Dashboard(index: 0,),
+                  transition: PageTransitionType.rightToLeft,
+                );
+              } else if (accountType != 'partner' && designation != 'super_admin' && designation != 'school_admin' && schoolId != null) {
+                // school staff - has school object but not admin/partner
+                navigateAndRemoveUntil(
+                  context: context,
+                  page: const StaffDashboard(),
                   transition: PageTransitionType.rightToLeft,
                 );
               } else {
                 navigateAndRemoveUntil(
                   context: context,
-                  page: Dashboard(index: 0,),
+                  page: const AdminDashboard(),
                   transition: PageTransitionType.rightToLeft,
                 );
               }
@@ -248,7 +262,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 30),
                       child: Text(
-                        widget.alreadyUser  ? "Enter the 6-digit code sent to +91 ${widget.phone}" : "Login to manage your school identity system.",
+                        widget.alreadyUser  ? "Enter the 6-digit code sent to ${widget.loginWithType == 'phone' ? "+91 ${widget.phone}" : widget.phone}" : "Login to manage your school identity system.",
                         textAlign: TextAlign.center,
                         style: MyStyles.regularText(size: 14, color: AppTheme.garyColor),
                       ),

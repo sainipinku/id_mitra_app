@@ -156,7 +156,8 @@ class LoginCubit extends Cubit<LoginState> {
       if (response.statusCode == 200) {
 
         final message = jsonData['message'] ?? "User not found";
-        emit(PasswordSuccess(message: message));
+        final userType = jsonData['user_type'] ?? '';
+        emit(PasswordSuccess(message: message, userType: userType));
       } else if (response.statusCode == 403) {
         final message = jsonData['message'] ?? "User not found";
         emit(LoginOnHold(message: message));

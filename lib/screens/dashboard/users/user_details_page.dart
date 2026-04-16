@@ -3,18 +3,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/config/ScreenSize.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
-import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/orders/orders_state.dart';
-import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
+import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/screens/orders/orders_page.dart';
+import 'package:idmitra/screens/staff/staff_list.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 import '../../edit_profile/image_setting.dart';
-import '../../staff/staff_list.dart';
 
 class UserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
@@ -27,44 +27,43 @@ class UserDetailsPage extends StatefulWidget {
 class _UserDetailsPageState extends State<UserDetailsPage> {
   List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
   int selectedIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => OrdersCubit()
-        ..fetchStatistics()
-        ..fetchStaffOrdersTotal(),
-      child: _UserDetailsBody(schoolDetailsModel: widget.schoolDetailsModel),
+      create: (_) => OrdersCubit()..fetchStatistics(),
+      child: _UserDetailsContent(
+        schoolDetailsModel: widget.schoolDetailsModel,
+        tabs: tabs,
+        selectedIndex: selectedIndex,
+        onTabChanged: (i) => setState(() => selectedIndex = i),
+      ),
     );
   }
 }
 
-class _UserDetailsBody extends StatefulWidget {
+class _UserDetailsContent extends StatelessWidget {
   final SchoolDetailsModel? schoolDetailsModel;
-  const _UserDetailsBody({this.schoolDetailsModel});
+  final List<String> tabs;
+  final int selectedIndex;
+  final void Function(int) onTabChanged;
 
-  @override
-  State<_UserDetailsBody> createState() => _UserDetailsBodyState();
-}
-
-class _UserDetailsBodyState extends State<_UserDetailsBody> {
-  List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
-  int selectedIndex = 0;
+  const _UserDetailsContent({
+    this.schoolDetailsModel,
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onTabChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CommonAppBar(
         title: 'School Details',
-        backgroundColor: Colors.transparent,
         showText: true,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.settings,color: Colors.black,),
-
-            // ✅ FIX: show dropdown below icon
             offset: const Offset(0, 45),
-
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -79,8 +78,8 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                   ),
                 );
               } else if (value == 'student_form') {
-                final schoolId = widget.schoolDetailsModel?.id?.toString() ?? '';
-                final schoolName = widget.schoolDetailsModel?.name ?? '';
+                final schoolId = schoolDetailsModel?.id?.toString() ?? '';
+                final schoolName = schoolDetailsModel?.name ?? '';
                 navigateWithTransition(
                   context: context,
                   page: BlocProvider(
@@ -90,7 +89,7 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                         schoolName: schoolName,
                       ),
                     child: StudentForm(
-                      schoolDetailsModel: widget.schoolDetailsModel!,
+                      schoolDetailsModel: schoolDetailsModel!,
                     ),
                   ),
                 );
@@ -136,7 +135,7 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             /// 🔹 TOP CARD (IMAGE + LOGO)
             Stack(
               clipBehavior: Clip.none,
@@ -145,41 +144,34 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
 
                 /// 🔹 CARD CONTAINER (with radius)
                 Container(
-                  height: 160,
+                  height: ScreenSize.hp(context, 18),
                   decoration: BoxDecoration(
+                    color: AppTheme.whiteColor,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   clipBehavior: Clip.hardEdge,
                   child: Stack(
                     children: [
 
-                      /// IMAGE
-                      Positioned.fill(
-                        child: Image.network(
-                    widget.schoolDetailsModel?.logoUrl ?? '',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image, size: 40);
-                    },
-                  )
-
-                      ),
-
                       /// DARK OVERLAY
                       Positioned.fill(
                         child: Container(
-                          color: Colors.black.withOpacity(0.3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.whiteColor,
+                            border: Border.all(color: AppTheme.backBtnBgColor),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
                         ),
                       ),
 
                       /// CENTER TITLE
                       Center(
                         child: Text(
-                          widget.schoolDetailsModel?.name ?? '',
+                          schoolDetailsModel?.name ?? '',
                           textAlign: TextAlign.center,
                           style: MyStyles.boldText(
                             size: 20,
-                            color: AppTheme.whiteColor,
+                            color: AppTheme.black_Color,
                           ),
                         ),
                       ),
@@ -200,29 +192,24 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-
-                                  /// LEFT INFO
                                   Expanded(
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
                                         Icon(Icons.location_on,
-                                            size: 14, color: AppTheme.whiteColor),
+                                            size: 14, color: AppTheme.black_Color),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
-                                            widget.schoolDetailsModel?.address ?? '',maxLines: 2,
+                                            schoolDetailsModel?.address ?? '',maxLines: 2,
                                             style: MyStyles.regularText(
-                                                size: 12, color: AppTheme.whiteColor),
+                                                size: 12, color: AppTheme.black_Color),
                                           ),
                                         ),
-
                                       ],
                                     ),
                                   ),
-
-                                  /// STATUS
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 10, vertical: 4),
@@ -241,12 +228,12 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                               Row(
                                 children: [
                                   Icon(Icons.calendar_month_outlined,
-                                      size: 14, color: AppTheme.whiteColor),
+                                      size: 14, color: AppTheme.black_Color),
                                   const SizedBox(width: 4),
                                   Text(
                                     "12 Feb 2026",
                                     style: MyStyles.regularText(
-                                        size: 12, color: AppTheme.whiteColor),
+                                        size: 12, color: AppTheme.black_Color),
                                   ),
                                 ],
                               ),
@@ -269,7 +256,7 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                       backgroundColor: Colors.white,
                       child: ClipOval(
                         child: Image.network(
-                          widget.schoolDetailsModel?.logoUrl ?? '',
+                          schoolDetailsModel?.logoUrl ?? '',
                           fit: BoxFit.cover,
                           width: 80,
                           height: 80,
@@ -284,40 +271,33 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
               ],
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 10),
 
             /// 🔹 STATS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                statCard(title: "STUDENTS", value: "1,250", callBtn: () {
+                statCard(title: "STUDENTS", value: "${schoolDetailsModel?.studentCount ?? ''}",callBtn: (){
                   navigateWithTransition(
                     context: context,
-                    page: StudentListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? ''),
+                    page: StudentListingPage(schoolId: schoolDetailsModel?.id.toString() ?? '',),
                   );
                 }),
-                statCard(title: "STAFF", value: "10", callBtn: () {
+                statCard(title: "STAFF", value: "${schoolDetailsModel?.staffCount ?? ''}",callBtn: (){
                   navigateWithTransition(
                     context: context,
-                    page: StaffListingPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? ''),
+                    page: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
                   );
                 }),
-                Expanded(
-                  child: BlocBuilder<OrdersCubit, OrdersState>(
-                    buildWhen: (p, c) =>
-                        p.statistics != c.statistics ||
-                        p.staffTotal != c.staffTotal ||
-                        p.statsLoading != c.statsLoading ||
-                        p.staffTotalLoading != c.staffTotalLoading,
-                    builder: (context, state) {
-                      final studentOrders = state.statistics?.totalOrders ?? 0;
-                      final staffOrders = state.staffTotal;
-                      final total = studentOrders + staffOrders;
-                      final isLoading = state.statsLoading || state.staffTotalLoading;
-                      return GestureDetector(
+                BlocBuilder<OrdersCubit, OrdersState>(
+                  buildWhen: (p, c) => p.statistics != c.statistics || p.statsLoading != c.statsLoading,
+                  builder: (context, state) {
+                    final total = state.statistics?.totalOrders;
+                    return Expanded(
+                      child: GestureDetector(
                         onTap: () => navigateWithTransition(
                           context: context,
-                          page: OrdersPage(schoolId: widget.schoolDetailsModel?.id.toString() ?? ''),
+                          page: OrdersPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
                         ),
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -329,27 +309,20 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                           ),
                           child: Column(
                             children: [
-                              Text(
-                                "TOTAL ORDERS",
-                                style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
-                              ),
+                              Text("TOTAL ORDERS",
+                                  style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
                               const SizedBox(height: 6),
-                              isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : Text(
-                                      '$total',
-                                      style: MyStyles.boldText(size: 20, color: AppTheme.btnColor),
-                                    ),
+                              state.statsLoading
+                                  ? const SizedBox(height: 24, width: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2))
+                                  : Text('${total ?? 0}',
+                                      style: MyStyles.boldText(size: 20, color: AppTheme.btnColor)),
                             ],
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -366,14 +339,9 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
               child: Row(
                 children: List.generate(tabs.length, (index) {
                   final isSelected = selectedIndex == index;
-
                   return Expanded(
                     child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedIndex = index;
-                        });
-                      },
+                      onTap: () => onTabChanged(index),
                       child: tabItem(tabs[index], isSelected),
                     ),
                   );
@@ -401,7 +369,7 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
 
                   infoRow(
                     "School Name",
-                    widget.schoolDetailsModel?.name ?? '',
+                    schoolDetailsModel?.name ?? '',
                     "School ID",
                     "SH-99283-DX",
                   ),
@@ -428,9 +396,9 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    "109/43, Gaya Building, Yusuf Meharali Road, Mandvi",
-                    style: TextStyle(fontSize: 13),
+                   Text(
+                    schoolDetailsModel?.address ?? '',
+                    style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
                   ),
                 ],
               ),
@@ -453,7 +421,7 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
 
                   infoRow(
                     "Admin Name",
-                    widget.schoolDetailsModel!.admin!.name ?? '',
+                    schoolDetailsModel?.admin?.name ?? '',
                     "ID Proof",
                     "SH-99283-DX",
                   ),
@@ -461,9 +429,9 @@ class _UserDetailsBodyState extends State<_UserDetailsBody> {
 
                   infoRow(
                     "Email Address",
-                    widget.schoolDetailsModel!.admin!.email ?? '',
+                    schoolDetailsModel?.admin?.email ?? '',
                     "Contact number",
-                    widget.schoolDetailsModel!.admin!.phone ?? '',
+                    schoolDetailsModel?.admin?.phone ?? '',
                   ),
                 ],
               ),
