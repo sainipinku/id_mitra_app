@@ -8,11 +8,11 @@ class OrdersState {
   final bool hasMore;
   final int total;
   final String? error;
-  final OrderStatistics? statistics;
   final bool statsLoading;
   final int staffTotal;
   final bool staffTotalLoading;
   final List<OrderClass> availableClasses;
+  final bool classesLoading;
 
   const OrdersState({
     this.loading = false,
@@ -22,11 +22,11 @@ class OrdersState {
     this.hasMore = true,
     this.total = 0,
     this.error,
-    this.statistics,
     this.statsLoading = false,
     this.staffTotal = 0,
     this.staffTotalLoading = false,
     this.availableClasses = const [],
+    this.classesLoading = true,
   });
 
   OrdersState copyWith({
@@ -37,11 +37,11 @@ class OrdersState {
     bool? hasMore,
     int? total,
     String? error,
-    OrderStatistics? statistics,
     bool? statsLoading,
     int? staffTotal,
     bool? staffTotalLoading,
     List<OrderClass>? availableClasses,
+    bool? classesLoading,
   }) {
     return OrdersState(
       loading: loading ?? this.loading,
@@ -51,11 +51,11 @@ class OrdersState {
       hasMore: hasMore ?? this.hasMore,
       total: total ?? this.total,
       error: error ?? this.error,
-      statistics: statistics ?? this.statistics,
       statsLoading: statsLoading ?? this.statsLoading,
       staffTotal: staffTotal ?? this.staffTotal,
       staffTotalLoading: staffTotalLoading ?? this.staffTotalLoading,
       availableClasses: availableClasses ?? this.availableClasses,
+      classesLoading: classesLoading ?? this.classesLoading,
     );
   }
 }
