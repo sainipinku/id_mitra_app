@@ -13,7 +13,6 @@ import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/screens/orders/orders_page.dart';
 import 'package:idmitra/screens/staff/staff_list.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
-
 import '../../edit_profile/image_setting.dart';
 
 class UserDetailsPage extends StatefulWidget {
@@ -53,6 +52,11 @@ class _UserDetailsContent extends StatelessWidget {
     required this.selectedIndex,
     required this.onTabChanged,
   });
+
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +281,7 @@ class _UserDetailsContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                ////gfhfghgdg
                 statCard(title: "STUDENTS", value: "${schoolDetailsModel?.studentCount ?? ''}",callBtn: (){
                   navigateWithTransition(
                     context: context,
