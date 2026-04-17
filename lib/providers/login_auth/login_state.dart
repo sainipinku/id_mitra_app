@@ -20,7 +20,8 @@ final class ForgetLoginSuccess extends LoginState {
 }
 final class PasswordSuccess extends LoginState {
   final String message;
-  PasswordSuccess({required this.message});
+  final String userType;
+  PasswordSuccess({required this.message, this.userType = ''});
 }
 
 final class LoginResendSuccess extends LoginState {}

@@ -19,6 +19,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     String classId = '',
     String dateFrom = '',
     String dateTo = '',
+    String schoolId = '',
   }) async {
     if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
 
@@ -37,12 +38,14 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
 
     try {
-      var url = '${Config.baseUrl}auth/partner/orders/dashboard/list?page=$currentPage&per_page=20';
+      var url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20';
+      if (schoolId.isNotEmpty) url += '&school_id=$schoolId';
       if (status.isNotEmpty) url += '&status=$status';
       if (search.isNotEmpty) url += '&search=$search';
       if (dateFrom.isNotEmpty) url += '&date_from=$dateFrom';
       if (dateTo.isNotEmpty) url += '&date_to=$dateTo';
       if (classId.isNotEmpty) url += '&class_id=$classId';
+      print('fetchOrders URL: $url');
 
       final response = await _api.getRequest(url);
       if (response == null) {
@@ -75,6 +78,17 @@ class OrdersCubit extends Cubit<OrdersState> {
       final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
       final updatedList = isLoadMore ? [...state.ordersList, ...newOrders] : newOrders;
 
+      // Extract unique classes from orders (only on first page load)
+      List<OrderClass> classes = state.availableClasses;
+      if (!isLoadMore) {
+        final seen = <int>{};
+        classes = updatedList
+            .where((o) => o.student?.classId != null && o.student?.className != null)
+            .map((o) => OrderClass(o.student!.classId!, o.student!.className!))
+            .where((c) => seen.add(c.id))
+            .toList();
+      }
+
       emit(state.copyWith(
         loading: false,
         isPaginationLoading: false,
@@ -82,6 +96,7 @@ class OrdersCubit extends Cubit<OrdersState> {
         page: respPage + 1,
         hasMore: respPage < lastPage,
         total: total,
+        availableClasses: classes,
       ));
     } catch (e) {
       emit(state.copyWith(loading: false, isPaginationLoading: false, error: e.toString()));
@@ -95,8 +110,14 @@ class OrdersCubit extends Cubit<OrdersState> {
       final response = await _api.patchRequestWithBody(url, {'status': newStatus});
       if (response == null) return false;
       final json = jsonDecode(response.body);
-      return json['success'] == true;
-    } catch (_) {
+      print('updateOrderStatus response: ${response.body}');
+      if (json['success'] == true) return true;
+      // show validation errors if any
+      final errors = json['errors'];
+      if (errors != null) print('Validation errors: $errors');
+      return false;
+    } catch (e) {
+      print('updateOrderStatus error: $e');
       return false;
     }
   }

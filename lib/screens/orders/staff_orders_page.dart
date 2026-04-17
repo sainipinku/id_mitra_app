@@ -9,13 +9,7 @@ import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
-
-const _staffOrderStatuses = [
-  {'label': 'Filter By Status', 'value': ''},
-  {'label': 'Re-Order', 'value': 're_order'},
-  {'label': 'Order Created', 'value': 'order_created'},
-  {'label': 'Work In-Process', 'value': 'work_in_process'},
-];
+import 'package:idmitra/models/orders/OrderModel.dart';
 
 class StaffOrderItem {
   final int id;
@@ -50,29 +44,17 @@ class StaffOrderItem {
     );
   }
 
-  String get statusLabel {
-    switch (status) {
-      case 'order_created':
-        return 'Order Created';
-      case 're_order':
-        return 'Re-Order';
-      case 'work_in_process':
-        return 'Work In Process';
-      default:
-        return status.replaceAll('_', ' ');
-    }
-  }
+  String get statusLabel => kOrderStatuses
+      .firstWhere((s) => s.value == status,
+          orElse: () => OrderStatusOption(status, status.replaceAll('_', ' ')))
+      .label;
 
   String get typeLabel {
     switch (type) {
-      case 'pvc_card':
-        return 'PVC Card';
-      case 'rfid_card':
-        return 'RFID Card';
-      case 'pasting_card':
-        return 'Pasting Card';
-      default:
-        return type.replaceAll('_', ' ');
+      case 'pvc_card': return 'PVC Card';
+      case 'rfid_card': return 'RFID Card';
+      case 'pasting_card': return 'Pasting Card';
+      default: return type.replaceAll('_', ' ');
     }
   }
 }
@@ -146,6 +128,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
         url += '&date_from=${_dateFromCtrl.text}';
       }
       if (_dateToCtrl.text.isNotEmpty) url += '&date_to=${_dateToCtrl.text}';
+      print('fetchStaffOrders URL: $url');
 
       final response = await ApiManager().getRequest(url);
       if (response == null) {
@@ -237,21 +220,6 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
             ),
           ),
 
-          // Table header
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                _headerCell('STAFF', flex: 4),
-                _headerCell('TYPE', flex: 3),
-                _headerCell('STATUS', flex: 3),
-                _headerCell('ORDER DATE', flex: 3),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: AppTheme.LineColor),
-
           // List
           Expanded(
             child: _loading && _orders.isEmpty
@@ -274,10 +242,11 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
                     onRefresh: () async => _resetAndFetch(),
                     child: ListView.builder(
                       controller: _scrollCtrl,
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                       itemCount: _orders.length + (_hasMore ? 1 : 0),
                       itemBuilder: (_, i) {
                         if (i < _orders.length)
-                          return _StaffOrderRow(order: _orders[i]);
+                          return _StaffOrderCard(order: _orders[i]);
                         return const Padding(
                           padding: EdgeInsets.all(16),
                           child: Center(child: CircularProgressIndicator()),
@@ -333,13 +302,11 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
         isExpanded: true,
         icon: const Icon(Icons.keyboard_arrow_down, size: 16),
         style: MyStyles.regularText(size: 12, color: AppTheme.black_Color),
-        items: _staffOrderStatuses
-            .map(
-              (s) => DropdownMenuItem<String>(
-                value: s['value']!,
-                child: Text(s['label']!, overflow: TextOverflow.ellipsis),
-              ),
-            )
+        items: kOrderFilterStatuses
+            .map((s) => DropdownMenuItem<String>(
+                  value: s.value,
+                  child: Text(s.label, overflow: TextOverflow.ellipsis),
+                ))
             .toList(),
         onChanged: (v) {
           setState(() => _selectedStatus = v ?? '');
@@ -398,94 +365,92 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
   );
 }
 
-class _StaffOrderRow extends StatelessWidget {
+// ─── Staff Order Card (same style as OrderCard) ───────────────────────────────
+class _StaffOrderCard extends StatelessWidget {
   final StaffOrderItem order;
-  const _StaffOrderRow({required this.order});
+  const _StaffOrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppTheme.LineColor)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            flex: 4,
+          // Header - ID + Status
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.btnColor.withOpacity(0.05),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
             child: Row(
               children: [
+                Text('#${order.id}', style: MyStyles.boldText(size: 13, color: AppTheme.btnColor)),
+                const Spacer(),
                 Container(
-                  height: 30,
-                  width: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.btnColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: order.staffPhoto != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            order.staffPhoto!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _initials(),
-                          ),
-                        )
-                      : _initials(),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    order.staffName ?? order.schoolName ?? '-',
-                    style: MyStyles.mediumText(
-                      size: 12,
-                      color: AppTheme.black_Color,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(order.statusLabel, style: MyStyles.mediumText(size: 11, color: AppTheme.btnColor)),
                 ),
               ],
             ),
           ),
-          // Type
-          Expanded(
-            flex: 3,
-            child: Text(
-              order.typeLabel,
-              style: MyStyles.regularText(
-                size: 11,
-                color: AppTheme.graySubTitleColor,
-              ),
-              overflow: TextOverflow.ellipsis,
+          Divider(height: 1, color: AppTheme.LineColor),
+          // Body - Staff name + School
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.badge_outlined, size: 14, color: AppTheme.graySubTitleColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        order.staffName ?? '-',
+                        style: MyStyles.boldText(size: 14, color: AppTheme.black_Color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (order.schoolName != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.school_outlined, size: 14, color: AppTheme.graySubTitleColor),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          order.schoolName!,
+                          style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
-          // Status chip
-          Expanded(
-            flex: 3,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.btnColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                order.statusLabel,
-                style: MyStyles.mediumText(size: 10, color: AppTheme.btnColor),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          // Order date
-          Expanded(
-            flex: 3,
-            child: Text(
-              order.orderedAt,
-              style: MyStyles.regularText(
-                size: 11,
-                color: AppTheme.graySubTitleColor,
-              ),
-              overflow: TextOverflow.ellipsis,
+          Divider(height: 1, color: AppTheme.LineColor),
+          // Footer - Type + Date
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                _infoChip(Icons.credit_card_outlined, order.typeLabel),
+                const Spacer(),
+                _infoChip(Icons.calendar_today_outlined, order.orderedAt),
+              ],
             ),
           ),
         ],
@@ -493,12 +458,14 @@ class _StaffOrderRow extends StatelessWidget {
     );
   }
 
-  Widget _initials() => Center(
-    child: Text(
-      (order.staffName ?? order.schoolName ?? '?')[0].toUpperCase(),
-      style: MyStyles.boldText(size: 12, color: AppTheme.btnColor),
-    ),
-  );
+  Widget _infoChip(IconData icon, String label) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppTheme.graySubTitleColor),
+          const SizedBox(width: 4),
+          Text(label, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+        ],
+      );
 }
 
 class _DotDateFormatter extends TextInputFormatter {
@@ -507,7 +474,7 @@ class _DotDateFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final text = newValue.text.replaceAll('/', '.').replaceAll('-', '.');
+    final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
     return newValue.copyWith(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),

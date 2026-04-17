@@ -13,14 +13,14 @@ import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
-class AdminSetting extends StatefulWidget {
-  const AdminSetting({super.key});
+class StaffSetting extends StatefulWidget {
+  const StaffSetting({super.key});
 
   @override
-  State<AdminSetting> createState() => _AdminSettingState();
+  State<StaffSetting> createState() => _StaffSettingState();
 }
 
-class _AdminSettingState extends State<AdminSetting> {
+class _StaffSettingState extends State<StaffSetting> {
   void _openStudentForm() async {
     final school = await UserLocal.getSchool();
     final schoolId = school['schoolId'] ?? '';
@@ -32,10 +32,7 @@ class _AdminSettingState extends State<AdminSetting> {
       context: context,
       page: BlocProvider(
         create: (_) => StudentFormCubit()
-          ..loadFromSchoolId(
-            schoolId: schoolId,
-            schoolName: schoolName,
-          ),
+          ..loadFromSchoolId(schoolId: schoolId, schoolName: schoolName),
         child: StudentForm(
           schoolDetailsModel: SchoolDetailsModel(
             name: schoolName,
@@ -108,9 +105,7 @@ class _AdminSettingState extends State<AdminSetting> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
         ),
         child: Row(
           children: [

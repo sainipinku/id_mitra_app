@@ -11,7 +11,6 @@ import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/helpers/keyboard.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
-import 'package:idmitra/screens/home/ExpandableText.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -344,9 +343,13 @@ class _StudentCardState extends State<StudentCard> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                ExpandableText(
-                  text:
+                const SizedBox(height: 3),
+                Text(
                   "Missing details: ${studentDetailsData.missingFields?.map((e) => _formatField(e.toString())).join(', ') ?? ''}",
+                  style: MyStyles.regularText(
+                    size: 12,
+                    color: AppTheme.redBtnBgColor,
+                  ),
                 ),
               ],
             ),

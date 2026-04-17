@@ -8,7 +8,9 @@ import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/ConfirmPasswordTextField.dart';
 import 'package:idmitra/screens/auth/PasswordTextField.dart';
+import 'package:idmitra/screens/admin/admin_dashboard.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
+import 'package:idmitra/screens/staff/staff_dashboard.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:page_transition/page_transition.dart';
@@ -69,11 +71,26 @@ class _PasswordScreenState extends State<PasswordScreen> {
               },
             );
           } else if (state is PasswordSuccess) {
-            navigateAndRemoveUntil(
-              context: context,
-              page: Dashboard(index: 0,),
-              transition: PageTransitionType.rightToLeft,
-            );
+            final userType = state.userType;
+            if (userType == 'school_staff') {
+              navigateAndRemoveUntil(
+                context: context,
+                page: const StaffDashboard(),
+                transition: PageTransitionType.rightToLeft,
+              );
+            } else if (userType == 'school_admin' || userType == 'super_admin') {
+              navigateAndRemoveUntil(
+                context: context,
+                page: const AdminDashboard(),
+                transition: PageTransitionType.rightToLeft,
+              );
+            } else {
+              navigateAndRemoveUntil(
+                context: context,
+                page: Dashboard(index: 0),
+                transition: PageTransitionType.rightToLeft,
+              );
+            }
           } else if (state is LoginNoFound) {
             Navigator.of(context).pop();
             final _snackBar = snackBar(

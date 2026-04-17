@@ -10,7 +10,7 @@ import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 
-class StudentProfilePage extends StatelessWidget {
+class StudentProfilePage extends StatefulWidget {
   final StudentDetailsData student;
   final String schoolId;
   const StudentProfilePage({
@@ -18,6 +18,21 @@ class StudentProfilePage extends StatelessWidget {
     required this.student,
     required this.schoolId,
   });
+
+  @override
+  State<StudentProfilePage> createState() => _StudentProfilePageState();
+}
+
+class _StudentProfilePageState extends State<StudentProfilePage> {
+  late StudentDetailsData _student;
+
+  @override
+  void initState() {
+    super.initState();
+    _student = widget.student;
+  }
+
+  String get schoolId => widget.schoolId;
 
   void _openEdit(BuildContext context) {
     Navigator.push(
@@ -36,11 +51,15 @@ class StudentProfilePage extends StatelessWidget {
           ],
           child: AddStudentFormPage(
             schoolId: schoolId,
-            editStudent: student,
+            editStudent: _student,
           ),
         ),
       ),
-    );
+    ).then((updatedStudent) {
+      if (updatedStudent is StudentDetailsData && mounted) {
+        setState(() => _student = updatedStudent);
+      }
+    });
   }
 
   @override
@@ -80,7 +99,7 @@ class StudentProfilePage extends StatelessWidget {
               title: 'Address',
               rows: _addressRows(),
             ),
-            _markStudentCard(),
+            _markStudentCard(context),
           ],
         ),
       ),
@@ -88,8 +107,8 @@ class StudentProfilePage extends StatelessWidget {
   }
 
   Widget _headerCard(BuildContext context) {
-    final isActive = (student.status ?? 0) == 1;
-    final hasPhoto = student.profilePhotoUrl?.isNotEmpty ?? false;
+    final isActive = (_student.status ?? 0) == 1;
+    final hasPhoto = _student.profilePhotoUrl?.isNotEmpty ?? false;
 
     return Container(
       width: double.infinity,
@@ -161,7 +180,7 @@ class StudentProfilePage extends StatelessWidget {
                           radius: 36,
                           backgroundColor: AppTheme.appBackgroundColor,
                           backgroundImage: hasPhoto
-                              ? NetworkImage(student.profilePhotoUrl!)
+                              ? NetworkImage(_student.profilePhotoUrl!)
                               : null,
                           child: !hasPhoto
                               ? Icon(Icons.person_rounded,
@@ -185,7 +204,7 @@ class StudentProfilePage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(student.name ?? '-',
+                  Text(_student.name ?? '-',
                       style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
                   const SizedBox(height: 3),
                   Text(_classSection(),
@@ -221,7 +240,7 @@ class StudentProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _markStudentCard() {
+  Widget _markStudentCard(context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -262,7 +281,7 @@ class StudentProfilePage extends StatelessWidget {
                   title: 'TC',
                   height: 44,
                   color: AppTheme.redBtnBgColor,
-                  onTap: () {},
+                  onTap: () => _showComingSoon(context, 'TC'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -271,12 +290,79 @@ class StudentProfilePage extends StatelessWidget {
                   title: 'Not in my class',
                   height: 44,
                   color: AppTheme.graySubTitleColor,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MultiBlocProvider(
+                          providers: [
+                            BlocProvider(
+                              create: (_) => StudentFormCubit()
+                                ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
+                            ),
+                            BlocProvider(
+                              create: (_) => StudentFormDataCubit()..load(schoolId),
+                            ),
+                            BlocProvider(create: (_) => AddStudentCubit()),
+                          ],
+                          child: AddStudentFormPage(
+                            schoolId: schoolId,
+                            editStudent: _student,
+                            initialTab: 1,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.btnColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.rocket_launch_outlined, size: 36, color: AppTheme.btnColor),
+              ),
+              const SizedBox(height: 16),
+              Text('Coming Soon',
+                  style: MyStyles.boldText(size: 18, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Text(
+                '"$feature" feature is coming soon.\nStay tuned for updates!',
+                textAlign: TextAlign.center,
+                style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(
+                  title: 'OK',
+                  height: 44,
+                  color: AppTheme.btnColor,
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -383,60 +469,60 @@ class StudentProfilePage extends StatelessWidget {
       );
 
   List<_InfoRow> _personalRows() => [
-        _InfoRow('Student Name', student.name ?? ''),
-        _InfoRow('Login ID', student.loginId ?? ''),
-        _InfoRow('Email', student.email?.toString() ?? ''),
-        _InfoRow('Phone', student.phone?.toString() ?? ''),
-        _InfoRow('WhatsApp', student.whatsappPhone?.toString() ?? ''),
-        _InfoRow('Gender', _cap(student.gender?.toString() ?? '')),
-        _InfoRow('Date of Birth', student.dob ?? ''),
-        _InfoRow('Blood Group', student.bloodGroup?.toString() ?? ''),
-        _InfoRow('Aadhar No', student.aadharNo?.toString() ?? ''),
-        _InfoRow('UID No', student.uidNo?.toString() ?? ''),
-        _InfoRow('NIC ID', student.studentNicId?.toString() ?? ''),
-        _InfoRow('Caste', student.caste?.toString() ?? ''),
-        _InfoRow('Religion', student.religion?.toString() ?? ''),
-        _InfoRow('RTE Student', student.isRteStudent?.toString() ?? ''),
+        _InfoRow('Student Name', _student.name ?? ''),
+        _InfoRow('Login ID', _student.loginId ?? ''),
+        _InfoRow('Email', _student.email?.toString() ?? ''),
+        _InfoRow('Phone', _student.phone?.toString() ?? ''),
+        _InfoRow('WhatsApp', _student.whatsappPhone?.toString() ?? ''),
+        _InfoRow('Gender', _cap(_student.gender?.toString() ?? '')),
+        _InfoRow('Date of Birth', _student.dob ?? ''),
+        _InfoRow('Blood Group', _student.bloodGroup?.toString() ?? ''),
+        _InfoRow('Aadhar No', _student.aadharNo?.toString() ?? ''),
+        _InfoRow('UID No', _student.uidNo?.toString() ?? ''),
+        _InfoRow('NIC ID', _student.studentNicId?.toString() ?? ''),
+        _InfoRow('Caste', _student.caste?.toString() ?? ''),
+        _InfoRow('Religion', _student.religion?.toString() ?? ''),
+        _InfoRow('RTE Student', _student.isRteStudent?.toString() ?? ''),
       ].where((r) => r.value.isNotEmpty).toList();
 
   List<_InfoRow> _academicRows() => [
-        _InfoRow('Class', student.datumClass?.nameWithprefix ?? ''),
-        _InfoRow('Section', student.section?.name ?? ''),
-        _InfoRow('Roll No', student.rollNo?.toString() ?? ''),
-        _InfoRow('Reg No', student.regNo?.toString() ?? ''),
-        _InfoRow('Admission No', student.admissionNo?.toString() ?? ''),
-        _InfoRow('SR No', student.srNo ?? ''),
-        _InfoRow('RFID No', student.rfidNo?.toString() ?? ''),
+        _InfoRow('Class', _student.datumClass?.nameWithprefix ?? ''),
+        _InfoRow('Section', _student.section?.name ?? ''),
+        _InfoRow('Roll No', _student.rollNo?.toString() ?? ''),
+        _InfoRow('Reg No', _student.regNo?.toString() ?? ''),
+        _InfoRow('Admission No', _student.admissionNo?.toString() ?? ''),
+        _InfoRow('SR No', _student.srNo ?? ''),
+        _InfoRow('RFID No', _student.rfidNo?.toString() ?? ''),
         _InfoRow('Transport',
-            _cap((student.transportMode?.toString() ?? '').replaceAll('_', ' '))),
+            _cap((_student.transportMode?.toString() ?? '').replaceAll('_', ' '))),
       ].where((r) => r.value.isNotEmpty).toList();
 
   List<_InfoRow> _parentRows() => [
-        _InfoRow('Father Name', student.fatherName ?? ''),
-        _InfoRow('Father Phone', student.fatherPhone ?? ''),
-        _InfoRow('Father WhatsApp', student.fatherWphone?.toString() ?? ''),
-        _InfoRow('Father Email', student.fatherEmail?.toString() ?? ''),
-        _InfoRow('Mother Name', student.motherName ?? ''),
-        _InfoRow('Mother Phone', student.motherPhone?.toString() ?? ''),
-        _InfoRow('Mother WhatsApp', student.motherWphone?.toString() ?? ''),
-        _InfoRow('Mother Email', student.motherEmail?.toString() ?? ''),
+        _InfoRow('Father Name', _student.fatherName ?? ''),
+        _InfoRow('Father Phone', _student.fatherPhone ?? ''),
+        _InfoRow('Father WhatsApp', _student.fatherWphone?.toString() ?? ''),
+        _InfoRow('Father Email', _student.fatherEmail?.toString() ?? ''),
+        _InfoRow('Mother Name', _student.motherName ?? ''),
+        _InfoRow('Mother Phone', _student.motherPhone?.toString() ?? ''),
+        _InfoRow('Mother WhatsApp', _student.motherWphone?.toString() ?? ''),
+        _InfoRow('Mother Email', _student.motherEmail?.toString() ?? ''),
       ].where((r) => r.value.isNotEmpty).toList();
 
   List<_InfoRow> _addressRows() => [
-        _InfoRow('Address', student.address ?? ''),
-        _InfoRow('Pincode', student.pincode?.toString() ?? ''),
+        _InfoRow('Address', _student.address ?? ''),
+        _InfoRow('Pincode', _student.pincode?.toString() ?? ''),
       ].where((r) => r.value.isNotEmpty).toList();
 
   String _classSection() {
-    final cls = student.datumClass?.nameWithprefix ?? '';
-    final sec = student.section?.name ?? '';
+    final cls = _student.datumClass?.nameWithprefix ?? '';
+    final sec = _student.section?.name ?? '';
     if (cls.isEmpty && sec.isEmpty) return '-';
     if (sec.isEmpty) return cls;
     return '$cls - $sec';
   }
 
   String _sessionName() {
-    final raw = student.session?.name?.toString() ?? '';
+    final raw = _student.session?.name?.toString() ?? '';
     return raw.replaceAll('SessionName.THE_', '').replaceAll('_', '-');
   }
 

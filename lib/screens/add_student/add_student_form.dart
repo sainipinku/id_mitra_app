@@ -49,10 +49,12 @@ const List<String> _kRteOptions = ['-Select-', 'Yes', 'No'];
 class AddStudentFormPage extends StatefulWidget {
   final String schoolId;
   final StudentDetailsData? editStudent;
+  final int initialTab;
   const AddStudentFormPage({
     super.key,
     required this.schoolId,
     this.editStudent,
+    this.initialTab = 0,
   });
 
   @override
@@ -71,7 +73,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
     if (widget.editStudent != null) {
       _additionalExpanded = _hasAdditionalData(widget.editStudent!);
       WidgetsBinding.instance.addPostFrameCallback(
@@ -129,10 +131,13 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
       _setCtrl('student_email', s.email?.toString());
       _setCtrl('student_phone', s.phone?.toString());
       _setCtrl('student_whatsapp', s.whatsappPhone?.toString());
+      _setCtrl('student_whatsapp_number', s.whatsappPhone?.toString());
       _setCtrl('landline_number', s.landLineNo?.toString());
+      _setCtrl('landline_contact_number', s.landLineNo?.toString());
       _setCtrl('aadhar_card_number', s.aadharNo?.toString());
       _setCtrl('uid_number', s.uidNo?.toString());
       _setCtrl('nic_id', s.studentNicId?.toString());
+      _setCtrl('student_nic_id', s.studentNicId?.toString());
       _setCtrl('caste', s.caste?.toString());
       _setCtrl('religion', s.religion?.toString());
       _setCtrl('address', s.address);
@@ -152,11 +157,16 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
       _setCtrl('mother_whatsapp', s.motherWphone?.toString());
 
       if (s.dob != null && s.dob!.isNotEmpty) {
-        final parts = s.dob!.split('-');
-        if (parts.length == 3) {
-          _setCtrl('date_of_birth', '${parts[2]}.${parts[1]}.${parts[0]}');
+        final dob = s.dob!;
+        if (dob.contains('-')) {
+          final parts = dob.split('-');
+          if (parts.length == 3) {
+            _setCtrl('date_of_birth', '${parts[2]}.${parts[1]}.${parts[0]}');
+          } else {
+            _setCtrl('date_of_birth', dob);
+          }
         } else {
-          _setCtrl('date_of_birth', s.dob);
+          _setCtrl('date_of_birth', dob.replaceAll('/', '.'));
         }
       }
 
@@ -987,7 +997,12 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                                 additionalFields,
                                 data,
                               ),
-                              const SizedBox.shrink(),
+                              Center(
+                                child: Image.asset(
+                                  'assets/images/no_data.png',
+                                  height: 200,
+                                ),
+                              ),
                             ],
                           ),
                   ),
@@ -1020,7 +1035,35 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                                     backgroundColor: Colors.green,
                                   ),
                                 );
-                                Navigator.pop(context, state.newStudent);
+                                // Return updated student - use newStudent from API or manually update
+                                StudentDetailsData? returnStudent = state.newStudent;
+                                if (returnStudent == null && widget.editStudent != null) {
+                                  // Manually update the student with form fields
+                                  final allFields = {
+                                    ..._ctrl.map((k, v) => MapEntry(k, v.text)),
+                                    ..._selectVal,
+                                  };
+                                  returnStudent = widget.editStudent!.copyWith(
+                                    name: allFields['student_name']?.toString(),
+                                    dob: allFields['date_of_birth']?.toString(),
+                                    address: allFields['address']?.toString(),
+                                    caste: allFields['caste']?.toString(),
+                                    studentNicId: allFields['student_nic_id']?.toString() ?? allFields['nic_id']?.toString(),
+                                    uidNo: allFields['uid_number']?.toString(),
+                                    fatherName: allFields['father_name']?.toString(),
+                                    fatherPhone: allFields['father_phone']?.toString(),
+                                    motherName: allFields['mother_name']?.toString(),
+                                    landLineNo: allFields['landline_contact_number']?.toString() ?? allFields['landline_number']?.toString(),
+                                    whatsappPhone: allFields['student_whatsapp_number']?.toString() ?? allFields['student_whatsapp']?.toString(),
+                                    fatherWphone: allFields['father_whatsapp_number']?.toString() ?? allFields['father_whatsapp']?.toString(),
+                                    motherPhone: allFields['mother_phone']?.toString(),
+                                    email: allFields['student_email']?.toString(),
+                                    phone: allFields['student_phone']?.toString(),
+                                    pincode: allFields['pincode']?.toString(),
+                                    religion: allFields['religion']?.toString(),
+                                  );
+                                }
+                                Navigator.pop(context, returnStudent);
                               }
                               if (state.error != null) {
                                 ScaffoldMessenger.of(context).showSnackBar(

@@ -7,20 +7,11 @@ import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
-import 'package:idmitra/models/add_student/StudentFormDataModel.dart';
 import 'package:idmitra/models/orders/OrderModel.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/orders/orders_state.dart';
-import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/orders/order_detail_page.dart';
 import 'package:idmitra/screens/orders/staff_orders_page.dart';
-
-const _statusOptions = [
-  {'label': 'Filter By Status', 'value': ''},
-  {'label': 'Re-Order', 'value': 're_order'},
-  {'label': 'Order Created', 'value': 'order_created'},
-  {'label': 'Work In Process', 'value': 'work_in_process'},
-];
 
 class OrdersPage extends StatelessWidget {
   final String schoolId;
@@ -31,9 +22,8 @@ class OrdersPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => OrdersCubit()
-          ..fetchOrders()
+          ..fetchOrders(schoolId: schoolId)
           ..fetchStatistics()),
-        BlocProvider(create: (_) => StudentFormDataCubit()..load(schoolId)),
       ],
       child: _OrdersView(schoolId: schoolId),
     );
@@ -68,6 +58,7 @@ class _OrdersViewState extends State<_OrdersView> {
           search: _searchCtrl.text.trim(),
           status: _selectedStatus,
           classId: _selectedClass,
+          schoolId: widget.schoolId,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -90,6 +81,7 @@ class _OrdersViewState extends State<_OrdersView> {
       search: _searchCtrl.text.trim(),
       status: _selectedStatus,
       classId: _selectedClass,
+      schoolId: widget.schoolId,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -151,26 +143,26 @@ class _OrdersViewState extends State<_OrdersView> {
           ),
 
           // Stats
-          BlocBuilder<OrdersCubit, OrdersState>(
-            buildWhen: (p, c) => p.statistics != c.statistics || p.statsLoading != c.statsLoading,
-            builder: (_, state) {
-              final s = state.statistics;
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Row(
-                  children: [
-                    _statCard('Total', s != null ? '${s.totalOrders}' : '-', Icons.receipt_long_outlined),
-                    const SizedBox(width: 8),
-                    _statCard('Pending', s != null ? '${s.pendingOrders}' : '-', Icons.hourglass_empty),
-                    const SizedBox(width: 8),
-                    _statCard('Completed', s != null ? '${s.completedOrders}' : '-', Icons.check_circle_outline),
-                    const SizedBox(width: 8),
-                    _statCard('Rate', s != null ? '${s.completionRate.toStringAsFixed(0)}%' : '-', Icons.trending_up),
-                  ],
-                ),
-              );
-            },
-          ),
+          // BlocBuilder<OrdersCubit, OrdersState>(
+          //   buildWhen: (p, c) => p.statistics != c.statistics || p.statsLoading != c.statsLoading,
+          //   builder: (_, state) {
+          //     final s = state.statistics;
+          //     return Padding(
+          //       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          //       child: Row(
+          //         children: [
+          //           _statCard('Total', s != null ? '${s.totalOrders}' : '-', Icons.receipt_long_outlined),
+          //           const SizedBox(width: 8),
+          //           _statCard('Pending', s != null ? '${s.pendingOrders}' : '-', Icons.hourglass_empty),
+          //           const SizedBox(width: 8),
+          //           _statCard('Completed', s != null ? '${s.completedOrders}' : '-', Icons.check_circle_outline),
+          //           const SizedBox(width: 8),
+          //           _statCard('Rate', s != null ? '${s.completionRate.toStringAsFixed(0)}%' : '-', Icons.trending_up),
+          //         ],
+          //       ),
+          //     );
+          //   },
+          // ),
 
           // List
           Expanded(
@@ -244,19 +236,18 @@ class _OrdersViewState extends State<_OrdersView> {
         ),
       );
 
-  Widget _classDropdown() => BlocBuilder<StudentFormDataCubit, StudentFormDataState>(
+  Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
+        buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.loading != c.loading,
         builder: (_, state) {
-          final seen = <String>{};
-          final unique = (state.data?.classes ?? []).where((c) => seen.add(c.nameWithPrefix)).toList();
           return _dropdown(
             value: _selectedClass.isEmpty ? '' : _selectedClass,
             hint: 'Filter By Classes',
-            loading: state.loading,
+            loading: state.loading && state.availableClasses.isEmpty,
             items: [
               const DropdownMenuItem(value: '', child: Text('Filter By Classes')),
-              ...unique.map((c) => DropdownMenuItem(
+              ...state.availableClasses.map((c) => DropdownMenuItem(
                     value: c.id.toString(),
-                    child: Text(c.nameWithPrefix, overflow: TextOverflow.ellipsis),
+                    child: Text(c.name, overflow: TextOverflow.ellipsis),
                   )),
             ],
             onChanged: (v) {
@@ -270,9 +261,9 @@ class _OrdersViewState extends State<_OrdersView> {
   Widget _statusDropdown() => _dropdown(
         value: _selectedStatus,
         hint: 'Filter By Status',
-        items: _statusOptions.map((s) => DropdownMenuItem<String>(
-              value: s['value']!,
-              child: Text(s['label']!, overflow: TextOverflow.ellipsis),
+        items: kOrderFilterStatuses.map((s) => DropdownMenuItem<String>(
+              value: s.value,
+              child: Text(s.label, overflow: TextOverflow.ellipsis),
             )).toList(),
         onChanged: (v) {
           setState(() => _selectedStatus = v ?? '');
@@ -371,17 +362,6 @@ class _OrdersViewState extends State<_OrdersView> {
 }
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
-const _cardStatusOptions = [
-  {'label': 'Order Created', 'value': 'order_created', 'icon': Icons.add_circle_outline},
-  {'label': 'Re-Order', 'value': 're_order', 'icon': Icons.refresh},
-  {'label': 'Work In Process', 'value': 'work_in_process', 'icon': Icons.build_outlined},
-  {'label': 'Printing', 'value': 'printing', 'icon': Icons.print_outlined},
-  {'label': 'Dispatched', 'value': 'dispatched', 'icon': Icons.local_shipping_outlined},
-  {'label': 'Delivered', 'value': 'delivered', 'icon': Icons.check_circle_outline},
-  {'label': 'Completed', 'value': 'completed', 'icon': Icons.done_all},
-  {'label': 'Cancelled', 'value': 'cancelled', 'icon': Icons.cancel_outlined},
-];
-
 class _OrderCard extends StatefulWidget {
   final OrderModel order;
   const _OrderCard({required this.order});
@@ -401,11 +381,10 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   String get _statusLabel {
-    final match = _cardStatusOptions.firstWhere(
-      (s) => s['value'] == _currentStatus,
-      orElse: () => {'label': _currentStatus.replaceAll('_', ' ')},
-    );
-    return match['label'] as String;
+    return kOrderStatuses
+        .firstWhere((s) => s.value == _currentStatus,
+            orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')))
+        .label;
   }
 
   Future<void> _updateStatus(String newStatus) async {
@@ -455,7 +434,7 @@ class _OrderCardState extends State<_OrderCard> {
                   const Spacer(),
                   _statusChip(),
                   const SizedBox(width: 4),
-                  // 3-dot action menu
+                  // 3-dot status update menu
                   _updating
                       ? const SizedBox(
                           width: 18, height: 18,
@@ -467,34 +446,37 @@ class _OrderCardState extends State<_OrderCard> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 8,
                           onSelected: _updateStatus,
-                          itemBuilder: (_) => _cardStatusOptions.map((s) {
-                            final isCurrent = s['value'] == _currentStatus;
-                            return PopupMenuItem<String>(
-                              value: s['value'] as String,
-                              enabled: !isCurrent,
+                          itemBuilder: (_) => [
+                            PopupMenuItem<String>(
+                              value: 'completed',
+                              enabled: _currentStatus != 'completed',
                               child: Row(
                                 children: [
                                   Icon(
-                                    s['icon'] as IconData,
+                                    Icons.check_circle_outline,
                                     size: 16,
-                                    color: isCurrent ? AppTheme.btnColor : AppTheme.graySubTitleColor,
+                                    color: _currentStatus == 'completed'
+                                        ? AppTheme.btnColor
+                                        : AppTheme.graySubTitleColor,
                                   ),
                                   const SizedBox(width: 10),
                                   Text(
-                                    s['label'] as String,
+                                    'Mark as Completed',
                                     style: MyStyles.regularText(
                                       size: 13,
-                                      color: isCurrent ? AppTheme.btnColor : AppTheme.black_Color,
+                                      color: _currentStatus == 'completed'
+                                          ? AppTheme.btnColor
+                                          : AppTheme.black_Color,
                                     ),
                                   ),
-                                  if (isCurrent) ...[
+                                  if (_currentStatus == 'completed') ...[
                                     const Spacer(),
                                     Icon(Icons.check, size: 14, color: AppTheme.btnColor),
                                   ],
                                 ],
                               ),
-                            );
-                          }).toList(),
+                            ),
+                          ],
                         ),
                 ],
               ),
@@ -583,7 +565,7 @@ class _OrderCardState extends State<_OrderCard> {
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final text = newValue.text.replaceAll('/', '.').replaceAll('-', '.');
+    final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
     return newValue.copyWith(text: text, selection: TextSelection.collapsed(offset: text.length));
   }
 }

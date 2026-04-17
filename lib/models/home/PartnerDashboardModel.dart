@@ -62,18 +62,18 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    filters: json["filters"] == null ? null : Filters.fromJson(json["filters"]),
-    orders: json["orders"] == null ? null : Orders.fromJson(json["orders"]),
-    schools: json["schools"] == null ? null : Employees.fromJson(json["schools"]),
-    users: json["users"] == null ? null : SchoolAdmins.fromJson(json["users"]),
-    schoolAdmins: json["school_admins"] == null ? null : SchoolAdmins.fromJson(json["school_admins"]),
-    students: json["students"] == null ? null : Employees.fromJson(json["students"]),
-    subPartners: json["sub_partners"] == null ? null : Employees.fromJson(json["sub_partners"]),
-    employees: json["employees"] == null ? null : Employees.fromJson(json["employees"]),
-    partner: json["partner"] == null ? null : Partner.fromJson(json["partner"]),
-    period: json["period"],
-    dateRange: json["date_range"] == null ? null : DateRange.fromJson(json["date_range"]),
-    summary: json["summary"] == null ? null : Summary.fromJson(json["summary"]),
+    filters: json["filters"] is Map ? Filters.fromJson(json["filters"] as Map<String, dynamic>) : null,
+    orders: json["orders"] is Map ? Orders.fromJson(json["orders"] as Map<String, dynamic>) : null,
+    schools: json["schools"] is Map ? Employees.fromJson(json["schools"] as Map<String, dynamic>) : null,
+    users: json["users"] is Map ? SchoolAdmins.fromJson(json["users"] as Map<String, dynamic>) : null,
+    schoolAdmins: json["school_admins"] is Map ? SchoolAdmins.fromJson(json["school_admins"] as Map<String, dynamic>) : null,
+    students: json["students"] is Map ? Employees.fromJson(json["students"] as Map<String, dynamic>) : null,
+    subPartners: json["sub_partners"] is Map ? Employees.fromJson(json["sub_partners"] as Map<String, dynamic>) : null,
+    employees: json["employees"] is Map ? Employees.fromJson(json["employees"] as Map<String, dynamic>) : null,
+    partner: json["partner"] is Map ? Partner.fromJson(json["partner"] as Map<String, dynamic>) : null,
+    period: json["period"]?.toString(),
+    dateRange: json["date_range"] is Map ? DateRange.fromJson(json["date_range"] as Map<String, dynamic>) : null,
+    summary: json["summary"] is Map ? Summary.fromJson(json["summary"] as Map<String, dynamic>) : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -228,9 +228,9 @@ class SchoolAdmins {
   });
 
   factory SchoolAdmins.fromJson(Map<String, dynamic> json) => SchoolAdmins(
-    total: json["total"],
-    active: json["active"],
-    inactive: json["inactive"],
+    total: json["total"] is int ? json["total"] : int.tryParse(json["total"]?.toString() ?? ''),
+    active: json["active"] is int ? json["active"] : int.tryParse(json["active"]?.toString() ?? ''),
+    inactive: json["inactive"] is int ? json["inactive"] : int.tryParse(json["inactive"]?.toString() ?? ''),
   );
 
   Map<String, dynamic> toJson() => {
@@ -258,12 +258,12 @@ class Summary {
   });
 
   factory Summary.fromJson(Map<String, dynamic> json) => Summary(
-    totalOrders: json["total_orders"],
-    totalSchools: json["total_schools"],
-    totalUsers: json["total_users"],
-    totalStudents: json["total_students"],
-    totalSubPartners: json["total_sub_partners"],
-    totalEmployees: json["total_employees"],
+    totalOrders: json["total_orders"] is int ? json["total_orders"] : int.tryParse(json["total_orders"]?.toString() ?? ''),
+    totalSchools: json["total_schools"] is int ? json["total_schools"] : int.tryParse(json["total_schools"]?.toString() ?? ''),
+    totalUsers: json["total_users"] is int ? json["total_users"] : int.tryParse(json["total_users"]?.toString() ?? ''),
+    totalStudents: json["total_students"] is int ? json["total_students"] : int.tryParse(json["total_students"]?.toString() ?? ''),
+    totalSubPartners: json["total_sub_partners"] is int ? json["total_sub_partners"] : int.tryParse(json["total_sub_partners"]?.toString() ?? ''),
+    totalEmployees: json["total_employees"] is int ? json["total_employees"] : int.tryParse(json["total_employees"]?.toString() ?? ''),
   );
 
   Map<String, dynamic> toJson() => {

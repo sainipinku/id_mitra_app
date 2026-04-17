@@ -82,6 +82,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   Widget _headerCard() {
     final o = _order!;
+    final student = o.student;
+    final hasPhoto = student?.profilePhotoUrl?.isNotEmpty ?? false;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -107,13 +110,32 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             child: Center(
               child: Column(
                 children: [
+                  // Student photo
                   Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: AppTheme.btnColor.withOpacity(0.1), shape: BoxShape.circle),
-                    child: Icon(Icons.receipt_long_outlined, size: 32, color: AppTheme.btnColor),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [BoxShadow(color: AppTheme.btnColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 3))],
+                    ),
+                    child: CircleAvatar(
+                      radius: 36,
+                      backgroundColor: AppTheme.appBackgroundColor,
+                      backgroundImage: hasPhoto ? NetworkImage(student!.profilePhotoUrl!) : null,
+                      child: !hasPhoto
+                          ? Icon(Icons.person_rounded, size: 36, color: AppTheme.graySubTitleColor)
+                          : null,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text('#${o.id}', style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
+                  if (student != null) ...[
+                    const SizedBox(height: 2),
+                    Text(student.name, style: MyStyles.mediumText(size: 14, color: AppTheme.black_Color)),
+                    if (student.className != null) ...[
+                      const SizedBox(height: 2),
+                      Text(student.className!, style: MyStyles.regularText(size: 12, color: AppTheme.btnColor)),
+                    ],
+                  ],
                   const SizedBox(height: 4),
                   Text(o.typeLabel, style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor)),
                   const SizedBox(height: 4),

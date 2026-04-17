@@ -54,17 +54,10 @@ class OrderModel {
   }
 
   String get statusLabel {
-    switch (status) {
-      case 'order_created': return 'Order Created';
-      case 're_order': return 'Re-Order';
-      case 'work_in_process': return 'Work In Process';
-      case 'printing': return 'Printing';
-      case 'dispatched': return 'Dispatched';
-      case 'delivered': return 'Delivered';
-      case 'completed': return 'Completed';
-      case 'cancelled': return 'Cancelled';
-      default: return status.replaceAll('_', ' ');
-    }
+    return kOrderStatuses
+        .firstWhere((s) => s.value == status,
+            orElse: () => OrderStatusOption(status, status.replaceAll('_', ' ')))
+        .label;
   }
 
   String get typeLabel {
@@ -117,6 +110,7 @@ class OrderStudent {
   final String name;
   final String? profilePhotoUrl;
   final String? className;
+  final int? classId;
   final String? sectionName;
   final String? gender;
   final String? dob;
@@ -132,6 +126,7 @@ class OrderStudent {
     required this.name,
     this.profilePhotoUrl,
     this.className,
+    this.classId,
     this.sectionName,
     this.gender,
     this.dob,
@@ -151,6 +146,7 @@ class OrderStudent {
       name: json['name'] ?? '',
       profilePhotoUrl: json['profile_photo_url'],
       className: cls?['name_withprefix'],
+      classId: cls?['id'],
       sectionName: section?['name'],
       gender: json['gender'],
       dob: json['dob'],
@@ -163,6 +159,29 @@ class OrderStudent {
     );
   }
 }
+
+class OrderStatusOption {
+  final String value;
+  final String label;
+  const OrderStatusOption(this.value, this.label);
+}
+
+const kOrderStatuses = [
+  OrderStatusOption('order_created', 'Order Created'),
+  OrderStatusOption('re_order', 'Re-Order'),
+  OrderStatusOption('work_in_process', 'Work In Process'),
+  OrderStatusOption('completed', 'Completed'),
+  OrderStatusOption('cancelled', 'Cancelled'),
+];
+
+const kOrderFilterStatuses = [
+  OrderStatusOption('', 'Filter By Status'),
+  OrderStatusOption('order_created', 'Order Created'),
+  OrderStatusOption('re_order', 'Re-Order'),
+  OrderStatusOption('work_in_process', 'Work In Process'),
+  OrderStatusOption('completed', 'Completed'),
+  OrderStatusOption('cancelled', 'Cancelled'),
+];
 
 class OrderStatistics {
   final int totalOrders;

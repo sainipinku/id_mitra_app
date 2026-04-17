@@ -11,22 +11,22 @@ import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:page_transition/page_transition.dart';
 
-import 'admin_home.dart';
-import 'admin_setting.dart';
+import 'staff_home.dart';
+import 'staff_setting.dart';
 
-class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({super.key});
+class StaffDashboard extends StatefulWidget {
+  const StaffDashboard({super.key});
 
   @override
-  State<AdminDashboard> createState() => _AdminDashboardState();
+  State<StaffDashboard> createState() => _StaffDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
+class _StaffDashboardState extends State<StaffDashboard> {
   int _selectedIndex = 0;
 
   final List<Widget> _widgetOptions = [
-    const AdminHome(),
-    BlocProvider(create: (_) => LoginCubit(), child: const AdminSetting()),
+    const StaffHome(),
+    BlocProvider(create: (_) => LoginCubit(), child: const StaffSetting()),
   ];
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
@@ -107,8 +107,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Admin", style: MyStyles.boldTxt(AppTheme.black_Color, 20)),
-                  Text("ID Mitra School Admin", style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 14)),
+                  Text("Staff", style: MyStyles.boldTxt(AppTheme.black_Color, 20)),
+                  Text("ID Mitra Staff", style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 14)),
                 ],
               ),
             ),
