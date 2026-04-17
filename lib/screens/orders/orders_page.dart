@@ -7,11 +7,9 @@ import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
-import 'package:idmitra/models/add_student/StudentFormDataModel.dart';
 import 'package:idmitra/models/orders/OrderModel.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/orders/orders_state.dart';
-import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/orders/order_detail_page.dart';
 import 'package:idmitra/screens/orders/staff_orders_page.dart';
 
@@ -26,7 +24,6 @@ class OrdersPage extends StatelessWidget {
         BlocProvider(create: (_) => OrdersCubit()
           ..fetchOrders(schoolId: schoolId)
           ..fetchStatistics()),
-        BlocProvider(create: (_) => StudentFormDataCubit()..load(schoolId)),
       ],
       child: _OrdersView(schoolId: schoolId),
     );
@@ -239,19 +236,18 @@ class _OrdersViewState extends State<_OrdersView> {
         ),
       );
 
-  Widget _classDropdown() => BlocBuilder<StudentFormDataCubit, StudentFormDataState>(
+  Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
+        buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.loading != c.loading,
         builder: (_, state) {
-          final seen = <String>{};
-          final unique = (state.data?.classes ?? []).where((c) => seen.add(c.nameWithPrefix)).toList();
           return _dropdown(
             value: _selectedClass.isEmpty ? '' : _selectedClass,
             hint: 'Filter By Classes',
-            loading: state.loading,
+            loading: state.loading && state.availableClasses.isEmpty,
             items: [
               const DropdownMenuItem(value: '', child: Text('Filter By Classes')),
-              ...unique.map((c) => DropdownMenuItem(
+              ...state.availableClasses.map((c) => DropdownMenuItem(
                     value: c.id.toString(),
-                    child: Text(c.nameWithPrefix, overflow: TextOverflow.ellipsis),
+                    child: Text(c.name, overflow: TextOverflow.ellipsis),
                   )),
             ],
             onChanged: (v) {

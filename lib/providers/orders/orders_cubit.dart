@@ -78,6 +78,17 @@ class OrdersCubit extends Cubit<OrdersState> {
       final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
       final updatedList = isLoadMore ? [...state.ordersList, ...newOrders] : newOrders;
 
+      // Extract unique classes from orders (only on first page load)
+      List<OrderClass> classes = state.availableClasses;
+      if (!isLoadMore) {
+        final seen = <int>{};
+        classes = updatedList
+            .where((o) => o.student?.classId != null && o.student?.className != null)
+            .map((o) => OrderClass(o.student!.classId!, o.student!.className!))
+            .where((c) => seen.add(c.id))
+            .toList();
+      }
+
       emit(state.copyWith(
         loading: false,
         isPaginationLoading: false,
@@ -85,6 +96,7 @@ class OrdersCubit extends Cubit<OrdersState> {
         page: respPage + 1,
         hasMore: respPage < lastPage,
         total: total,
+        availableClasses: classes,
       ));
     } catch (e) {
       emit(state.copyWith(loading: false, isPaginationLoading: false, error: e.toString()));

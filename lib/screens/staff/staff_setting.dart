@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/api_mamanger/UserLocal.dart';
+import 'package:idmitra/api_mamanger/secure_storage.dart';
+import 'package:idmitra/bottom_diloag/logout.dart';
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/config/sharedpref.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
+import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
+import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
@@ -38,22 +43,50 @@ class _StaffSettingState extends State<StaffSetting> {
     );
   }
 
+  void _logout() {
+    LogoutBottomDilog(
+      buildContext: context,
+      title: 'Logout',
+      desc: 'Are you sure you want to logout?',
+      button: () {
+        context.read<LoginCubit>().constLogoutFun();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Settings', style: MyStyles.boldTxt(AppTheme.black_Color, 18)),
-          const SizedBox(height: 16),
-          _settingTile(
-            icon: Icons.assignment,
-            title: 'Student Form Fields',
-            subtitle: 'Configure student registration form',
-            onTap: _openStudentForm,
-          ),
-        ],
+    return BlocListener<LoginCubit, LoginState>(
+      listener: (context, state) {
+        if (state is LogoutSuccess) {
+          SharedPref.removeAll();
+          UserSecureStorage.deleteAll();
+          navigateWithTransition(context: context, page: const LoginScreen());
+        }
+      },
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Settings', style: MyStyles.boldTxt(AppTheme.black_Color, 18)),
+            const SizedBox(height: 16),
+            _settingTile(
+              icon: Icons.assignment,
+              title: 'Student Form Fields',
+              subtitle: 'Configure student registration form',
+              onTap: _openStudentForm,
+            ),
+            const SizedBox(height: 12),
+            _settingTile(
+              icon: Icons.logout,
+              title: 'Logout',
+              subtitle: 'Sign out of your account',
+              onTap: _logout,
+              iconColor: Colors.red,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -63,6 +96,7 @@ class _StaffSettingState extends State<StaffSetting> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? iconColor,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -77,8 +111,8 @@ class _StaffSettingState extends State<StaffSetting> {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: AppTheme.btn10perOpacityColor,
-              child: Icon(icon, color: AppTheme.btnColor, size: 22),
+              backgroundColor: (iconColor ?? AppTheme.btnColor).withOpacity(0.1),
+              child: Icon(icon, color: iconColor ?? AppTheme.btnColor, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(

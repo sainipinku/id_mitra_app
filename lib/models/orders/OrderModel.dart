@@ -110,6 +110,7 @@ class OrderStudent {
   final String name;
   final String? profilePhotoUrl;
   final String? className;
+  final int? classId;
   final String? sectionName;
   final String? gender;
   final String? dob;
@@ -125,6 +126,7 @@ class OrderStudent {
     required this.name,
     this.profilePhotoUrl,
     this.className,
+    this.classId,
     this.sectionName,
     this.gender,
     this.dob,
@@ -144,6 +146,7 @@ class OrderStudent {
       name: json['name'] ?? '',
       profilePhotoUrl: json['profile_photo_url'],
       className: cls?['name_withprefix'],
+      classId: cls?['id'],
       sectionName: section?['name'],
       gender: json['gender'],
       dob: json['dob'],
