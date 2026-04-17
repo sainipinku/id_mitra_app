@@ -212,6 +212,12 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       'school_class_id': fields['class']?.toString(),
       'session': fields['session']?.toString(),
       'class': fields['class']?.toString(),
+      // Alternate keys - API may use different names
+      'student_whatsapp_number': _f(['student_whatsapp_number', 'student_whatsapp']),
+      'landline_contact_number': _f(['landline_contact_number', 'landline_number']),
+      'uid_number': _f(['uid_number', 'uid_no']),
+      'date_of_birth': dob,
+      'student_email': _f(['student_email']),
       'school_class_section_id': fields['class_section']?.toString(),
       'school_house_id': fields['house']?.toString(),
       'reg_no': _f(['registration_number', 'reg_no']),
