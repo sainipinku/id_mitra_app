@@ -40,13 +40,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   }
 }
 
-
-///ehdkjfdklhdsgd
-///
-///
-///
-///
-
 class _UserDetailsContent extends StatelessWidget {
   final SchoolDetailsModel? schoolDetailsModel;
   final List<String> tabs;
