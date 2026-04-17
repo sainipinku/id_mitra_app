@@ -23,6 +23,9 @@ class UserDetailsPage extends StatefulWidget {
 class _UserDetailsPageState extends State<UserDetailsPage> {
   List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
   int selectedIndex = 0;
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
