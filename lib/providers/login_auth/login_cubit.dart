@@ -120,15 +120,16 @@ class LoginCubit extends Cubit<LoginState> {
   constLogoutFun() async {
     emit(LoginLoading());
     try {
-      var response = await apiManager.postWithoutRequest(
+      var response = await apiManager.postRequest(
+          {},
           Config.baseUrl + Routes.authLogout
       );
 
       debugPrint("response ${response.body}");
-      final jsonData = jsonDecode(response.body);  // FIXED HERE
-      if (response.statusCode == 200) {
-
-        LogoutModel logoutModel = LogoutModel.fromJson(jsonData);
+      final jsonData = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 401) {
+        // 401 means token already invalid - still logout locally
+        LogoutModel logoutModel = LogoutModel(status: true, message: 'Logged out');
         emit(LogoutSuccess(logoutModel: logoutModel));
       } else if (response.statusCode == 403) {
         final message = jsonData['message'] ?? "User not found";

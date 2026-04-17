@@ -9,6 +9,7 @@ import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
+import 'package:page_transition/page_transition.dart';
 
 import 'staff_home.dart';
 import 'staff_setting.dart';
@@ -39,7 +40,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           if (state is LogoutSuccess) {
             SharedPref.removeAll();
             UserSecureStorage.deleteAll();
-            navigateWithTransition(context: context, page: const LoginScreen());
+            navigateAndRemoveUntil(context: context, page: const LoginScreen(), transition: PageTransitionType.leftToRight);
           }
         },
         child: Scaffold(
@@ -115,10 +116,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
               children: [
                 IconButton(
                   icon: Container(
-                    height: 44, width: 44,
+                    height: 70,
+                    width: 70,
                     decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.btn10perOpacityColor),
                     child: Padding(
-                      padding: const EdgeInsets.all(10.0),
+                      padding: const EdgeInsets.all(3.0),
                       child: svgIcon(icon: 'assets/icons/home/notification.svg', clr: AppTheme.btnColor),
                     ),
                   ),
@@ -134,12 +136,16 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 ),
               ],
             ),
-            // Logout button
+            // Profile/Setting button
             IconButton(
               icon: Container(
-                height: 44, width: 44,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withOpacity(0.1)),
-                child: const Icon(Icons.logout, color: Colors.red, size: 20),
+                height: 70,
+                width: 70,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.btn10perOpacityColor),
+                child: Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: svgIcon(icon: 'assets/icons/home/user-profile.svg', clr: AppTheme.btnColor),
+                ),
               ),
               onPressed: () {
                 LogoutBottomDilog(

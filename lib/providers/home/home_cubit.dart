@@ -45,8 +45,17 @@ class HomeCubit extends Cubit<HomeState> {
       if (dashboardResponse.statusCode == 200 &&
           userResponse.statusCode == 200) {
 
-        final dashboardJson = jsonDecode(dashboardResponse.body);
-        final userJson = jsonDecode(userResponse.body);
+        final dashboardBody = dashboardResponse.body.trim();
+        final userBody = userResponse.body.trim();
+
+        // HTML response check - server ne error page diya
+        if (userBody.startsWith('<') || dashboardBody.startsWith('<')) {
+          emit(state.copyWith(loading: false, error: "Server error - invalid response"));
+          return;
+        }
+
+        final dashboardJson = jsonDecode(dashboardBody);
+        final userJson = jsonDecode(userBody);
 
         final dashboardModel = PartnerDashboardModel.fromJson(dashboardJson);
         final userModel = UserDetailsModel.fromJson(userJson);
