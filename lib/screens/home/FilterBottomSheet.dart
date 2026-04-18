@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:idmitra/components/app_theme.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   const FilterBottomSheet({super.key});
@@ -8,12 +9,22 @@ class FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
+  String? selectedClass;
+  String? selectedGender;
 
-  bool regNo = true;
-  bool rollNo = false;
-  bool uidNo = false;
-  bool name = false;
-  bool fatherName = false;
+  final List<String> classList = [
+    "Class 1",
+    "Class 2",
+    "Class 3",
+    "Class 4",
+    "Class 5",
+  ];
+
+  final List<String> genderList = [
+    "Male",
+    "Female",
+    "Other",
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +32,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
 
             /// HEADER
@@ -30,125 +42,93 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 const Text(
                   "Filters",
                   style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 IconButton(
+                  onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                )
+                ),
               ],
             ),
 
             const Divider(),
+            const SizedBox(height: 10),
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-
-                /// LEFT MENU
-                Container(
-                  width: 120,
-                  color: Colors.grey.shade100,
-                  child: Column(
-                    children: const [
-
-                      ListTile(
-                        title: Text("Fields"),
-                        tileColor: Color(0xffE6F2FF),
-                      ),
-
-                      ListTile(
-                        title: Text("Gender"),
-                      ),
-
-                      ListTile(
-                        title: Text("Data Availability"),
-                      ),
-
-                      ListTile(
-                        title: Text("Class"),
-                      ),
-                    ],
-                  ),
+            /// CLASS DROPDOWN
+            DropdownButtonFormField<String>(
+              value: selectedClass,
+              decoration: InputDecoration(
+                labelText: "Select Class",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-
-                /// RIGHT CONTENT
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      children: [
-
-                        /// SEARCH FIELD
-                        TextField(
-                          decoration: InputDecoration(
-                            hintText: "Search Fields...",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        /// CHECKBOX LIST
-                        CheckboxListTile(
-                          value: regNo,
-                          title: const Text("Registration No."),
-                          onChanged: (val) {
-                            setState(() => regNo = val!);
-                          },
-                        ),
-
-                        CheckboxListTile(
-                          value: rollNo,
-                          title: const Text("Roll No."),
-                          onChanged: (val) {
-                            setState(() => rollNo = val!);
-                          },
-                        ),
-
-                        CheckboxListTile(
-                          value: uidNo,
-                          title: const Text("UID No."),
-                          onChanged: (val) {
-                            setState(() => uidNo = val!);
-                          },
-                        ),
-
-                        CheckboxListTile(
-                          value: name,
-                          title: const Text("Name"),
-                          onChanged: (val) {
-                            setState(() => name = val!);
-                          },
-                        ),
-
-                        CheckboxListTile(
-                          value: fatherName,
-                          title: const Text("Father name"),
-                          onChanged: (val) {
-                            setState(() => fatherName = val!);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              ],
+                enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
+                focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
+                errorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
+                focusedErrorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
+              ),
+              items: classList.map((item) {
+                return DropdownMenuItem(
+                  value: item,
+                  child: Text(item),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedClass = value;
+                });
+              },
             ),
+
+            const SizedBox(height: 15),
+
+            /// GENDER DROPDOWN
+            DropdownButtonFormField<String>(
+              value: selectedGender,
+              decoration: InputDecoration(
+                labelText: "Select Gender",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
+                focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
+                errorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
+                focusedErrorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
+              ),
+              items: genderList.map((item) {
+                return DropdownMenuItem(
+                  value: item,
+                  child: Text(item),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedGender = value;
+                });
+              },
+            ),
+
+            const SizedBox(height: 20),
 
             /// BUTTONS
             Row(
               children: [
-
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50), // height = 50
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        selectedClass = null;
+                        selectedGender = null;
+                      });
+                    },
                     child: const Text("Reset"),
                   ),
                 ),
@@ -159,16 +139,31 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
+                      minimumSize: const Size(double.infinity, 50), // height = 50
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pop(context, {
+                        "class": selectedClass,
+                        "gender": selectedGender,
+                      });
+                    },
                     child: const Text("Apply Filter"),
                   ),
-                )
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
+    );
+  }
+  OutlineInputBorder appBorder(Color color, double radius) {
+    return OutlineInputBorder(
+      borderSide: BorderSide(color: color),
+      borderRadius: BorderRadius.circular(radius),
     );
   }
 }

@@ -30,6 +30,8 @@ class StudentsCubit extends Cubit<StudentsState> {
     bool isLoadMore = false,
     String search = "",
     String schoolId = "",
+    String gender = "",
+    String classId = "",
   }) async {
 
     // 🔴 Prevent multiple calls
@@ -51,7 +53,7 @@ class StudentsCubit extends Cubit<StudentsState> {
 
 
       final response = await apiManager.getRequest(
-        "${Config.baseUrl}auth/school/$schoolId?search=$search&page=$currentPage",
+        "${Config.baseUrl}auth/school/$schoolId?search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
       );
 
       final jsonData = jsonDecode(response.body);

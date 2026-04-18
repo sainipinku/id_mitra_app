@@ -55,41 +55,14 @@ class _StudentListingPageState extends State<StudentListingPage> {
         context.read<StudentsCubit>().fetchStudents(
           search: searchController.text.trim(),
           schoolId: widget.schoolId,
+          gender: '',
+          classId: ''
         );
       }
     });
   }
 
-  void openFilter(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.whiteColor,
-      shape: const RoundedRectangleBorder( // <-- SEE HERE
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(25.0),
-        ),
-      ),
-      builder: (BuildContext context) {
-        return  StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState){
-              setState((){});
-              return SingleChildScrollView(
-                child: AnimatedPadding(
-                  duration: const Duration(milliseconds: 100),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                  child: FilterBottomSheet(),
-                )
-                ,
-              );
-            }
-        );
-      },
 
-    );
-
-  }
 
   @override
   void initState() {
@@ -107,6 +80,8 @@ class _StudentListingPageState extends State<StudentListingPage> {
           isLoadMore: true,
           search: '',
           schoolId: widget.schoolId,
+            gender: '',
+            classId: ''
         );
       }
     });
@@ -116,6 +91,8 @@ class _StudentListingPageState extends State<StudentListingPage> {
     context.read<StudentsCubit>().fetchStudents(
       search: '',
       schoolId: widget.schoolId,
+        gender: '',
+        classId: ''
     );
   }
   @override
@@ -147,17 +124,62 @@ class _StudentListingPageState extends State<StudentListingPage> {
                   const SizedBox(width: 10),
 
                   GestureDetector(
-                    onTap: (){
-                      openFilter(context);
+                    onTap: () async {
+                      final result = await showModalBottomSheet<Map<String, dynamic>>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: AppTheme.whiteColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(25),
+                          ),
+                        ),
+                        builder: (context) {
+                          return SingleChildScrollView(
+                            child: AnimatedPadding(
+                              duration: const Duration(milliseconds: 100),
+                              curve: Curves.easeOut,
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: const FilterBottomSheet(),
+                            ),
+                          );
+                        },
+                      );
+
+                      if (result != null) {
+                        print("Class: ${result['class']}");
+                        print("Gender: ${result['gender']}");
+
+                        final String? classId = result['class'];
+                        final String? gender =
+                        result['gender']?.toString().toLowerCase();
+
+                        if (_debounce?.isActive ?? false) {
+                          _debounce!.cancel();
+                        }
+
+                        _debounce = Timer(const Duration(milliseconds: 500), () {
+                          context.read<StudentsCubit>().fetchStudents(
+                            search: '',
+                            schoolId: widget.schoolId,
+                            classId: classId ?? '',     // null bhi ja sakta hai
+                            gender: gender ?? '',       // male / female / null
+                          );
+                        });
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: AppTheme.graySubTitleColor,width: 0.3),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: svgIcon(icon: 'assets/icons/filtter.svg', clr: AppTheme.black_Color,),
+                      child: svgIcon(
+                        icon: 'assets/icons/filtter.svg',
+                        clr: AppTheme.black_Color,
+                      ),
                     ),
                   )
                 ],
