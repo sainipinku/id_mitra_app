@@ -79,7 +79,7 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                 children: [
 
                   Text(
-                    widget.schoolDetailsModel!.name ?? '',
+                    widget.schoolDetailsModel!.name ?? '',maxLines: 1,overflow: TextOverflow.ellipsis,
                     style:
                     MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                   ),
@@ -94,7 +94,7 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                       Icon(Icons.location_on,size: 15,),
                       Expanded(
                         child: Text(
-                          widget.schoolDetailsModel!.address ?? '',
+                          widget.schoolDetailsModel!.address ?? '',maxLines: 2,overflow: TextOverflow.ellipsis,
                           style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
                         ),
                       ),
