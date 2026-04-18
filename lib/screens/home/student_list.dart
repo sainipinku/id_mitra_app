@@ -142,7 +142,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                               padding: EdgeInsets.only(
                                 bottom: MediaQuery.of(context).viewInsets.bottom,
                               ),
-                              child: const FilterBottomSheet(),
+                              child:  FilterBottomSheet(schoolId: widget.schoolId,),
                             ),
                           );
                         },

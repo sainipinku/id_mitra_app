@@ -27,7 +27,7 @@ class OrdersCubit extends Cubit<OrdersState> {
       final List rawClasses = data['classes'] ?? [];
       print('fetchSchoolClasses classes count: ${rawClasses.length}');
       final classes = rawClasses
-          .map((e) => OrderClass(e['id'] as int, e['name_withprefix'] ?? e['name'] ?? ''))
+          .map((e) => OrderClass(e['id'] as int, e['name'] ?? '',e['name_withprefix'] ))
           .toList();
       emit(state.copyWith(availableClasses: classes, classesLoading: false));
     } catch (e) {

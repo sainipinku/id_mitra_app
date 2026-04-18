@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
+import 'package:idmitra/providers/orders/orders_state.dart';
+
 
 class FilterBottomSheet extends StatefulWidget {
-  const FilterBottomSheet({super.key});
+  String schoolId;
+  FilterBottomSheet({super.key,required this.schoolId});
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -12,20 +17,19 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   String? selectedClass;
   String? selectedGender;
 
-  final List<String> classList = [
-    "Class 1",
-    "Class 2",
-    "Class 3",
-    "Class 4",
-    "Class 5",
-  ];
+
 
   final List<String> genderList = [
     "Male",
     "Female",
     "Other",
   ];
-
+   @override
+  void initState() {
+    // TODO: implement initState
+     context.read<OrdersCubit>().fetchSchoolClasses(widget.schoolId);
+    super.initState();
+  }
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -57,32 +61,47 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             const SizedBox(height: 10),
 
             /// CLASS DROPDOWN
-            DropdownButtonFormField<String>(
-              value: selectedClass,
-              decoration: InputDecoration(
-                labelText: "Select Class",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
-                focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
-                errorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
-                focusedErrorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
-              ),
-              items: classList.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(item),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedClass = value;
-                });
-              },
-            ),
+            BlocBuilder<OrdersCubit, OrdersState>(
+              builder: (context, state) {
+                if (state.loading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
-            const SizedBox(height: 15),
+                return DropdownButtonFormField<String>(
+                  value: selectedClass,
+                  decoration: InputDecoration(
+                    labelText: "Select Class",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
+                    focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
+                    errorBorder:
+                    appBorder(AppTheme.errorMessageBackgroundColor, 15),
+                    focusedErrorBorder:
+                    appBorder(AppTheme.errorMessageBackgroundColor, 15),
+                  ),
+
+                  items: state.availableClasses.map((item) {
+                    return DropdownMenuItem<String>(
+                      value: item.name.toString(), // API id
+                      child: Text(item.nameWithprefix ?? ""), // Class Name
+                    );
+                  }).toList(),
+
+                  onChanged: (value) {
+                    setState(() {
+                      selectedClass = value;
+                    });
+                  },
+                );
+              },
+            )
+            ,
+
+           /* const SizedBox(height: 15),
 
             /// GENDER DROPDOWN
             DropdownButtonFormField<String>(
@@ -108,7 +127,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   selectedGender = value;
                 });
               },
-            ),
+            ),*/
 
             const SizedBox(height: 20),
 
