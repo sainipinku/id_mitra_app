@@ -15,24 +15,28 @@ import 'package:idmitra/screens/orders/staff_orders_page.dart';
 
 class OrdersPage extends StatelessWidget {
   final String schoolId;
-  const OrdersPage({super.key, required this.schoolId});
+  final String schoolName;
+  final int? totalOrderCount;
+  const OrdersPage({super.key, required this.schoolId, this.schoolName = '', this.totalOrderCount});
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => OrdersCubit()
-          ..fetchOrders(schoolId: schoolId)
-          ..fetchStatistics()),
-      ],
-      child: _OrdersView(schoolId: schoolId),
+    return BlocProvider(
+      create: (_) => OrdersCubit()
+        ..fetchOrders(schoolId: schoolId)
+        ..fetchSchoolClasses(schoolId),
+      child: Builder(
+        builder: (_) => _OrdersView(schoolId: schoolId, schoolName: schoolName, totalOrderCount: totalOrderCount),
+      ),
     );
   }
 }
 
 class _OrdersView extends StatefulWidget {
   final String schoolId;
-  const _OrdersView({required this.schoolId});
+  final String schoolName;
+  final int? totalOrderCount;
+  const _OrdersView({required this.schoolId, this.schoolName = '', this.totalOrderCount});
 
   @override
   State<_OrdersView> createState() => _OrdersViewState();
@@ -164,6 +168,24 @@ class _OrdersViewState extends State<_OrdersView> {
           //   },
           // ),
 
+          // Total count banner
+          if (widget.totalOrderCount != null)
+            Container(
+              width: double.infinity,
+              color: AppTheme.btnColor.withOpacity(0.08),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 16, color: AppTheme.btnColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Total Orders: ${widget.totalOrderCount}',
+                    style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+                  ),
+                ],
+              ),
+            ),
+
           // List
           Expanded(
             child: BlocBuilder<OrdersCubit, OrdersState>(
@@ -237,12 +259,12 @@ class _OrdersViewState extends State<_OrdersView> {
       );
 
   Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
-        buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.loading != c.loading,
+        buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.classesLoading != c.classesLoading,
         builder: (_, state) {
           return _dropdown(
             value: _selectedClass.isEmpty ? '' : _selectedClass,
             hint: 'Filter By Classes',
-            loading: state.loading && state.availableClasses.isEmpty,
+            loading: state.classesLoading,
             items: [
               const DropdownMenuItem(value: '', child: Text('Filter By Classes')),
               ...state.availableClasses.map((c) => DropdownMenuItem(
@@ -252,7 +274,7 @@ class _OrdersViewState extends State<_OrdersView> {
             ],
             onChanged: (v) {
               setState(() => _selectedClass = v ?? '');
-              _resetAndFetch();
+              WidgetsBinding.instance.addPostFrameCallback((_) => _resetAndFetch());
             },
           );
         },
@@ -267,7 +289,7 @@ class _OrdersViewState extends State<_OrdersView> {
             )).toList(),
         onChanged: (v) {
           setState(() => _selectedStatus = v ?? '');
-          _resetAndFetch();
+          WidgetsBinding.instance.addPostFrameCallback((_) => _resetAndFetch());
         },
       );
 
@@ -361,7 +383,6 @@ class _OrdersViewState extends State<_OrdersView> {
       );
 }
 
-// ─── Order Card ───────────────────────────────────────────────────────────────
 class _OrderCard extends StatefulWidget {
   final OrderModel order;
   const _OrderCard({required this.order});

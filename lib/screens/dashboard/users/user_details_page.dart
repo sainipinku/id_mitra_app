@@ -5,8 +5,6 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/config/ScreenSize.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
-import 'package:idmitra/providers/orders/orders_cubit.dart';
-import 'package:idmitra/providers/orders/orders_state.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/screens/home/student_list.dart';
@@ -17,7 +15,7 @@ import '../../edit_profile/image_setting.dart';
 
 class UserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
-  UserDetailsPage({super.key,this.schoolDetailsModel});
+  UserDetailsPage({super.key, this.schoolDetailsModel});
 
   @override
   State<UserDetailsPage> createState() => _UserDetailsPageState();
@@ -26,16 +24,14 @@ class UserDetailsPage extends StatefulWidget {
 class _UserDetailsPageState extends State<UserDetailsPage> {
   List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
   int selectedIndex = 0;
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => OrdersCubit()..fetchStatistics(),
-      child: _UserDetailsContent(
-        schoolDetailsModel: widget.schoolDetailsModel,
-        tabs: tabs,
-        selectedIndex: selectedIndex,
-        onTabChanged: (i) => setState(() => selectedIndex = i),
-      ),
+    return _UserDetailsContent(
+      schoolDetailsModel: widget.schoolDetailsModel,
+      tabs: tabs,
+      selectedIndex: selectedIndex,
+      onTabChanged: (i) => setState(() => selectedIndex = i),
     );
   }
 }
@@ -53,11 +49,6 @@ class _UserDetailsContent extends StatelessWidget {
     required this.onTabChanged,
   });
 
-
-
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,20 +57,15 @@ class _UserDetailsContent extends StatelessWidget {
         showText: true,
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.settings,color: Colors.black,),
+            icon: const Icon(Icons.settings, color: Colors.black),
             offset: const Offset(0, 45),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             elevation: 8,
-
             onSelected: (value) {
               if (value == 'image_settings') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const ImageSettingsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const ImageSettingsScreen()),
                 );
               } else if (value == 'student_form') {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
@@ -88,48 +74,24 @@ class _UserDetailsContent extends StatelessWidget {
                   context: context,
                   page: BlocProvider(
                     create: (_) => StudentFormCubit()
-                      ..loadFromSchoolId(
-                        schoolId: schoolId,
-                        schoolName: schoolName,
-                      ),
-                    child: StudentForm(
-                      schoolDetailsModel: schoolDetailsModel!,
-                    ),
+                      ..loadFromSchoolId(schoolId: schoolId, schoolName: schoolName),
+                    child: StudentForm(schoolDetailsModel: schoolDetailsModel!),
                   ),
                 );
               }
             },
-
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: 'image_settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.image),
-                    SizedBox(width: 10),
-                    Text('Image Settings'),
-                  ],
-                ),
+                child: Row(children: [Icon(Icons.image), SizedBox(width: 10), Text('Image Settings')]),
               ),
               PopupMenuItem(
                 value: 'profile_settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.person),
-                    SizedBox(width: 10),
-                    Text('Profile Settings'),
-                  ],
-                ),
+                child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
               ),
               PopupMenuItem(
                 value: 'student_form',
-                child: Row(
-                  children: [
-                    Icon(Icons.assignment),
-                    SizedBox(width: 10),
-                    Text('Student Form'),
-                  ],
-                ),
+                child: Row(children: [Icon(Icons.assignment), SizedBox(width: 10), Text('Student Form')]),
               ),
             ],
           ),
@@ -140,13 +102,12 @@ class _UserDetailsContent extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 30),
-            /// 🔹 TOP CARD (IMAGE + LOGO)
+
+            // TOP CARD
             Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-
-                /// 🔹 CARD CONTAINER (with radius)
                 Container(
                   height: ScreenSize.hp(context, 18),
                   decoration: BoxDecoration(
@@ -156,8 +117,6 @@ class _UserDetailsContent extends StatelessWidget {
                   clipBehavior: Clip.hardEdge,
                   child: Stack(
                     children: [
-
-                      /// DARK OVERLAY
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
@@ -167,20 +126,13 @@ class _UserDetailsContent extends StatelessWidget {
                           ),
                         ),
                       ),
-
-                      /// CENTER TITLE
                       Center(
                         child: Text(
                           schoolDetailsModel?.name ?? '',
                           textAlign: TextAlign.center,
-                          style: MyStyles.boldText(
-                            size: 20,
-                            color: AppTheme.black_Color,
-                          ),
+                          style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
                         ),
                       ),
-
-                      /// BOTTOM INFO BAR
                       Positioned(
                         bottom: 12,
                         left: 12,
@@ -199,45 +151,39 @@ class _UserDetailsContent extends StatelessWidget {
                                   Expanded(
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
-                                        Icon(Icons.location_on,
-                                            size: 14, color: AppTheme.black_Color),
+                                        Icon(Icons.location_on, size: 14, color: AppTheme.black_Color),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
-                                            schoolDetailsModel?.address ?? '',maxLines: 2,
-                                            style: MyStyles.regularText(
-                                                size: 12, color: AppTheme.black_Color),
+                                            schoolDetailsModel?.address ?? '',
+                                            maxLines: 2,
+                                            style: MyStyles.regularText(size: 12, color: AppTheme.black_Color),
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: AppTheme.greenColor,
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
                                       "ACTIVE",
-                                      style: MyStyles.boldText(
-                                          size: 10, color: AppTheme.whiteColor),
+                                      style: MyStyles.boldText(size: 10, color: AppTheme.whiteColor),
                                     ),
                                   ),
                                 ],
                               ),
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_month_outlined,
-                                      size: 14, color: AppTheme.black_Color),
+                                  Icon(Icons.calendar_month_outlined, size: 14, color: AppTheme.black_Color),
                                   const SizedBox(width: 4),
                                   Text(
                                     "12 Feb 2026",
-                                    style: MyStyles.regularText(
-                                        size: 12, color: AppTheme.black_Color),
+                                    style: MyStyles.regularText(size: 12, color: AppTheme.black_Color),
                                   ),
                                 ],
                               ),
@@ -248,8 +194,6 @@ class _UserDetailsContent extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                /// 🔹 TOP LOGO (PERFECT CENTER)
                 Positioned(
                   top: -40,
                   left: 0,
@@ -264,9 +208,8 @@ class _UserDetailsContent extends StatelessWidget {
                           fit: BoxFit.cover,
                           width: 80,
                           height: 80,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.image, size: 40);
-                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.image, size: 40),
                         ),
                       ),
                     ),
@@ -277,64 +220,46 @@ class _UserDetailsContent extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            /// 🔹 STATS
+            // STATS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ////gfhfghgdg
-                statCard(title: "STUDENTS", value: "${schoolDetailsModel?.studentCount ?? ''}",callBtn: (){
-                  navigateWithTransition(
+                statCard(
+                  title: "STUDENTS",
+                  value: "${schoolDetailsModel?.studentCount ?? ''}",
+                  callBtn: () => navigateWithTransition(
                     context: context,
-                    page: StudentListingPage(schoolId: schoolDetailsModel?.id.toString() ?? '',),
-                  );
-                }),
-                statCard(title: "STAFF", value: "${schoolDetailsModel?.staffCount ?? ''}",callBtn: (){
-                  navigateWithTransition(
+                    page: StudentListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                  ),
+                ),
+                statCard(
+                  title: "STAFF",
+                  value: "${schoolDetailsModel?.staffCount ?? ''}",
+                  callBtn: () => navigateWithTransition(
                     context: context,
                     page: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
-                  );
-                }),
-                BlocBuilder<OrdersCubit, OrdersState>(
-                  buildWhen: (p, c) => p.statistics != c.statistics || p.statsLoading != c.statsLoading,
-                  builder: (context, state) {
-                    final total = state.statistics?.totalOrders;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => navigateWithTransition(
-                          context: context,
-                          page: OrdersPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
-                        ),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          decoration: BoxDecoration(
-                            color: AppTheme.whiteColor,
-                            border: Border.all(color: AppTheme.backBtnBgColor),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            children: [
-                              Text("TOTAL ORDERS",
-                                  style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
-                              const SizedBox(height: 6),
-                              state.statsLoading
-                                  ? const SizedBox(height: 24, width: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2))
-                                  : Text('${total ?? 0}',
-                                      style: MyStyles.boldText(size: 20, color: AppTheme.btnColor)),
-                            ],
-                          ),
-                        ),
+                  ),
+                ),
+                statCard(
+                  title: "TOTAL ORDERS",
+                  value: "${schoolDetailsModel?.orderCount ?? 0}",
+                  callBtn: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => OrdersPage(
+                        schoolId: schoolDetailsModel?.id.toString() ?? '',
+                        schoolName: schoolDetailsModel?.name ?? '',
+                        totalOrderCount: schoolDetailsModel?.orderCount,
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ],
             ),
 
             const SizedBox(height: 20),
 
-            /// 🔹 TABS
+            // TABS
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -355,105 +280,70 @@ class _UserDetailsContent extends StatelessWidget {
             ),
 
             const SizedBox(height: 20),
-            if(selectedIndex == 0)
-            /// 🔹 GENERAL INFO CARD
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+
+            if (selectedIndex == 0)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("General Information",
+                        style: MyStyles.boldText(size: 20, color: AppTheme.black_Color)),
+                    const SizedBox(height: 12),
+                    infoRow("School Name", schoolDetailsModel?.name ?? '', "School ID", "SH-99283-DX"),
+                    divider(),
+                    infoRow("Email Address", "Xaviar@school.edu", "Contact number", "+91 9876543210"),
+                    divider(),
+                    infoRow("Category", "Private Sec. School", "Established", "1995 (29 Years)"),
+                    divider(),
+                    const Text("Address", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    Text(
+                      schoolDetailsModel?.address ?? '',
+                      style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   Text(
-                    "General Information",
-                    style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
-                  ),
-                  const SizedBox(height: 12),
 
-                  infoRow(
-                    "School Name",
-                    schoolDetailsModel?.name ?? '',
-                    "School ID",
-                    "SH-99283-DX",
-                  ),
-                  divider(),
-
-                  infoRow(
-                    "Email Address",
-                    "Xaviar@school.edu",
-                    "Contact number",
-                    "+91 9876543210",
-                  ),
-                  divider(),
-
-                  infoRow(
-                    "Category",
-                    "Private Sec. School",
-                    "Established",
-                    "1995 (29 Years)",
-                  ),
-                  divider(),
-
-                  const Text(
-                    "Address",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                   Text(
-                    schoolDetailsModel?.address ?? '',
-                    style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
-                  ),
-                ],
+            if (selectedIndex == 2)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Admin Information",
+                        style: MyStyles.boldText(size: 20, color: AppTheme.black_Color)),
+                    const SizedBox(height: 12),
+                    infoRow("Admin Name", schoolDetailsModel?.admin?.name ?? '', "ID Proof", "SH-99283-DX"),
+                    divider(),
+                    infoRow(
+                      "Email Address",
+                      schoolDetailsModel?.admin?.email ?? '',
+                      "Contact number",
+                      schoolDetailsModel?.admin?.phone ?? '',
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if(selectedIndex == 2)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Admin Information",
-                    style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
-                  ),
-                  const SizedBox(height: 12),
-
-                  infoRow(
-                    "Admin Name",
-                    schoolDetailsModel?.admin?.name ?? '',
-                    "ID Proof",
-                    "SH-99283-DX",
-                  ),
-                  divider(),
-
-                  infoRow(
-                    "Email Address",
-                    schoolDetailsModel?.admin?.email ?? '',
-                    "Contact number",
-                    schoolDetailsModel?.admin?.phone ?? '',
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  /// 🔹 STAT CARD
-  Widget statCard({required String title, required String value,required VoidCallback callBtn}) {
+  Widget statCard({required String title, required String value, required VoidCallback callBtn}) {
     return Expanded(
       child: GestureDetector(
-        onTap: (){
-          callBtn();
-        },
+        onTap: callBtn,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -464,15 +354,9 @@ class _UserDetailsContent extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Text(
-                title,
-                style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
-              ),
+              Text(title, style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
               const SizedBox(height: 6),
-              Text(
-                value,
-                style: MyStyles.boldText(size: 20, color: AppTheme.btnColor),
-              ),
+              Text(value, style: MyStyles.boldText(size: 20, color: AppTheme.btnColor)),
             ],
           ),
         ),
@@ -480,7 +364,6 @@ class _UserDetailsContent extends StatelessWidget {
     );
   }
 
-  /// 🔹 TAB ITEM
   Widget tabItem(String title, bool isSelected) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -499,7 +382,6 @@ class _UserDetailsContent extends StatelessWidget {
     );
   }
 
-  /// 🔹 INFO ROW
   Widget infoRow(String title1, String value1, String title2, String value2) {
     return Row(
       children: [
@@ -523,7 +405,5 @@ class _UserDetailsContent extends StatelessWidget {
     );
   }
 
-  Widget divider() {
-    return const Divider(height: 20);
-  }
+  Widget divider() => const Divider(height: 20);
 }

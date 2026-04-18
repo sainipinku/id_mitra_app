@@ -55,7 +55,10 @@ class SchoolCubit extends Cubit<SchoolState> {
       List list = jsonData["data"]?["schools"]?["data"] ?? [];
 
       List<SchoolDetailsModel> newList =
-      list.map((e) => SchoolDetailsModel.fromJson(e)).toList();
+      list.map((e) {
+        print('School: ${e['name']}, order_count: ${e['order_count']}, student_count: ${e['student_count']}');
+        return SchoolDetailsModel.fromJson(e);
+      }).toList();
 
       final total = jsonData["data"]["schools"]["total"] ?? 0;
 

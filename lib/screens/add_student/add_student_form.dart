@@ -360,17 +360,37 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 
   Widget _sessionDropdown(List<SessionOption> sessions) {
     if (sessions.isEmpty) return _loadingTile('Loading sessions...');
+
+    // Auto-select first session if not already set
     final val = (_selectVal['session'] as int?);
+    if (val == null && sessions.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectVal['session'] = sessions.first.value);
+      });
+    }
     final selected = (val != null && sessions.any((s) => s.value == val))
         ? sessions.firstWhere((s) => s.value == val)
-        : null;
-    return Dropdown<SessionOption>(
-      value: selected,
-      items: sessions,
-      hintText: 'Select Session',
-      onChange: (v) => setState(() => _selectVal['session'] = v?.value),
-      displayText: (_, o) => o.label,
-      showClearButton: false,
+        : sessions.isNotEmpty ? sessions.first : null;
+
+    // Read-only - show as disabled tile
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.appBackgroundColor,
+        border: Border.all(color: AppTheme.backBtnBgColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              selected?.label ?? 'No session available',
+              style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+            ),
+          ),
+          Icon(Icons.lock_outline, size: 16, color: AppTheme.graySubTitleColor),
+        ],
+      ),
     );
   }
 
