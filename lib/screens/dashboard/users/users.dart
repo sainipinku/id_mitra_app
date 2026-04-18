@@ -30,18 +30,7 @@ class _SchoolsState extends State<Schools> {
   ];
   Timer? _debounce;
   int selectedIndex = 0;
-  void openFilter(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return const FilterBottomSheet();
-      },
-    );
-  }
+
   @override
   void initState() {
     super.initState();
