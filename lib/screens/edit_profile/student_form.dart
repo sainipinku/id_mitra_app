@@ -197,20 +197,29 @@ class _StudentFormState extends State<StudentForm> {
                           ),
                         ),
                       )
-                    : ListView.separated(
+                    : ReorderableListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        onReorder: (oldIndex, newIndex) {
+                          setAdd(() {
+                            if (newIndex > oldIndex) newIndex--;
+                            final item = filtered.removeAt(oldIndex);
+                            filtered.insert(newIndex, item);
+                            selected.clear();
+                          });
+                        },
                         itemBuilder: (_, i) {
                           final f = filtered[i];
                           final checked = selected.contains(i);
                           return GestureDetector(
+                            key: ValueKey(f['name']),
                             onTap: () => setAdd(
                               () => checked
                                   ? selected.remove(i)
                                   : selected.add(i),
                             ),
                             child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 12,
@@ -262,6 +271,7 @@ class _StudentFormState extends State<StudentForm> {
                                       ],
                                     ),
                                   ),
+                                  const Icon(Icons.drag_indicator, color: Colors.grey, size: 18),
                                 ],
                               ),
                             ),
@@ -462,14 +472,21 @@ class _StudentFormState extends State<StudentForm> {
                                 ),
                               ),
                             )
-                          : ListView.separated(
+                          : ReorderableListView.builder(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: tempFields.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 8),
+                              onReorder: (oldIndex, newIndex) {
+                                setSheet(() {
+                                  if (newIndex > oldIndex) newIndex--;
+                                  final item = tempFields.removeAt(oldIndex);
+                                  tempFields.insert(newIndex, item);
+                                });
+                              },
                               itemBuilder: (_, i) {
                                 final f = tempFields[i];
                                 return Container(
+                                  key: ValueKey(f.name),
+                                  margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
                                     vertical: 10,

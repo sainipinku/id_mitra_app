@@ -91,6 +91,22 @@ class _HomeState extends State<Home> {
 
                       },
                     ),
+
+                    StatCard(
+                      title: "Total Orders",
+                      value: data?.orders?.total?.toString() ?? "0",
+                      icon: Icons.receipt_long,
+                      color: Colors.indigo,
+                      button: (){},
+                    ),
+
+                    StatCard(
+                      title: "Completed Orders",
+                      value: data?.orders?.completeOrders?.toString() ?? "0",
+                      icon: Icons.check_circle_outline,
+                      color: Colors.teal,
+                      button: (){},
+                    ),
                   ],
                 ),
 

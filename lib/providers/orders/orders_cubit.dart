@@ -11,6 +11,31 @@ class OrdersCubit extends Cubit<OrdersState> {
 
   final ApiManager _api = ApiManager();
 
+  // ─── Fetch school classes ─────────────────────────────────────────────────
+  Future<void> fetchSchoolClasses(String schoolId) async {
+    if (schoolId.isEmpty) return;
+    emit(state.copyWith(classesLoading: true));
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/students/form-data';
+      final response = await _api.getRequest(url);
+      if (response == null) {
+        emit(state.copyWith(classesLoading: false));
+        return;
+      }
+      final json = jsonDecode(response.body);
+      final data = json['data'] ?? json;
+      final List rawClasses = data['classes'] ?? [];
+      print('fetchSchoolClasses classes count: ${rawClasses.length}');
+      final classes = rawClasses
+          .map((e) => OrderClass(e['id'] as int, e['name_withprefix'] ?? e['name'] ?? ''))
+          .toList();
+      emit(state.copyWith(availableClasses: classes, classesLoading: false));
+    } catch (e) {
+      print('fetchSchoolClasses error: $e');
+      emit(state.copyWith(classesLoading: false));
+    }
+  }
+
   // ─── Fetch orders list ────────────────────────────────────────────────────
   Future<void> fetchOrders({
     bool isLoadMore = false,
@@ -44,7 +69,7 @@ class OrdersCubit extends Cubit<OrdersState> {
       if (search.isNotEmpty) url += '&search=$search';
       if (dateFrom.isNotEmpty) url += '&date_from=$dateFrom';
       if (dateTo.isNotEmpty) url += '&date_to=$dateTo';
-      if (classId.isNotEmpty) url += '&class_id=$classId';
+      // class_id filtered on frontend
       print('fetchOrders URL: $url');
 
       final response = await _api.getRequest(url);
@@ -52,6 +77,7 @@ class OrdersCubit extends Cubit<OrdersState> {
         emit(state.copyWith(loading: false, isPaginationLoading: false, error: 'Failed to load orders'));
         return;
       }
+      print('fetchOrders status: ${response.statusCode}, body length: ${response.body.length}');
 
       final json = jsonDecode(response.body);
       final data = json['data'] as Map<String, dynamic>;
@@ -76,18 +102,39 @@ class OrdersCubit extends Cubit<OrdersState> {
       }
 
       final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
-      final updatedList = isLoadMore ? [...state.ordersList, ...newOrders] : newOrders;
+
+      // Frontend class filter — backend does not support class_id param
+      final filtered = classId.isNotEmpty
+          ? newOrders.where((o) => o.student?.classId?.toString() == classId).toList()
+          : newOrders;
+
+      final updatedList = isLoadMore ? [...state.ordersList, ...filtered] : filtered;
+
+      final hasMore = respPage < lastPage;
+
+      // If class filter active and no results on this page but more pages exist, auto-load next
+      if (classId.isNotEmpty && filtered.isEmpty && hasMore) {
+        emit(state.copyWith(
+          isPaginationLoading: false,
+          loading: false,
+          page: respPage + 1,
+          hasMore: hasMore,
+          total: total,
+        ));
+        fetchOrders(
+          isLoadMore: true,
+          search: search,
+          status: status,
+          classId: classId,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+          schoolId: schoolId,
+        );
+        return;
+      }
 
       // Extract unique classes from orders (only on first page load)
       List<OrderClass> classes = state.availableClasses;
-      if (!isLoadMore) {
-        final seen = <int>{};
-        classes = updatedList
-            .where((o) => o.student?.classId != null && o.student?.className != null)
-            .map((o) => OrderClass(o.student!.classId!, o.student!.className!))
-            .where((c) => seen.add(c.id))
-            .toList();
-      }
 
       emit(state.copyWith(
         loading: false,
@@ -122,30 +169,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
-  // ─── Fetch statistics ─────────────────────────────────────────────────────
-  Future<void> fetchStatistics() async {
-    emit(state.copyWith(statsLoading: true));
-    try {
-      final url = Config.baseUrl + Routes.getOrderStatistics();
-      final response = await _api.getRequest(url);
-      if (response == null) {
-        emit(state.copyWith(statsLoading: false));
-        return;
-      }
-      final json = jsonDecode(response.body);
-      final overview = json['data']?['overview'] as Map<String, dynamic>?;
-      if (overview != null) {
-        emit(state.copyWith(
-          statsLoading: false,
-          statistics: OrderStatistics.fromJson(overview),
-        ));
-      } else {
-        emit(state.copyWith(statsLoading: false));
-      }
-    } catch (_) {
-      emit(state.copyWith(statsLoading: false));
-    }
-  }
+
 
   // ─── Fetch staff orders total ─────────────────────────────────────────────
   Future<void> fetchStaffOrdersTotal() async {

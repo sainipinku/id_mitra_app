@@ -119,7 +119,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
     setState(() => _loading = true);
     try {
       final currentPage = reset ? 1 : _page;
-      var url = '${Config.baseUrl}auth/partner/orders?page=$currentPage';
+      var url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&school_id=${widget.schoolId}';
       if (_selectedStatus.isNotEmpty) url += '&status=$_selectedStatus';
       if (_searchCtrl.text.trim().isNotEmpty) {
         url += '&search=${_searchCtrl.text.trim()}';
