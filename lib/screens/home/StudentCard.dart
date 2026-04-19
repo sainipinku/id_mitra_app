@@ -31,35 +31,27 @@ class StudentCard extends StatefulWidget {
 class _StudentCardState extends State<StudentCard> {
   late StudentDetailsData studentDetailsData;
   File? studentProfileImageFile;
-  CroppedFile? croppedProfileFile;
   bool isUploading = false;
 
-  /// 📸 Camera
+  /// 📸 Camera — no crop, direct upload
   Future<void> _fromCamera() async {
-    final pickedFile = await ImagePicker().pickImage(
-      source: ImageSource.camera,
-    );
-
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
-      studentProfileImageFile = File(pickedFile.path);
-      _cropImage();
+      await _uploadImage(pickedFile.path);
     }
   }
 
-  /// 🖼 Gallery
+  /// 🖼 Gallery — crop then upload
   Future<void> _fromGallery() async {
-    final pickedFile = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-    );
-
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       studentProfileImageFile = File(pickedFile.path);
-      _cropImage();
+      await _cropAndUpload();
     }
   }
 
-  /// ✂️ Crop + Upload
-  Future<void> _cropImage() async {
+  /// ✂️ Crop (gallery only)
+  Future<void> _cropAndUpload() async {
     if (studentProfileImageFile == null) return;
 
     CroppedFile? croppedFile = await ImageCropper().cropImage(
@@ -67,46 +59,41 @@ class _StudentCardState extends State<StudentCard> {
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
         AndroidUiSettings(
-          toolbarTitle: 'Cropper',
+          toolbarTitle: 'Crop Image',
           toolbarColor: AppTheme.MainColor,
           toolbarWidgetColor: Colors.white,
           lockAspectRatio: true,
           hideBottomControls: true,
         ),
-        IOSUiSettings(title: 'Cropper', aspectRatioLockEnabled: true),
+        IOSUiSettings(title: 'Crop Image', aspectRatioLockEnabled: true),
       ],
     );
 
     if (croppedFile != null) {
-      setState(() {
-        croppedProfileFile = croppedFile;
-        isUploading = true;
-      });
-
-      try {
-        var response = await ApiManager().multiRequestRoute(
-          croppedFile.path,
-          Config.baseUrl +
-              Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
-        );
-        print(
-          'proifle---------${Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? '')}',
-        );
-        if (response.statusCode == 200) {
-          final jsonData = jsonDecode(response.body);
-          print('proifle---------${jsonData['data']['profile_photo_url']}');
-          setState(() {
-            studentDetailsData = studentDetailsData.copyWith(
-              profilePhotoUrl: jsonData['data']['profile_photo_url'],
-            );
-          });
-        }
-      } catch (e) {
-        debugPrint("Upload error: $e");
-      }
-
-      setState(() => isUploading = false);
+      await _uploadImage(croppedFile.path);
     }
+  }
+
+  /// ⬆️ Upload image
+  Future<void> _uploadImage(String path) async {
+    setState(() => isUploading = true);
+    try {
+      var response = await ApiManager().multiRequestRoute(
+        path,
+        Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
+      );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        setState(() {
+          studentDetailsData = studentDetailsData.copyWith(
+            profilePhotoUrl: jsonData['data']['profile_photo_url'],
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Upload error: $e");
+    }
+    setState(() => isUploading = false);
   }
 
   /// 📂 Bottom Sheet
@@ -125,7 +112,7 @@ class _StudentCardState extends State<StudentCard> {
             children: [
               Text(
                 "Choose Image",
-                style: MyStyles.boldText(size: 18, color: Colors.black),
+                style: MyStyles.boldText(size: 14, color: Colors.black),
               ),
 
               const SizedBox(height: 15),
@@ -159,7 +146,6 @@ class _StudentCardState extends State<StudentCard> {
                 onTap: () {
                   setState(() {
                     studentProfileImageFile = null;
-                    croppedProfileFile = null;
                     studentDetailsData = studentDetailsData.copyWith(
                       profilePhotoUrl: "",
                     );
@@ -218,7 +204,11 @@ class _StudentCardState extends State<StudentCard> {
                 schoolId: widget.schoolId,
               ),
           ),
-        );
+        ).then((updated) {
+          if (updated is StudentDetailsData && mounted) {
+            setState(() => studentDetailsData = updated);
+          }
+        });
       },
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -234,12 +224,9 @@ class _StudentCardState extends State<StudentCard> {
             children: [
               GestureDetector(
                 onTap: () {
-                  if (studentDetailsData.photo != null &&
-                      studentDetailsData.photo!.isNotEmpty) {
-                    _showImagePreview(
-                      context,
-                      studentDetailsData.profilePhotoUrl!,
-                    );
+                  final url = studentDetailsData.profilePhotoUrl;
+                  if (url != null && url.isNotEmpty) {
+                    _showImagePreview(context, url);
                   } else {
                     showPicker(context);
                   }
@@ -273,12 +260,9 @@ class _StudentCardState extends State<StudentCard> {
                 right: 0,
                 child: InkWell(
                   onTap: () {
-                    if (studentDetailsData.photo != null &&
-                        studentDetailsData.photo!.isNotEmpty) {
-                      _showImagePreview(
-                        context,
-                        studentDetailsData.profilePhotoUrl!,
-                      );
+                    final url = studentDetailsData.profilePhotoUrl;
+                    if (url != null && url.isNotEmpty) {
+                      _showImagePreview(context, url);
                     } else {
                       showPicker(context);
                     }
@@ -292,7 +276,7 @@ class _StudentCardState extends State<StudentCard> {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Icon(
-                      studentDetailsData.photo != null
+                      (studentDetailsData.profilePhotoUrl != null && studentDetailsData.profilePhotoUrl!.isNotEmpty)
                           ? Icons.preview
                           : Icons.camera_alt,
                       size: 12,
@@ -494,7 +478,7 @@ class _StudentCardState extends State<StudentCard> {
               const Text(
                 'Are you sure you want to\ndelete this student?',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+                style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
               ),
               const SizedBox(height: 28),
               Row(
@@ -559,28 +543,38 @@ class _StudentCardState extends State<StudentCard> {
       context: context,
       builder: (_) {
         return Dialog(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.network(
-                imageUrl,
-                height: 250,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-
-              const SizedBox(height: 10),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  showPicker(context);
-                },
-                icon: Icon(Icons.edit),
-                label: Text("Edit Profile Image"),
-              ),
-
-              const SizedBox(height: 10),
-            ],
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.network(
+                  imageUrl,
+                  height: 300,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 300,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                  ),
+                ),
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      showPicker(context);
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Edit Profile Image"),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

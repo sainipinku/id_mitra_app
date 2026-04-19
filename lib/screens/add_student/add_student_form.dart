@@ -227,7 +227,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                   child: Text(
                     'Choose Your Picker',
                     style: MyStyles.boldText(
-                      size: 20,
+                      size: 14,
                       color: AppTheme.black_Color,
                     ),
                   ),

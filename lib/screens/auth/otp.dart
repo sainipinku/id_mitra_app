@@ -253,7 +253,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     /// TITLE
                     Text(
                       widget.alreadyUser ? "OTP Verification" : "Hello, Welcome",
-                      style: MyStyles.boldText(size: 26, color: AppTheme.black_Color ),
+                      style: MyStyles.boldText(size: 16, color: AppTheme.black_Color ),
                     ),
 
                     const SizedBox(height: 10),

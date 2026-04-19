@@ -146,7 +146,7 @@ class _ForgetPasswordLoginScreenState extends State<ForgetPasswordLoginScreen> {
                         Text(
                           "Forget Password",
                           style: MyStyles.boldText(
-                            size: 26,
+                            size: 16,
                             color: AppTheme.black_Color,
                           ),
                         ),

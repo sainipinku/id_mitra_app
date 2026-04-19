@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           "Hello, Welcome",
                           style: MyStyles.boldText(
-                            size: 26,
+                            size: 16,
                             color: AppTheme.black_Color,
                           ),
                         ),

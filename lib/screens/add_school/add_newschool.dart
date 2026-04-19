@@ -221,7 +221,7 @@ class _AddNewSchoolPageState extends State<AddNewSchoolPage> {
                       Align(
                         alignment: Alignment.center,
                         child: Text('Choose Your Picher',
-                            style: MyStyles.boldText(size: 20, color: AppTheme.black_Color)),
+                            style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
                       ),
                       InkWell(
                         onTap: (){

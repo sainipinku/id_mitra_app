@@ -161,7 +161,7 @@ class _ProfileSettingState extends State<ProfileSetting> {
                 const SizedBox(height: 20),
                 Text(
                   data!.name ?? '',
-                  style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
+                  style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                 ),
                 const SizedBox(height: 4),
                 Text(

@@ -216,7 +216,7 @@ class _HomeState extends State<Home> {
                   Text(
                     state.error ?? "Something went wrong",
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                    style: MyStyles.regularTxt(Colors.red, 14),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
