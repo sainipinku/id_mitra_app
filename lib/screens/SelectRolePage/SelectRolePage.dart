@@ -57,7 +57,7 @@ class _SelectRolePageState extends State<SelectRolePage> {
                   Text(
                     "IDMITRA",
                     style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold
                     ),
                   ),
@@ -74,7 +74,7 @@ class _SelectRolePageState extends State<SelectRolePage> {
               const Text(
                 "Select User Role",
                 style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold
                 ),
               ),
@@ -154,7 +154,7 @@ class _SelectRolePageState extends State<SelectRolePage> {
                                   Text(
                                     roles[index]["title"],
                                     style: const TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.bold
                                     ),
                                   ),
@@ -164,7 +164,7 @@ class _SelectRolePageState extends State<SelectRolePage> {
                                   Text(
                                     roles[index]["desc"],
                                     style: TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 12,
                                         color: Colors.grey.shade600
                                     ),
                                   ),

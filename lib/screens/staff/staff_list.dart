@@ -258,7 +258,7 @@ class _StaffCard extends StatelessWidget {
             child: Center(
               child: Text(
                 staff.name[0].toUpperCase(),
-                style: MyStyles.boldText(size: 22, color: AppTheme.btnColor),
+                style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
               ),
             ),
           ),

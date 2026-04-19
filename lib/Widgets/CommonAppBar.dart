@@ -29,6 +29,7 @@ class CommonAppBar extends StatelessWidget
   final double elevation;
   final Color backgroundColor;
   final Color titleColor;
+  final VoidCallback? onBackPressed;
 
   const CommonAppBar({
     super.key,
@@ -42,6 +43,7 @@ class CommonAppBar extends StatelessWidget
     this.elevation = 0,
     this.backgroundColor = Colors.white,
     this.titleColor = Colors.black,
+    this.onBackPressed,
   });
 
   @override

@@ -11,6 +11,46 @@ class OrdersCubit extends Cubit<OrdersState> {
 
   final ApiManager _api = ApiManager();
 
+  // ─── Class sort order ─────────────────────────────────────────────────────
+  static const _classOrder = [
+    'nursery', 'pre nursery', 'prenursery',
+    'prep', 'pre prep', 'preprep',
+    'lkg', 'l.k.g', 'lower kg', 'lower kindergarten',
+    'ukg', 'u.k.g', 'upper kg', 'upper kindergarten',
+    'kg', 'kindergarten',
+    '1', 'i', 'class 1', 'grade 1',
+    '2', 'ii', 'class 2', 'grade 2',
+    '3', 'iii', 'class 3', 'grade 3',
+    '4', 'iv', 'class 4', 'grade 4',
+    '5', 'v', 'class 5', 'grade 5',
+    '6', 'vi', 'class 6', 'grade 6',
+    '7', 'vii', 'class 7', 'grade 7',
+    '8', 'viii', 'class 8', 'grade 8',
+    '9', 'ix', 'class 9', 'grade 9',
+    '10', 'x', 'class 10', 'grade 10',
+    '11', 'xi', 'class 11', 'grade 11',
+    '12', 'xii', 'class 12', 'grade 12',
+  ];
+
+  static int _classSortIndex(String name) {
+    final lower = name.trim().toLowerCase();
+    for (int i = 0; i < _classOrder.length; i++) {
+      if (lower == _classOrder[i] || lower.contains(_classOrder[i])) return i;
+    }
+    return 999;
+  }
+
+  static List<OrderClass> _sortClasses(List<OrderClass> classes) {
+    final sorted = [...classes];
+    sorted.sort((a, b) {
+      final ai = _classSortIndex(a.name);
+      final bi = _classSortIndex(b.name);
+      if (ai != bi) return ai.compareTo(bi);
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    return sorted;
+  }
+
   // ─── Fetch school classes ─────────────────────────────────────────────────
   Future<void> fetchSchoolClasses(String schoolId) async {
     if (schoolId.isEmpty) return;
@@ -25,11 +65,10 @@ class OrdersCubit extends Cubit<OrdersState> {
       final json = jsonDecode(response.body);
       final data = json['data'] ?? json;
       final List rawClasses = data['classes'] ?? [];
-      print('fetchSchoolClasses classes count: ${rawClasses.length}');
       final classes = rawClasses
-          .map((e) => OrderClass(e['id'] as int, e['name'] ?? '',e['name_withprefix'] ))
+          .map((e) => OrderClass(e['id'] as int, e['name'] ?? '', e['name_withprefix']))
           .toList();
-      emit(state.copyWith(availableClasses: classes, classesLoading: false));
+      emit(state.copyWith(availableClasses: _sortClasses(classes), classesLoading: false));
     } catch (e) {
       print('fetchSchoolClasses error: $e');
       emit(state.copyWith(classesLoading: false));

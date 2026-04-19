@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
+import 'package:idmitra/api_mamanger/api_manager.dart';
+import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
@@ -9,6 +15,8 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StudentProfilePage extends StatefulWidget {
   final StudentDetailsData student;
@@ -25,11 +33,184 @@ class StudentProfilePage extends StatefulWidget {
 
 class _StudentProfilePageState extends State<StudentProfilePage> {
   late StudentDetailsData _student;
+  File? _profileImageFile;
+  bool _isUploading = false;
 
   @override
   void initState() {
     super.initState();
     _student = widget.student;
+  }
+
+  Future<void> _fromCamera() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      await _uploadImage(pickedFile.path);
+    }
+  }
+
+  Future<void> _fromGallery() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      _profileImageFile = File(pickedFile.path);
+      await _cropAndUpload();
+    }
+  }
+
+  Future<void> _cropAndUpload() async {
+    if (_profileImageFile == null) return;
+
+    CroppedFile? croppedFile = await ImageCropper().cropImage(
+      sourcePath: _profileImageFile!.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Image',
+          toolbarColor: AppTheme.MainColor,
+          toolbarWidgetColor: Colors.white,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
+        IOSUiSettings(title: 'Crop Image', aspectRatioLockEnabled: true),
+      ],
+    );
+
+    if (croppedFile != null) {
+      await _uploadImage(croppedFile.path);
+    }
+  }
+
+  Future<void> _uploadImage(String path) async {
+    setState(() => _isUploading = true);
+    try {
+      var response = await ApiManager().multiRequestRoute(
+        path,
+        Config.baseUrl + Routes.updateStudentProfile(_student.uuid ?? ''),
+      );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        setState(() {
+          _student = _student.copyWith(
+            profilePhotoUrl: jsonData['data']['profile_photo_url'],
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Upload error: $e");
+    }
+    setState(() => _isUploading = false);
+  }
+
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.whiteColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Choose Image",
+                  style: MyStyles.boldText(size: 14, color: Colors.black)),
+              const SizedBox(height: 15),
+              _pickerItem(
+                icon: 'assets/icons/camera_single.svg',
+                title: "Camera",
+                onTap: () { Navigator.pop(context); _fromCamera(); },
+              ),
+              _divider(),
+              _pickerItem(
+                icon: 'assets/icons/choose_from_gallery.svg',
+                title: "Gallery",
+                onTap: () { Navigator.pop(context); _fromGallery(); },
+              ),
+              _divider(),
+              _pickerItem(
+                icon: 'assets/icons/remove_image.svg',
+                title: "Remove Photo",
+                color: Colors.red,
+                onTap: () {
+                  setState(() {
+                    _profileImageFile = null;
+                    _student = _student.copyWith(profilePhotoUrl: "");
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _pickerItem({
+    required String icon,
+    required String title,
+    required VoidCallback onTap,
+    Color color = Colors.black,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          SvgPicture.asset(icon),
+          const SizedBox(width: 10),
+          Text(title, style: MyStyles.regularText(size: 14, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider() => Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        height: 1,
+        color: Colors.grey.shade300,
+      );
+
+  void _showImagePreview(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.network(
+                imageUrl,
+                height: 300,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 300,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                ),
+              ),
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showPicker(context);
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text("Edit Profile Image"),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   String get schoolId => widget.schoolId;
@@ -70,6 +251,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         title: 'Student Profile',
         backgroundColor: Colors.white,
         showText: true,
+        onBackPressed: () => Navigator.pop(context, _student),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
@@ -164,32 +346,75 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                 children: [
                   Stack(
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.btnColor.withOpacity(0.2),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 36,
-                          backgroundColor: AppTheme.appBackgroundColor,
-                          backgroundImage: hasPhoto
-                              ? NetworkImage(_student.profilePhotoUrl!)
-                              : null,
-                          child: !hasPhoto
-                              ? Icon(Icons.person_rounded,
-                                  size: 36, color: AppTheme.graySubTitleColor)
-                              : null,
+                      GestureDetector(
+                        onTap: () {
+                          final url = _student.profilePhotoUrl;
+                          if (url != null && url.isNotEmpty) {
+                            _showImagePreview(context, url);
+                          } else {
+                            _showPicker(context);
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.btnColor.withOpacity(0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 36,
+                            backgroundColor: AppTheme.appBackgroundColor,
+                            backgroundImage: hasPhoto
+                                ? NetworkImage(_student.profilePhotoUrl!)
+                                : null,
+                            child: _isUploading
+                                ? const SizedBox(
+                                    width: 30,
+                                    height: 30,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : !hasPhoto
+                                    ? Icon(Icons.person_rounded,
+                                        size: 36, color: AppTheme.graySubTitleColor)
+                                    : null,
+                          ),
                         ),
                       ),
                       Positioned(
                         bottom: 2, right: 2,
+                        child: GestureDetector(
+                          onTap: () {
+                            final url = _student.profilePhotoUrl;
+                            if (url != null && url.isNotEmpty) {
+                              _showImagePreview(context, url);
+                            } else {
+                              _showPicker(context);
+                            }
+                          },
+                          child: Container(
+                            width: 22, height: 22,
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: Icon(
+                              hasPhoto ? Icons.preview : Icons.camera_alt,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Active/Inactive status dot
+                      Positioned(
+                        top: 0, right: 0,
                         child: Container(
                           width: 13, height: 13,
                           decoration: BoxDecoration(
@@ -343,7 +568,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
               ),
               const SizedBox(height: 16),
               Text('Coming Soon',
-                  style: MyStyles.boldText(size: 18, color: AppTheme.black_Color)),
+                  style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
               const SizedBox(height: 8),
               Text(
                 '"$feature" feature is coming soon.\nStay tuned for updates!',

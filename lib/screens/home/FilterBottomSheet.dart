@@ -1,175 +1,197 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/orders/orders_state.dart';
 
-
 class FilterBottomSheet extends StatefulWidget {
-  String schoolId;
-  FilterBottomSheet({super.key,required this.schoolId});
+  final String schoolId;
+  const FilterBottomSheet({super.key, required this.schoolId});
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
 }
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
-  String? selectedClass;
+  String? selectedClassId;
+  String? selectedClassName;
   String? selectedGender;
 
-
-
-  final List<String> genderList = [
-    "Male",
-    "Female",
-    "Other",
-  ];
-   @override
+  @override
   void initState() {
-    // TODO: implement initState
-     context.read<OrdersCubit>().fetchSchoolClasses(widget.schoolId);
     super.initState();
+    // Classes are fetched by the BlocProvider in student_list.dart
   }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            /// HEADER
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   "Filters",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
-
             const Divider(),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
-            /// CLASS DROPDOWN
+            // Selected class chip (if any)
+            if (selectedClassName != null) ...[
+              Wrap(
+                spacing: 8,
+                children: [
+                  Chip(
+                    label: Text(
+                      selectedClassName!,
+                      style: MyStyles.regularText(size: 13, color: AppTheme.btnColor),
+                    ),
+                    backgroundColor: AppTheme.btnColor.withOpacity(0.1),
+                    deleteIcon: const Icon(Icons.close, size: 14),
+                    onDeleted: () => setState(() {
+                      selectedClassId = null;
+                      selectedClassName = null;
+                    }),
+                    side: BorderSide.none,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // Class label
+            Text(
+              "Select Class",
+              style: MyStyles.mediumText(size: 13, color: AppTheme.graySubTitleColor),
+            ),
+            const SizedBox(height: 8),
+
+            // Class list — fixed height, no full-screen overlay
             BlocBuilder<OrdersCubit, OrdersState>(
+              buildWhen: (p, c) =>
+                  p.availableClasses != c.availableClasses ||
+                  p.classesLoading != c.classesLoading,
               builder: (context, state) {
-                if (state.loading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
+                if (state.classesLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state.availableClasses.isEmpty) {
+                  return Text(
+                    "No classes available",
+                    style: MyStyles.regularText(
+                        size: 13, color: AppTheme.graySubTitleColor),
                   );
                 }
-
-                return DropdownButtonFormField<String>(
-                  value: selectedClass,
-                  decoration: InputDecoration(
-                    labelText: "Select Class",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
-                    focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
-                    errorBorder:
-                    appBorder(AppTheme.errorMessageBackgroundColor, 15),
-                    focusedErrorBorder:
-                    appBorder(AppTheme.errorMessageBackgroundColor, 15),
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.35,
                   ),
-
-                  items: state.availableClasses.map((item) {
-                    return DropdownMenuItem<String>(
-                      value: item.name.toString(), // API id
-                      child: Text(item.nameWithprefix ?? ""), // Class Name
-                    );
-                  }).toList(),
-
-                  onChanged: (value) {
-                    setState(() {
-                      selectedClass = value;
-                    });
-                  },
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: state.availableClasses.length,
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: AppTheme.LineColor),
+                    itemBuilder: (context, index) {
+                      final cls = state.availableClasses[index];
+                      final isSelected =
+                          selectedClassId == cls.id.toString();
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            selectedClassId = cls.id.toString();
+                            selectedClassName =
+                                cls.nameWithprefix ?? cls.name;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  cls.nameWithprefix ?? cls.name,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: isSelected
+                                        ? AppTheme.btnColor
+                                        : AppTheme.black_Color,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_circle,
+                                    size: 18, color: AppTheme.btnColor),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
-            )
-            ,
-
-           /* const SizedBox(height: 15),
-
-            /// GENDER DROPDOWN
-            DropdownButtonFormField<String>(
-              value: selectedGender,
-              decoration: InputDecoration(
-                labelText: "Select Gender",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
-                focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
-                errorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
-                focusedErrorBorder: appBorder(AppTheme.errorMessageBackgroundColor, 15),
-              ),
-              items: genderList.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(item),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedGender = value;
-                });
-              },
-            ),*/
+            ),
 
             const SizedBox(height: 20),
 
-            /// BUTTONS
+            // Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50), // height = 50
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     onPressed: () {
                       setState(() {
-                        selectedClass = null;
+                        selectedClassId = null;
+                        selectedClassName = null;
                         selectedGender = null;
                       });
                     },
                     child: const Text("Reset"),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      minimumSize: const Size(double.infinity, 50), // height = 50
+                      backgroundColor: AppTheme.btnColor,
+                      minimumSize: const Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     onPressed: () {
                       Navigator.pop(context, {
-                        "class": selectedClass,
+                        "class": selectedClassId,
                         "gender": selectedGender,
                       });
                     },
-                    child: const Text("Apply Filter"),
+                    child: const Text(
+                      "Apply Filter",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ],
@@ -177,12 +199,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ],
         ),
       ),
-    );
-  }
-  OutlineInputBorder appBorder(Color color, double radius) {
-    return OutlineInputBorder(
-      borderSide: BorderSide(color: color),
-      borderRadius: BorderRadius.circular(radius),
     );
   }
 }

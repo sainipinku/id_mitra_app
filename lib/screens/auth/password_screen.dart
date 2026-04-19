@@ -168,7 +168,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
                         Text(
                           "Set Your Security",
                           style: MyStyles.boldText(
-                            size: 26,
+                            size: 16,
                             color: AppTheme.black_Color,
                           ),
                         ),

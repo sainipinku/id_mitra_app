@@ -113,7 +113,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       Align(
                         alignment: Alignment.center,
                         child: Text('Choose Your Picher',
-                            style: MyStyles.boldText(size: 20, color: AppTheme.black_Color)),
+                            style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
                       ),
                       InkWell(
                         onTap: (){
@@ -500,7 +500,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         child: Text(
           dob ?? "Select date",
-          style:  TextStyle(fontSize: 16,color: AppTheme.black_Color,),
+          style:  TextStyle(fontSize: 14,color: AppTheme.black_Color,),
         ),
       ),
     );

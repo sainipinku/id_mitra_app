@@ -8,6 +8,7 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
 import 'package:idmitra/providers/add_student/add_student_cubit.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
@@ -134,16 +135,11 @@ class _StudentListingPageState extends State<StudentListingPage> {
                             top: Radius.circular(25),
                           ),
                         ),
-                        builder: (context) {
-                          return SingleChildScrollView(
-                            child: AnimatedPadding(
-                              duration: const Duration(milliseconds: 100),
-                              curve: Curves.easeOut,
-                              padding: EdgeInsets.only(
-                                bottom: MediaQuery.of(context).viewInsets.bottom,
-                              ),
-                              child:  FilterBottomSheet(schoolId: widget.schoolId,),
-                            ),
+                        builder: (_) {
+                          return BlocProvider(
+                            create: (_) => OrdersCubit()
+                              ..fetchSchoolClasses(widget.schoolId),
+                            child: FilterBottomSheet(schoolId: widget.schoolId),
                           );
                         },
                       );
