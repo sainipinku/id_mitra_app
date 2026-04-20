@@ -126,7 +126,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 
   void _prefillStudent(StudentDetailsData s) {
     setState(() {
-      // Text fields — field name matches _buildBody keys
       _setCtrl('student_name', s.name);
       _setCtrl('student_email', s.email?.toString());
       _setCtrl('student_phone', s.phone?.toString());

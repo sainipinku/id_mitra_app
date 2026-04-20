@@ -3,7 +3,6 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/screens/dashboard/StatCard.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
-import '../add_student/add_student.dart';
 
 class StaffHome extends StatefulWidget {
   const StaffHome({super.key});
@@ -40,7 +39,7 @@ class _StaffHomeState extends State<StaffHome> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => navigateWithTransition(context: context, page: const AddNewStudent()),
+               //   onTap: () => navigateWithTransition(context: context, page: const AddNewStudent()),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     decoration: BoxDecoration(
