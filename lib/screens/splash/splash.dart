@@ -4,7 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 
 import 'package:idmitra/components/app_theme.dart';
-import 'package:idmitra/screens/admin/admin_dashboard.dart';
+import 'package:idmitra/screens/admin/admin_home/admin_dashboard.dart';
+
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
 import 'package:idmitra/screens/staff/staff_dashboard.dart';
