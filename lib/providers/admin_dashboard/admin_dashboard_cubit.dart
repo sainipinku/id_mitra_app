@@ -23,10 +23,10 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       }
       if (response.statusCode == 200) {
         final body = response.body as String;
-        print('📊 Dashboard API Response: $body'); // debug - remove after fix
+        print('Dashboard API Response: $body');
         final json = jsonDecode(body);
         final model = SchoolDashboardModel.fromJson(json);
-        print('📊 Parsed students: ${model.data.summary.students}'); // debug
+        print('Parsed students: ${model.data.summary.students}');
         emit(state.copyWith(loading: false, dashboard: model));
       } else {
         emit(state.copyWith(
