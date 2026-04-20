@@ -43,6 +43,7 @@ class Routes {
   static String getOrderDetail(String uuid) => "auth/partner/orders/$uuid";
   static String updateOrderStatus(String uuid) => "auth/partner/orders/$uuid/status";
   static String getOrderStatistics() => "auth/partner/orders/statistics/summary";
+  static String getSchoolDashboard() => "auth/school/dashboard/stats";
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";
   static String getSubCategoryProductById(String subCatId) => "product/subcategory/$subCatId";
 }
