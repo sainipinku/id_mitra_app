@@ -4,8 +4,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 
 import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/screens/admin/admin_home/admin_dashboard.dart';
+
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
+import 'package:idmitra/screens/staff/staff_dashboard.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 
@@ -45,13 +48,30 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
 
   void navigationToScreen() async {
     var token = await UserSecureStorage.fetchToken();
+    var accountType = await UserSecureStorage.fetchRole();
     print('token----------->$token');
     if (token != null && token.isNotEmpty) {
-      navigateAndRemoveUntil(
-        context: context,
-        page: Dashboard(index: 0,),
-        transition: PageTransitionType.rightToLeft,
-      );
+      if(accountType == "partner"){
+        navigateAndRemoveUntil(
+          context: context,
+          page: Dashboard(index: 0,),
+          transition: PageTransitionType.rightToLeft,
+        );
+      }else if (accountType != 'partner' && accountType != 'super_admin' && accountType != 'school_admin') {
+        // school staff - has school object but not admin/partner
+        navigateAndRemoveUntil(
+          context: context,
+          page: const StaffDashboard(),
+          transition: PageTransitionType.rightToLeft,
+        );
+      } else {
+        navigateAndRemoveUntil(
+          context: context,
+          page: const AdminDashboard(),
+          transition: PageTransitionType.rightToLeft,
+        );
+      }
+
     } else {
       navigateAndRemoveUntil(
         context: context,
