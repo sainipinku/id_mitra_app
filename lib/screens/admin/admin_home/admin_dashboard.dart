@@ -77,13 +77,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
-  void _onSchoolTap(BuildContext context, DashSchool? dashSchool) {
+  void _onSchoolTap(BuildContext context, DashSchool? dashSchool, AdminDashboardState dashState) {
     if (dashSchool == null) return;
+    final summary = dashState.dashboard?.data.summary;
     final schoolModel = SchoolDetailsModel(
       id: dashSchool.id,
       name: dashSchool.name,
       schoolPrefix: dashSchool.schoolPrefix,
       logoUrl: dashSchool.logoUrl,
+      studentCount: summary?.students,
+      staffCount: summary?.staff,
+      orderCount: summary?.orders.total,
     );
     navigateWithTransition(
       context: context,
@@ -113,7 +117,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ? dashSchool!.id.toString()
                 : _schoolId;
             return Scaffold(
-              appBar: _appBar(context, dashSchool),
+              appBar: _appBar(context, dashSchool, dashState),
               body: Center(child: _getWidgets(schoolId).elementAt(_selectedIndex)),
               bottomNavigationBar: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -162,7 +166,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  PreferredSizeWidget _appBar(BuildContext context, DashSchool? dashSchool) {
+  PreferredSizeWidget _appBar(BuildContext context, DashSchool? dashSchool, AdminDashboardState dashState) {
     final schoolName = dashSchool?.name ?? '';
     return AppBar(
       backgroundColor: Colors.white,
@@ -182,7 +186,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             const SizedBox(width: 12),
             Expanded(
               child: GestureDetector(
-                onTap: dashSchool != null ? () => _onSchoolTap(context, dashSchool) : null,
+                onTap: dashSchool != null ? () => _onSchoolTap(context, dashSchool, dashState) : null,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

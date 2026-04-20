@@ -69,17 +69,25 @@ class DashSummary {
 
   factory DashSummary.fromJson(Map<String, dynamic> json) {
     final o = json['orders'] ?? {};
-    final s = json['students'] ?? {};
-    final st = json['staff'] ?? {};
-    final cl = json['classes'] ?? {};
-    final ch = json['checklists'] ?? {};
+    final s = json['students'];
+    final st = json['staff'];
+    final cl = json['classes'];
+    final ch = json['checklists'];
     return DashSummary(
-      orders: DashOrders.fromJson(o),
-      students: _parseInt(s['total']),
-      staff: _parseInt(st['total']),
-      classes: _parseInt(cl['total']),
-      checklists: _parseInt(ch['total']),
+      orders: DashOrders.fromJson(o is Map ? o as Map<String, dynamic> : {}),
+      students: _parseField(s),
+      staff: _parseField(st),
+      classes: _parseField(cl),
+      checklists: _parseField(ch),
     );
+  }
+
+  /// Handles both {"total": 2} object format AND direct integer format
+  static int _parseField(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is Map) return _parseInt((v as Map<String, dynamic>)['total']);
+    return _parseInt(v);
   }
 }
 

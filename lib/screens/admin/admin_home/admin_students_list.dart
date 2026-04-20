@@ -40,7 +40,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         }
       });
     }
-    // If schoolId is empty, wait for didUpdateWidget to provide it from dashboard
+
   }
 
   @override

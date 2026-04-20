@@ -8,8 +8,8 @@ import 'package:idmitra/providers/admin_dashboard/admin_dashboard_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
+import 'package:idmitra/screens/dashboard/StatCard.dart';
 import 'package:idmitra/utils/MyStyles.dart';
-
 
 class AdminHome extends StatelessWidget {
   final VoidCallback? onStudentAdded;
@@ -64,14 +64,63 @@ class _AdminHomeView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SummaryCards(data: data),
-                const SizedBox(height: 16),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.4,
+                  children: [
+                    StatCard(
+                      title: "Total Students",
+                      value: '${data?.summary.students ?? 0}',
+                      icon: Icons.school,
+                      color: Colors.orange,
+                      button: () {},
+                    ),
+                    StatCard(
+                      title: "Total Staff",
+                      value: '${data?.summary.staff ?? 0}',
+                      icon: Icons.group,
+                      color: Colors.blue,
+                      button: () {},
+                    ),
+                    StatCard(
+                      title: "Total Orders",
+                      value: '${data?.summary.orders.total ?? 0}',
+                      icon: Icons.receipt_long,
+                      color: Colors.indigo,
+                      button: () {},
+                    ),
+                    StatCard(
+                      title: "Completed Orders",
+                      value: '${data?.summary.orders.completed ?? 0}',
+                      icon: Icons.check_circle_outline,
+                      color: Colors.teal,
+                      button: () {},
+                    ),
+                    StatCard(
+                      title: "Total Classes",
+                      value: '${data?.summary.classes ?? 0}',
+                      icon: Icons.class_outlined,
+                      color: Colors.purple,
+                      button: () {},
+                    ),
+                    StatCard(
+                      title: "Total Checklists",
+                      value: '${data?.summary.checklists ?? 0}',
+                      icon: Icons.checklist_outlined,
+                      color: Colors.green,
+                      button: () {},
+                    ),
+                  ],
+                ),
 
-                if (data != null) _OrdersGrid(orders: data.summary.orders),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 if (data != null) _AttendanceCard(attendance: data.attendance),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 Text(
                   "Quick Actions",
@@ -89,135 +138,65 @@ class _AdminHomeView extends StatelessWidget {
   }
 }
 
-class _OrdersGrid extends StatelessWidget {
-  final DashOrders orders;
-  const _OrdersGrid({required this.orders});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: [
-        _MiniStatCard(
-          item: _StatItem(
-            'Total Orders',
-            '${orders.total}',
-            Icons.receipt_long_outlined,
-            Colors.indigo,
-          ),
-        ),
-        _MiniStatCard(
-          item: _StatItem(
-            'Completed',
-            '${orders.completed}',
-            Icons.check_circle_outline,
-            Colors.green,
-          ),
-        ),
-      ],
-    );
-  }
+class _ChecklistItem {
+  final String label;
+  final bool done;
+  const _ChecklistItem(this.label, this.done);
 }
 
-class _SummaryCards extends StatelessWidget {
-  final SchoolDashboardData? data;
-  const _SummaryCards({this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      _StatItem(
-        'Students',
-        '${data?.summary.students ?? 0}',
-        Icons.school_outlined,
-        Colors.orange,
-      ),
-      _StatItem(
-        'Staff',
-        '${data?.summary.staff ?? 0}',
-        Icons.group_outlined,
-        Colors.blue,
-      ),
-      _StatItem(
-        'Classes',
-        '${data?.summary.classes ?? 0}',
-        Icons.class_outlined,
-        Colors.purple,
-      ),
-      _StatItem(
-        'Checklists',
-        '${data?.summary.checklists ?? 0}',
-        Icons.checklist_outlined,
-        Colors.teal,
-      ),
-    ];
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: items.map((item) => _MiniStatCard(item: item)).toList(),
-    );
-  }
-}
-
-class _StatItem {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  _StatItem(this.title, this.value, this.icon, this.color);
-}
-
-class _MiniStatCard extends StatelessWidget {
-  final _StatItem item;
-  const _MiniStatCard({required this.item});
+class _ChecklistSection extends StatelessWidget {
+  final List<_ChecklistItem> items;
+  final Color accentColor;
+  const _ChecklistSection({required this.items, required this.accentColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
         ],
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: item.color.withOpacity(0.12),
-            child: Icon(item.icon, color: item.color, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        children: items.map((item) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
               children: [
-                Text(
-                  item.value,
-                  style: MyStyles.boldTxt(AppTheme.black_Color, 20),
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: item.done
+                      ? accentColor.withOpacity(0.15)
+                      : Colors.grey.shade100,
+                  child: Icon(
+                    item.done ? Icons.check : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: item.done ? accentColor : Colors.grey.shade400,
+                  ),
                 ),
-                Text(
-                  item.title,
-                  style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    style: MyStyles.regularTxt(
+                      item.done
+                          ? AppTheme.graySubTitleColor
+                          : AppTheme.black_Color,
+                      14,
+                    ),
+                  ),
                 ),
+                if (item.done)
+                  Text("Done", style: MyStyles.mediumTxt(accentColor, 12))
+                else
+                  Text("Pending", style: MyStyles.mediumTxt(Colors.orange, 12)),
               ],
             ),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -233,7 +212,7 @@ class _AttendanceCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
         ],
@@ -346,25 +325,24 @@ class _QuickActions extends StatelessWidget {
         builder: (_) => MultiBlocProvider(
           providers: [
             BlocProvider(
-              create: (_) => StudentFormCubit()
-                ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
+              create: (_) =>
+                  StudentFormCubit()
+                    ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
             ),
-            BlocProvider(
-              create: (_) => StudentFormDataCubit()..load(schoolId),
-            ),
+            BlocProvider(create: (_) => StudentFormDataCubit()..load(schoolId)),
             BlocProvider(create: (_) => AddStudentCubit()),
           ],
           child: AddStudentFormPage(schoolId: schoolId),
         ),
       ),
     );
-    if (result != null) {
-      onStudentAdded?.call();
-    }
+    // Always navigate to students tab after returning from add student screen
+    onStudentAdded?.call();
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
     return Row(
       children: [
         Expanded(
@@ -372,6 +350,7 @@ class _QuickActions extends StatelessWidget {
             label: "Add Student",
             icon: Icons.person_add_outlined,
             color: Colors.green,
+            width: width,
             onTap: () => _navigateToAddStudent(context),
           ),
         ),
@@ -381,6 +360,7 @@ class _QuickActions extends StatelessWidget {
             label: "Add Staff",
             icon: Icons.group_add_outlined,
             color: AppTheme.btnColor,
+            width: width,
             onTap: () {},
           ),
         ),
@@ -393,11 +373,13 @@ class _ActionTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final double width;
   final VoidCallback onTap;
   const _ActionTile({
     required this.label,
     required this.icon,
     required this.color,
+    required this.width,
     required this.onTap,
   });
 
@@ -409,7 +391,7 @@ class _ActionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
           ],
@@ -417,12 +399,15 @@ class _ActionTile extends StatelessWidget {
         child: Column(
           children: [
             CircleAvatar(
-              radius: 26,
+              radius: width * 0.065,
               backgroundColor: color.withOpacity(0.12),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: width * 0.06),
             ),
             const SizedBox(height: 10),
-            Text(label, style: MyStyles.regularTxt(AppTheme.black_Color, 13)),
+            Text(
+              label,
+              style: MyStyles.regularTxt(AppTheme.black_Color, width * 0.033),
+            ),
           ],
         ),
       ),
