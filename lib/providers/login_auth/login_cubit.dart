@@ -57,6 +57,7 @@ class LoginCubit extends Cubit<LoginState> {
 
         // Save token securely
         await UserSecureStorage.setToken(jsonData["token"]);
+        await UserSecureStorage.setRole(jsonData["user_type"]);
         emit(LoginSuccess(loginModel: loginModel, loginWithType: '', schoolData: schoolData));
       } else if (response.statusCode == 403 || response.statusCode == 400 || response.statusCode == 401) {
         final message = jsonData['message'] ?? "User not found";
