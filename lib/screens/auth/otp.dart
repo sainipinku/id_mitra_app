@@ -10,7 +10,6 @@ import 'package:idmitra/config/prefConstatnt.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/PasswordTextField.dart';
 import 'package:idmitra/screens/auth/password_screen.dart';
-import 'package:idmitra/screens/admin/admin_dashboard.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
 import 'package:idmitra/screens/staff/staff_dashboard.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
@@ -21,6 +20,7 @@ import 'package:pinput/pinput.dart';
 
 import '../../components/app_theme.dart';
 import '../../components/my_font_weight.dart';
+import '../admin/admin_home/admin_dashboard.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;

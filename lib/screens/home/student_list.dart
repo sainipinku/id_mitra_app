@@ -54,10 +54,10 @@ class _StudentListingPageState extends State<StudentListingPage> {
         context.read<StudentsCubit>().prependStudent(result);
       } else {
         context.read<StudentsCubit>().fetchStudents(
-          search: searchController.text.trim(),
-          schoolId: widget.schoolId,
-          gender: '',
-          classId: ''
+            search: searchController.text.trim(),
+            schoolId: widget.schoolId,
+            gender: '',
+            classId: ''
         );
       }
     });
@@ -78,9 +78,9 @@ class _StudentListingPageState extends State<StudentListingPage> {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
-          isLoadMore: true,
-          search: '',
-          schoolId: widget.schoolId,
+            isLoadMore: true,
+            search: '',
+            schoolId: widget.schoolId,
             gender: '',
             classId: ''
         );
@@ -88,10 +88,10 @@ class _StudentListingPageState extends State<StudentListingPage> {
     });
   }
   Future<void> refreshData() async {
-  //  await Future.delayed(const Duration(seconds: 2));
+    //  await Future.delayed(const Duration(seconds: 2));
     context.read<StudentsCubit>().fetchStudents(
-      search: '',
-      schoolId: widget.schoolId,
+        search: '',
+        schoolId: widget.schoolId,
         gender: '',
         classId: ''
     );
@@ -195,33 +195,33 @@ class _StudentListingPageState extends State<StudentListingPage> {
                   return Expanded(
                     child: state.studentsList.isEmpty
                         ? Center(
-                            child: Image.asset(
-                              "assets/images/no_data.png",
-                              height: 200,
-                            ),
-                          )
+                      child: Image.asset(
+                        "assets/images/no_data.png",
+                        height: 200,
+                      ),
+                    )
                         : ListView.builder(
-                            controller: _scrollController,
-                            itemCount:
-                                state.studentsList.length +
-                                (state.hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index < state.studentsList.length) {
-                                final item = state.studentsList[index];
-                                return StudentCard(
-                                  studentData: item,
-                                  schoolId: widget.schoolId,
-                                );
-                              } else {
-                                return const Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                      controller: _scrollController,
+                      itemCount:
+                      state.studentsList.length +
+                          (state.hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index < state.studentsList.length) {
+                          final item = state.studentsList[index];
+                          return StudentCard(
+                            studentData: item,
+                            schoolId: widget.schoolId,
+                          );
+                        } else {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   );
                 },
               ),

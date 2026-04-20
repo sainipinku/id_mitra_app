@@ -52,32 +52,32 @@ class StudentsCubit extends Cubit<StudentsState> {
     }
 
 
-      final response = await apiManager.getRequest(
-        "${Config.baseUrl}auth/school/$schoolId?search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
-      );
+    final response = await apiManager.getRequest(
+      "${Config.baseUrl}auth/school/$schoolId?search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
+    );
 
-      final jsonData = jsonDecode(response.body);
+    final jsonData = jsonDecode(response.body);
 
-      List list = jsonData["data"]?["data"] ?? [];
+    List list = jsonData["data"]?["data"] ?? [];
 
-      List<StudentDetailsData> newList =
-      list.map((e) => StudentDetailsData.fromJson(e)).toList();
+    List<StudentDetailsData> newList =
+    list.map((e) => StudentDetailsData.fromJson(e)).toList();
 
-      final total = jsonData["data"]["total"] ?? 0;
+    final total = jsonData["data"]["total"] ?? 0;
 
-      List<StudentDetailsData> updatedList = isLoadMore
-          ? [...state.studentsList, ...newList]
-          : newList;
+    List<StudentDetailsData> updatedList = isLoadMore
+        ? [...state.studentsList, ...newList]
+        : newList;
 
-      bool hasMore = updatedList.length < total;
+    bool hasMore = updatedList.length < total;
 
-      emit(state.copyWith(
-        loading: false,
-        isPaginationLoading: false,
-        studentsList: updatedList,
-        page: currentPage + 1,
-        hasMore: hasMore,
-      ));
+    emit(state.copyWith(
+      loading: false,
+      isPaginationLoading: false,
+      studentsList: updatedList,
+      page: currentPage + 1,
+      hasMore: hasMore,
+    ));
   }
 
   void prependStudent(StudentDetailsData student) {
