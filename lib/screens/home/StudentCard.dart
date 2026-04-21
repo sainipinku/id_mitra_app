@@ -260,9 +260,10 @@ class _StudentCardState extends State<StudentCard> {
                 right: 0,
                 child: InkWell(
                   onTap: () {
-                    final url = studentDetailsData.profilePhotoUrl;
-                    if (url != null && url.isNotEmpty) {
-                      _showImagePreview(context, url);
+
+                    final urlPhoto = studentDetailsData.photo;
+                    if (urlPhoto != null) {
+                      _showImagePreview(context, studentDetailsData.profilePhotoUrl ?? '');
                     } else {
                       showPicker(context);
                     }
@@ -276,7 +277,7 @@ class _StudentCardState extends State<StudentCard> {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Icon(
-                      (studentDetailsData.profilePhotoUrl != null && studentDetailsData.profilePhotoUrl!.isNotEmpty)
+                      (studentDetailsData.photo != null && studentDetailsData.photo!.isNotEmpty)
                           ? Icons.preview
                           : Icons.camera_alt,
                       size: 12,
@@ -543,37 +544,66 @@ class _StudentCardState extends State<StudentCard> {
       context: context,
       builder: (_) {
         return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(24),
+          backgroundColor: Colors.black,
+          insetPadding: const EdgeInsets.all(16),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.network(
-                  imageUrl,
-                  height: 300,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 300,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.person, size: 80, color: Colors.grey),
+            child: Container(
+              color: Colors.black,
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  /// IMAGE
+                  Flexible(
+                    child: InteractiveViewer(
+                      panEnabled: true,
+                      minScale: 0.8,
+                      maxScale: 4,
+                      child: Image.network(
+                        imageUrl,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 300,
+                          width: double.infinity,
+                          color: Colors.grey.shade300,
+                          child: const Icon(
+                            Icons.person,
+                            size: 80,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: TextButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      showPicker(context);
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Edit Profile Image"),
+
+                  const SizedBox(height: 12),
+
+                  /// BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        showPicker(context);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text("Edit Profile Image"),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

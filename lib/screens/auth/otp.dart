@@ -396,7 +396,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         Text(
                           selectedLoginType == "password"
                               ? "Enter Password"
-                              : "Enter 4-digit PIN",
+                              : "Enter 6-digit PIN",
                           style: MyStyles.boldText(
                             size: 14,
                             color: AppTheme.black_Color,
