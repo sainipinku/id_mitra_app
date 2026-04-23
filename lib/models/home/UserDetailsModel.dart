@@ -41,7 +41,7 @@ class User {
   int? creatorId;
   dynamic parentId;
   String? accountType;
- // List<dynamic>? permissions;
+
   String? uuid;
   String? name;
   String? firmName;
@@ -53,14 +53,13 @@ class User {
   dynamic otpExpire;
   dynamic fcmToken;
   String? gstNumber;
-  //String? businessNature;
+
   int? status;
   DateTime? createdAt;
   DateTime? updatedAt;
   dynamic deletedAt;
   dynamic profilePic;
-  List<String>? type;
-  List<String>? dealsIn;
+
   String? profilePhotoUrl;
   String? receivedAtFormatted;
   String? receivedAt;
@@ -74,7 +73,7 @@ class User {
     this.creatorId,
     this.parentId,
     this.accountType,
-   // this.permissions,
+
     this.uuid,
     this.name,
     this.firmName,
@@ -86,14 +85,13 @@ class User {
     this.otpExpire,
     this.fcmToken,
     this.gstNumber,
-  //  this.businessNature,
+
     this.status,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
     this.profilePic,
-    this.type,
-    this.dealsIn,
+
     this.profilePhotoUrl,
     this.receivedAtFormatted,
     this.receivedAt,
@@ -108,7 +106,7 @@ class User {
     creatorId: json["creator_id"],
     parentId: json["parent_id"],
     accountType: json["account_type"],
-  //  permissions: json["permissions"] == null ? [] : List<dynamic>.from(json["permissions"]!.map((x) => x)),
+
     uuid: json["uuid"],
     name: json["name"],
     firmName: json["firm_name"],
@@ -120,14 +118,13 @@ class User {
     otpExpire: json["otp_expire"],
     fcmToken: json["fcm_token"],
     gstNumber: json["gst_number"],
-    //businessNature: json["business_nature"],
+
     status: json["status"],
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
     profilePic: json["profile_pic"],
-    type: json["type"] == null ? [] : List<String>.from(json["type"]!.map((x) => x)),
-    dealsIn: json["deals_in"] == null ? [] : List<String>.from(json["deals_in"]!.map((x) => x)),
+
     profilePhotoUrl: json["profile_photo_url"],
     receivedAtFormatted: json["received_at_formatted"],
     receivedAt: json["received_at"],
@@ -142,7 +139,6 @@ class User {
     "creator_id": creatorId,
     "parent_id": parentId,
     "account_type": accountType,
-   // "permissions": permissions == null ? [] : List<dynamic>.from(permissions!.map((x) => x)),
     "uuid": uuid,
     "name": name,
     "firm_name": firmName,
@@ -154,14 +150,13 @@ class User {
     "otp_expire": otpExpire,
     "fcm_token": fcmToken,
     "gst_number": gstNumber,
-    //"business_nature": businessNature,
+
     "status": status,
     "created_at": createdAt?.toIso8601String(),
     "updated_at": updatedAt?.toIso8601String(),
     "deleted_at": deletedAt,
     "profile_pic": profilePic,
-    "type": type == null ? [] : List<dynamic>.from(type!.map((x) => x)),
-    "deals_in": dealsIn == null ? [] : List<dynamic>.from(dealsIn!.map((x) => x)),
+
     "profile_photo_url": profilePhotoUrl,
     "received_at_formatted": receivedAtFormatted,
     "received_at": receivedAt,
