@@ -230,7 +230,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
             ],
           );
         }
-        // Other select fields
         final options = ['-Select-'];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
