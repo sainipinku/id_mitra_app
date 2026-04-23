@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -110,13 +111,17 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       _page = 1;
       _hasMore = true;
       _error = null;
+      _loading = false;
     });
     _fetch(reset: true);
   }
 
   Future<void> _fetch({bool reset = false}) async {
-    if (_loading || (!_hasMore && !reset)) return;
-    setState(() => _loading = true);
+    if (!reset && (_loading || !_hasMore)) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final currentPage = reset ? 1 : _page;
       var url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&school_id=${widget.schoolId}';
@@ -223,14 +228,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
           // List
           Expanded(
             child: _loading && _orders.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                ? Center(
-                    child: Text(
-                      _error!,
-                      style: MyStyles.regularText(size: 14, color: Colors.red),
-                    ),
-                  )
+                ? const OrderListShimmer()
                 : _orders.isEmpty
                 ? Center(
                     child: Image.asset(

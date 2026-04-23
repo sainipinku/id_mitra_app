@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
@@ -12,13 +13,14 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
-import 'package:idmitra/screens/add_student/add_student_form.dart';
+import 'package:idmitra/screens/admin/admin_add_student_form/admin_add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
   final String? schoolId;
-  const AdminStudentsScreen({super.key, this.schoolId});
+  final bool showAppBar;
+  const AdminStudentsScreen({super.key, this.schoolId, this.showAppBar = false});
 
   @override
   State<AdminStudentsScreen> createState() => _AdminStudentsScreenState();
@@ -63,15 +65,27 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_schoolLoaded || _schoolId.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              shimmerBox(height: 48, radius: 12),
+              const SizedBox(height: 15),
+              const StudentListShimmer(),
+            ],
+          ),
+        ),
+      );
     }
-    return _StudentListBody(schoolId: _schoolId);
+    return _StudentListBody(schoolId: _schoolId, showAppBar: widget.showAppBar);
   }
 }
 
 class _StudentListBody extends StatefulWidget {
   final String schoolId;
-  const _StudentListBody({required this.schoolId});
+  final bool showAppBar;
+  const _StudentListBody({required this.schoolId, this.showAppBar = false});
 
   @override
   State<_StudentListBody> createState() => _StudentListBodyState();
@@ -121,7 +135,7 @@ class _StudentListBodyState extends State<_StudentListBody> {
             ),
             BlocProvider(create: (_) => AddStudentCubit()),
           ],
-          child: AddStudentFormPage(schoolId: widget.schoolId),
+          child: AdminAddStudentFormPage(schoolId: widget.schoolId),
         ),
       ),
     ).then((result) {
@@ -150,6 +164,9 @@ class _StudentListBodyState extends State<_StudentListBody> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.showAppBar
+          ? AppBar(title: const Text('Students'), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0)
+          : null,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.btnColor,
         tooltip: 'Add Student',
@@ -204,13 +221,13 @@ class _StudentListBodyState extends State<_StudentListBody> {
                 ],
               ),
               const SizedBox(height: 15),
-              BlocBuilder<StudentsCubit, StudentsState>(
-                builder: (context, state) {
-                  if (state.loading) {
-                    return const Expanded(child: Center(child: CircularProgressIndicator()));
-                  }
-                  return Expanded(
-                    child: state.studentsList.isEmpty
+              Expanded(
+                child: BlocBuilder<StudentsCubit, StudentsState>(
+                  builder: (context, state) {
+                    if (state.loading) {
+                      return const ShimmerList(expanded: false);
+                    }
+                    return state.studentsList.isEmpty
                         ? Center(child: Image.asset('assets/images/no_data.png', height: 200))
                         : ListView.builder(
                             controller: _scrollCtrl,
@@ -227,9 +244,9 @@ class _StudentListBodyState extends State<_StudentListBody> {
                                 child: Center(child: CircularProgressIndicator()),
                               );
                             },
-                          ),
-                  );
-                },
+                          );
+                  },
+                ),
               ),
             ],
           ),

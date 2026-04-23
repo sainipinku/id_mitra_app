@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/models/home/SchoolDashboardModel.dart';
@@ -8,6 +9,8 @@ import 'package:idmitra/providers/admin_dashboard/admin_dashboard_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
+import 'package:idmitra/providers/add_staff/add_staff_cubit.dart';
+import 'package:idmitra/screens/staff/add_staff_form.dart';
 import 'package:idmitra/screens/dashboard/StatCard.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 
@@ -30,7 +33,7 @@ class _AdminHomeView extends StatelessWidget {
     return BlocBuilder<AdminDashboardCubit, AdminDashboardState>(
       builder: (context, state) {
         if (state.loading) {
-          return const Center(child: CircularProgressIndicator());
+          return const HomeShimmer();
         }
         if (state.error != null && state.dashboard == null) {
           return Center(
@@ -336,8 +339,25 @@ class _QuickActions extends StatelessWidget {
         ),
       ),
     );
-    // Always navigate to students tab after returning from add student screen
     onStudentAdded?.call();
+  }
+
+  Future<void> _navigateToAddStaff(BuildContext context) async {
+    final school = await UserLocal.getSchool();
+    final schoolId = school['schoolId'] ?? '';
+    if (!context.mounted || schoolId.isEmpty) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => AddStaffCubit(),
+          child: AddStaffFormPage(
+            editStudent: null,
+            schoolId: schoolId,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -361,7 +381,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.group_add_outlined,
             color: AppTheme.btnColor,
             width: width,
-            onTap: () {},
+            onTap: () => _navigateToAddStaff(context),
           ),
         ),
       ],

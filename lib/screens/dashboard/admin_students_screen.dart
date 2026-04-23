@@ -13,6 +13,7 @@ import 'package:idmitra/providers/admin_students/admin_students_state.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
@@ -163,9 +164,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
               BlocBuilder<AdminStudentsCubit, AdminStudentsState>(
                 builder: (context, state) {
                   if (state.loading) {
-                    return const Expanded(
-                      child: Center(child: CircularProgressIndicator()),
-                    );
+                    return const StudentListShimmer();
                   }
 
                   if (state.studentsList.isEmpty) {

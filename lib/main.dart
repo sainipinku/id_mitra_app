@@ -14,6 +14,7 @@ import 'package:idmitra/utils/GlobalContext.dart';
 
 void main() async{
 
+
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -23,6 +24,7 @@ void main() async{
       statusBarBrightness: Brightness.light,
     ),
   );
+
 
   runApp(const MyApp());
 }

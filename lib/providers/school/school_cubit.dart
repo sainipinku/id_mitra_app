@@ -46,36 +46,36 @@ class SchoolCubit extends Cubit<SchoolState> {
     }
 
 
-      final response = await apiManager.getRequest(
-        "${Config.baseUrl}auth/partner/schools?page=$currentPage&search=$search",
-      );
+    final response = await apiManager.getRequest(
+      "${Config.baseUrl}auth/partner/schools?page=$currentPage&search=$search",
+    );
 
-      final jsonData = jsonDecode(response.body);
+    final jsonData = jsonDecode(response.body);
 
-      List list = jsonData["data"]?["schools"]?["data"] ?? [];
+    List list = jsonData["data"]?["schools"]?["data"] ?? [];
 
-      List<SchoolDetailsModel> newList =
-      list.map((e) {
-        print('School: ${e['name']}, order_count: ${e['order_count']}, student_count: ${e['student_count']}');
-        return SchoolDetailsModel.fromJson(e);
-      }).toList();
+    List<SchoolDetailsModel> newList =
+    list.map((e) {
+      print('School: ${e['name']}, order_count: ${e['order_count']}, student_count: ${e['student_count']}');
+      return SchoolDetailsModel.fromJson(e);
+    }).toList();
 
-      final total = jsonData["data"]["schools"]["total"] ?? 0;
+    final total = jsonData["data"]["schools"]["total"] ?? 0;
 
-      List<SchoolDetailsModel> updatedList = isLoadMore
-          ? [...state.students, ...newList]
-          : newList;
+    List<SchoolDetailsModel> updatedList = isLoadMore
+        ? [...state.students, ...newList]
+        : newList;
 
-      bool hasMore = updatedList.length < total;
+    bool hasMore = updatedList.length < total;
 
-      emit(state.copyWith(
-        loading: false,
-        isPaginationLoading: false,
-        students: updatedList,
-        page: currentPage + 1,
-        hasMore: hasMore,
-      ));
+    emit(state.copyWith(
+      loading: false,
+      isPaginationLoading: false,
+      students: updatedList,
+      page: currentPage + 1,
+      hasMore: hasMore,
+    ));
 
-    }
+  }
 
 }

@@ -13,7 +13,11 @@ class ApiManager {
 
     var response = await http.get(
       Uri.parse(url),
-      headers: {"Authorization": "Bearer $token"},
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
     );
     print('status code-----${response.statusCode} and base url----${url}');
     if (response.statusCode == 201 ||

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/providers/home/home_cubit.dart';
@@ -27,7 +28,7 @@ class _HomeState extends State<Home> {
 
           /// 🔄 LOADING
           if (state.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return const HomeShimmer();
           }
 
           /// ✅ SUCCESS

@@ -1,0 +1,639 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
+import 'package:idmitra/Widgets/CommonAppBar.dart';
+import 'package:idmitra/components/app_theme.dart';
+import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/components/text_filed.dart';
+import 'package:idmitra/models/orders/OrderModel.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
+import 'package:idmitra/providers/orders/orders_state.dart';
+import 'package:idmitra/screens/admin/admin_order/admin_order_detail_page.dart';
+import 'package:idmitra/screens/admin/admin_order/admin_staff_orders_page.dart';
+
+class AdminOrdersPage extends StatelessWidget {
+  final String schoolId;
+  final String schoolName;
+  final int? totalOrderCount;
+
+  const AdminOrdersPage({
+    super.key,
+    required this.schoolId,
+    this.schoolName = '',
+    this.totalOrderCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => OrdersCubit()
+        ..fetchOrders(schoolId: schoolId)
+        ..fetchSchoolClasses(schoolId),
+      child: _AdminOrdersView(
+        schoolId: schoolId,
+        schoolName: schoolName,
+        totalOrderCount: totalOrderCount,
+      ),
+    );
+  }
+}
+
+class _AdminOrdersView extends StatefulWidget {
+  final String schoolId;
+  final String schoolName;
+  final int? totalOrderCount;
+
+  const _AdminOrdersView({
+    required this.schoolId,
+    this.schoolName = '',
+    this.totalOrderCount,
+  });
+
+  @override
+  State<_AdminOrdersView> createState() => _AdminOrdersViewState();
+}
+
+class _AdminOrdersViewState extends State<_AdminOrdersView> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  final TextEditingController _dateFromCtrl = TextEditingController();
+  final TextEditingController _dateToCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+  Timer? _debounce;
+
+  String _selectedStatus = '';
+  String _selectedClass = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(() {
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
+        context.read<OrdersCubit>().fetchOrders(
+              isLoadMore: true,
+              search: _searchCtrl.text.trim(),
+              status: _selectedStatus,
+              classId: _selectedClass,
+              schoolId: widget.schoolId,
+              dateFrom: _dateFromCtrl.text,
+              dateTo: _dateToCtrl.text,
+            );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _dateFromCtrl.dispose();
+    _dateToCtrl.dispose();
+    _scrollCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _resetAndFetch() {
+    context.read<OrdersCubit>().fetchOrders(
+          search: _searchCtrl.text.trim(),
+          status: _selectedStatus,
+          classId: _selectedClass,
+          schoolId: widget.schoolId,
+          dateFrom: _dateFromCtrl.text,
+          dateTo: _dateToCtrl.text,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.appBackgroundColor,
+      appBar: CommonAppBar(
+        title: 'Orders',
+        backgroundColor: Colors.white,
+        showText: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AdminStaffOrdersPage(schoolId: widget.schoolId),
+                ),
+              ),
+              icon: const Icon(Icons.badge_outlined, size: 16),
+              label: Text('Staff Cards',
+                  style:
+                      MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.btnColor,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Filters
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              children: [
+                _searchBar(),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _classDropdown()),
+                    const SizedBox(width: 8),
+                    Expanded(child: _statusDropdown()),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: _dateField(_dateFromCtrl, 'dd-mm-yyyy')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _dateField(_dateToCtrl, 'dd-mm-yyyy')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Total count banner
+          if (widget.totalOrderCount != null)
+            Container(
+              width: double.infinity,
+              color: AppTheme.btnColor.withOpacity(0.08),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long_outlined,
+                      size: 16, color: AppTheme.btnColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Total Orders: ${widget.totalOrderCount}',
+                    style: MyStyles.boldText(
+                        size: 14, color: AppTheme.btnColor),
+                  ),
+                ],
+              ),
+            ),
+
+          // List
+          Expanded(
+            child: BlocBuilder<OrdersCubit, OrdersState>(
+              builder: (_, state) {
+                if (state.loading) {
+                  return const OrderListShimmer();
+                }
+                if (state.error != null && state.ordersList.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(state.error!,
+                            style: MyStyles.regularText(
+                                size: 14, color: Colors.red)),
+                        const SizedBox(height: 12),
+                        TextButton(
+                            onPressed: _resetAndFetch,
+                            child: const Text('Retry')),
+                      ],
+                    ),
+                  );
+                }
+                if (state.ordersList.isEmpty) {
+                  return Center(
+                      child: Image.asset('assets/images/no_data.png',
+                          height: 200));
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => _resetAndFetch(),
+                  child: ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    itemCount: state.ordersList.length +
+                        (state.hasMore ? 1 : 0),
+                    itemBuilder: (_, i) {
+                      if (i < state.ordersList.length) {
+                        return _AdminOrderCard(order: state.ordersList[i]);
+                      }
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchBar() => TextField(
+        controller: _searchCtrl,
+        style:
+            MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+        onChanged: (_) {
+          if (_debounce?.isActive ?? false) _debounce!.cancel();
+          _debounce = Timer(
+              const Duration(milliseconds: 500), _resetAndFetch);
+        },
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: AppTheme.appBackgroundColor,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          hintText: 'Search order...',
+          prefixIcon: const Icon(Icons.search, size: 20),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: AppTheme.backBtnBgColor),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: AppTheme.btnColor),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          hintStyle: MyStyles.regularText(
+              size: 13, color: AppTheme.graySubTitleColor),
+        ),
+      );
+
+  Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
+        buildWhen: (p, c) =>
+            p.availableClasses != c.availableClasses ||
+            p.classesLoading != c.classesLoading,
+        builder: (_, state) {
+          return _dropdown(
+            value: _selectedClass.isEmpty ? '' : _selectedClass,
+            hint: 'Filter By Classes',
+            loading: state.classesLoading,
+            items: [
+              const DropdownMenuItem(
+                  value: '', child: Text('Filter By Classes')),
+              ...state.availableClasses.map((c) => DropdownMenuItem(
+                    value: c.id.toString(),
+                    child: Text(c.name, overflow: TextOverflow.ellipsis),
+                  )),
+            ],
+            onChanged: (v) {
+              setState(() => _selectedClass = v ?? '');
+              WidgetsBinding.instance
+                  .addPostFrameCallback((_) => _resetAndFetch());
+            },
+          );
+        },
+      );
+
+  Widget _statusDropdown() => _dropdown(
+        value: _selectedStatus,
+        hint: 'Filter By Status',
+        items: kOrderFilterStatuses
+            .map((s) => DropdownMenuItem<String>(
+                  value: s.value,
+                  child: Text(s.label, overflow: TextOverflow.ellipsis),
+                ))
+            .toList(),
+        onChanged: (v) {
+          setState(() => _selectedStatus = v ?? '');
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _resetAndFetch());
+        },
+      );
+
+  Widget _dropdown({
+    required String value,
+    required String hint,
+    required List<DropdownMenuItem<String>> items,
+    required void Function(String?) onChanged,
+    bool loading = false,
+  }) =>
+      Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.appBackgroundColor,
+          border: Border.all(color: AppTheme.backBtnBgColor),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            menuMaxHeight: 300,
+            icon: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.keyboard_arrow_down, size: 18),
+            style: MyStyles.regularText(
+                size: 13, color: AppTheme.black_Color),
+            items: items,
+            onChanged: onChanged,
+          ),
+        ),
+      );
+
+  Widget _dateField(TextEditingController ctrl, String hint) {
+    return StatefulBuilder(
+      builder: (context, setLocal) => AppTextField(
+        controller: ctrl,
+        hintText: hint,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[\d.\-/]')),
+          LengthLimitingTextInputFormatter(10),
+          _AdminDotDateFormatter(),
+        ],
+        suffixIcon: ctrl.text.isNotEmpty
+            ? GestureDetector(
+                onTap: () {
+                  ctrl.clear();
+                  setLocal(() {});
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  _debounce = Timer(
+                      const Duration(milliseconds: 200), _resetAndFetch);
+                },
+                child: const Icon(Icons.close, size: 16),
+              )
+            : null,
+        onChanged: (_) {
+          setLocal(() {});
+          if (ctrl.text.length == 10 || ctrl.text.isEmpty) {
+            if (_debounce?.isActive ?? false) _debounce!.cancel();
+            _debounce = Timer(
+                const Duration(milliseconds: 400), _resetAndFetch);
+          }
+        },
+      ),
+    );
+  }
+}
+
+// ─── Order Card ───────────────────────────────────────────────────────────────
+class _AdminOrderCard extends StatefulWidget {
+  final OrderModel order;
+  const _AdminOrderCard({required this.order});
+
+  @override
+  State<_AdminOrderCard> createState() => _AdminOrderCardState();
+}
+
+class _AdminOrderCardState extends State<_AdminOrderCard> {
+  late String _currentStatus;
+  bool _updating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStatus = widget.order.status;
+  }
+
+  String get _statusLabel => kOrderStatuses
+      .firstWhere((s) => s.value == _currentStatus,
+          orElse: () => OrderStatusOption(
+              _currentStatus, _currentStatus.replaceAll('_', ' ')))
+      .label;
+
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() => _updating = true);
+    final success = await context
+        .read<OrdersCubit>()
+        .updateOrderStatus(widget.order.uuid, newStatus);
+    if (mounted) {
+      setState(() {
+        _updating = false;
+        if (success) _currentStatus = newStatus;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? 'Status updated successfully'
+              : 'Failed to update status'),
+          backgroundColor: success ? AppTheme.btnColor : Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              AdminOrderDetailPage(uuid: widget.order.uuid),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2))
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.btnColor.withOpacity(0.05),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+              ),
+              child: Row(
+                children: [
+                  Text('#${widget.order.id}',
+                      style: MyStyles.boldText(
+                          size: 13, color: AppTheme.btnColor)),
+                  const Spacer(),
+                  _statusChip(),
+                  const SizedBox(width: 4),
+                  _updating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : PopupMenuButton<String>(
+                          icon: Icon(Icons.more_vert,
+                              size: 18,
+                              color: AppTheme.graySubTitleColor),
+                          offset: const Offset(0, 32),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 8,
+                          onSelected: _updateStatus,
+                          itemBuilder: (_) => [
+                            PopupMenuItem<String>(
+                              value: 'completed',
+                              enabled: _currentStatus != 'completed',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    size: 16,
+                                    color: _currentStatus == 'completed'
+                                        ? AppTheme.btnColor
+                                        : AppTheme.graySubTitleColor,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Mark as Completed',
+                                    style: MyStyles.regularText(
+                                      size: 13,
+                                      color: _currentStatus == 'completed'
+                                          ? AppTheme.btnColor
+                                          : AppTheme.black_Color,
+                                    ),
+                                  ),
+                                  if (_currentStatus == 'completed') ...[
+                                    const Spacer(),
+                                    Icon(Icons.check,
+                                        size: 14,
+                                        color: AppTheme.btnColor),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: AppTheme.LineColor),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: widget.order.student?.profilePhotoUrl != null
+                        ? Image.network(
+                            widget.order.student!.profilePhotoUrl!,
+                            height: 56,
+                            width: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _placeholder(),
+                          )
+                        : _placeholder(),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.order.student?.name ?? '-',
+                          style: MyStyles.boldText(
+                              size: 14, color: AppTheme.black_Color),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (widget.order.student?.className != null) ...[
+                          const SizedBox(height: 2),
+                          Text(widget.order.student!.className!,
+                              style: MyStyles.mediumText(
+                                  size: 12, color: AppTheme.btnColor)),
+                        ],
+                        const SizedBox(height: 4),
+                        Text(widget.order.school?.name ?? '',
+                            style: MyStyles.regularText(
+                                size: 11,
+                                color: AppTheme.graySubTitleColor),
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: AppTheme.LineColor),
+            // Footer
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  _infoChip(
+                      Icons.credit_card_outlined, widget.order.typeLabel),
+                  const SizedBox(width: 8),
+                  _infoChip(
+                      Icons.style_outlined, widget.order.orderCardsLabel),
+                  const Spacer(),
+                  _infoChip(Icons.calendar_today_outlined,
+                      widget.order.orderedAt),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+        height: 56,
+        width: 56,
+        decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(8)),
+        child: const Icon(Icons.person, color: Colors.grey),
+      );
+
+  Widget _statusChip() => Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+            color: AppTheme.btnColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20)),
+        child: Text(_statusLabel,
+            style: MyStyles.mediumText(
+                size: 11, color: AppTheme.btnColor)),
+      );
+
+  Widget _infoChip(IconData icon, String label) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppTheme.graySubTitleColor),
+          const SizedBox(width: 4),
+          Text(label,
+              style: MyStyles.regularText(
+                  size: 11, color: AppTheme.graySubTitleColor)),
+        ],
+      );
+}
+
+class _AdminDotDateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final text =
+        newValue.text.replaceAll('/', '-').replaceAll('.', '-');
+    return newValue.copyWith(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length));
+  }
+}

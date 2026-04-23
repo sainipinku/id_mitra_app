@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 import 'package:idmitra/bottom_diloag/logout.dart';
 import 'package:idmitra/components/app_theme.dart';
@@ -59,10 +60,7 @@ class _ProfileHeader extends StatelessWidget {
     return BlocBuilder<AdminDashboardCubit, AdminDashboardState>(
       builder: (context, state) {
         if (state.loading) {
-          return const Padding(
-            padding: EdgeInsets.all(40),
-            child: Center(child: CircularProgressIndicator()),
-          );
+          return const ProfileHeaderShimmer();
         }
 
         final user = state.dashboard?.data.user;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/snack_bar_widget.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
@@ -140,7 +141,7 @@ class _ProfileSettingState extends State<ProfileSetting> {
 
         /// 🔄 LOADING
         if (state.loading) {
-          return const Center(child: CircularProgressIndicator());
+          return const ProfileHeaderShimmer();
         }
 
         /// ✅ SUCCESS

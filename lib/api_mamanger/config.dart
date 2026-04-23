@@ -1,5 +1,6 @@
 class Config {
-  static String devBaseUrl = "http://stag.idmitra.com/api/";
+  static String devBaseUrl = "http://10.0.2.2:8000/api/";  // emulator
+  // static String devBaseUrl = "http://192.168.x.x:8000/api/";  // real device — apna IP daalo
   static String proBaseUrl = "https://idmitra.com/api/";
   static String baseUrl = proBaseUrl;
   // Base URL without /api/ suffix (for school panel routes)
@@ -31,6 +32,22 @@ class Routes {
   static String getEventsList(String name,String status,int pageNo) => "events?search=$name&status=$status&page=$pageNo";
   static String getStudentFormFields(String schoolId) => "auth/partner/school/$schoolId/student-form-fields";
   static String getSchoolFormFields(String schoolId) => "auth/school/$schoolId/form-fields";
+  static String getStaffFormFields(String schoolId, {bool isPartner = false}) =>
+      isPartner ? "auth/partner/school/$schoolId/form-fields/staff" : "auth/school/$schoolId/form-fields/staff";
+  static String getStaffRoles(String schoolId, {bool isPartner = false}) =>
+      isPartner ? "auth/partner/school/$schoolId/staff/roles/list" : "auth/school/$schoolId/staff/roles/list";
+  static String addStaff(String schoolId, {bool isPartner = false}) =>
+      isPartner ? "auth/partner/school/$schoolId/staff" : "auth/school/$schoolId/staff";
+  static String getStaffList(String schoolId, {int page = 1, String search = '', bool isPartner = false}) {
+    final base = isPartner
+        ? "auth/partner/school/$schoolId/staff?page=$page"
+        : "auth/school/$schoolId/staff?page=$page";
+    return search.isNotEmpty ? "$base&search=$search" : base;
+  }
+  static String getStaffDetail(String schoolId, String uuid, {bool isPartner = false}) =>
+      isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
+  static String updateStaff(String schoolId, String uuid, {bool isPartner = false}) =>
+      isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
   static String updateSchoolStudentFormFields(String schoolId) => "auth/school/$schoolId/form-fields/student";
   static String updateLeadsStatus(String leadsId,String status) => "leads/$leadsId/change-status/$status";
   static String toggleStudentStatus(String schoolId, String studentId) => "auth/school/$schoolId/students/$studentId/status";

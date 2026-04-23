@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
@@ -371,7 +372,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
         ? sessions.firstWhere((s) => s.value == val)
         : sessions.isNotEmpty ? sessions.first : null;
 
-    // Read-only - show as disabled tile
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
@@ -997,7 +997,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                   ),
                   Expanded(
                     child: (dataState.loading || formState.loading)
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const AddStudentFormShimmer()
                         : dataState.error != null && dataState.data == null
                         ? Center(
                             child: Text(

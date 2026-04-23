@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
@@ -89,7 +90,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   p.classesLoading != c.classesLoading,
               builder: (context, state) {
                 if (state.classesLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Column(
+                    children: List.generate(5, (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: shimmerBox(height: 44, radius: 8),
+                    )),
+                  );
                 }
                 if (state.availableClasses.isEmpty) {
                   return Text(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
@@ -191,7 +192,7 @@ class _OrdersViewState extends State<_OrdersView> {
             child: BlocBuilder<OrdersCubit, OrdersState>(
               builder: (_, state) {
                 if (state.loading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const OrderListShimmer();
                 }
                 if (state.error != null && state.ordersList.isEmpty) {
                   return Center(

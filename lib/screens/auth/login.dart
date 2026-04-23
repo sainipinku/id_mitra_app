@@ -10,6 +10,7 @@ import 'package:idmitra/screens/auth/PasswordTextField.dart';
 import 'package:idmitra/screens/auth/forget_password_login.dart';
 import 'package:idmitra/screens/auth/otp.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
+import 'package:idmitra/screens/employee_dashboard/employee_dashboard.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 import 'package:page_transition/page_transition.dart';
@@ -152,15 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         Image.asset('assets/images/login_top_img.png'),
 
                         const SizedBox(height: 30),
-
                         Text(
-                          "Hello, Welcome",
-                          style: MyStyles.boldText(
-                            size: 16,
-                            color: AppTheme.black_Color,
+                            "Hello, Welcome",
+                            style: MyStyles.boldText(
+                              size: 16,
+                              color: AppTheme.black_Color,
+                            ),
                           ),
-                        ),
-
                         const SizedBox(height: 8),
 
                         Text(
