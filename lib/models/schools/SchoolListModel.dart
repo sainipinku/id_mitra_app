@@ -682,8 +682,7 @@ class Partner {
   DateTime? updatedAt;
   dynamic deletedAt;
   String? profilePic;
-  List<String>? type;
-  List<String>? dealsIn;
+
   String? profilePhotoUrl;
   String? receivedAtFormatted;
   String? receivedAt;
@@ -712,8 +711,6 @@ class Partner {
     this.updatedAt,
     this.deletedAt,
     this.profilePic,
-    this.type,
-    this.dealsIn,
     this.profilePhotoUrl,
     this.receivedAtFormatted,
     this.receivedAt,
@@ -743,8 +740,7 @@ class Partner {
     DateTime? updatedAt,
     dynamic deletedAt,
     String? profilePic,
-    List<String>? type,
-    List<String>? dealsIn,
+
     String? profilePhotoUrl,
     String? receivedAtFormatted,
     String? receivedAt,
@@ -773,8 +769,6 @@ class Partner {
         updatedAt: updatedAt ?? this.updatedAt,
         deletedAt: deletedAt ?? this.deletedAt,
         profilePic: profilePic ?? this.profilePic,
-        type: type ?? this.type,
-        dealsIn: dealsIn ?? this.dealsIn,
         profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
         receivedAtFormatted: receivedAtFormatted ?? this.receivedAtFormatted,
         receivedAt: receivedAt ?? this.receivedAt,
@@ -804,8 +798,6 @@ class Partner {
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
     profilePic: json["profile_pic"],
-    type: json["type"] == null ? [] : List<String>.from(json["type"]!.map((x) => x)),
-    dealsIn: json["deals_in"] == null ? [] : List<String>.from(json["deals_in"]!.map((x) => x)),
     profilePhotoUrl: json["profile_photo_url"],
     receivedAtFormatted: json["received_at_formatted"],
     receivedAt: json["received_at"],
@@ -835,8 +827,6 @@ class Partner {
     "updated_at": updatedAt?.toIso8601String(),
     "deleted_at": deletedAt,
     "profile_pic": profilePic,
-    "type": type == null ? [] : List<dynamic>.from(type!.map((x) => x)),
-    "deals_in": dealsIn == null ? [] : List<dynamic>.from(dealsIn!.map((x) => x)),
     "profile_photo_url": profilePhotoUrl,
     "received_at_formatted": receivedAtFormatted,
     "received_at": receivedAt,
