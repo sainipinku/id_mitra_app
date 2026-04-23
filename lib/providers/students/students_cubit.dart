@@ -53,7 +53,7 @@ class StudentsCubit extends Cubit<StudentsState> {
 
 
     final response = await apiManager.getRequest(
-      "${Config.baseUrl}auth/school/$schoolId?search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
+      "${Config.baseUrl}auth/school/$schoolId?perPage=10&search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
     );
 
     final jsonData = jsonDecode(response.body);
