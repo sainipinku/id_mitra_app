@@ -85,17 +85,19 @@ class OrdersCubit extends Cubit<OrdersState> {
     String dateTo = '',
     String schoolId = '',
   }) async {
-    if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
+    // For fresh fetch (not load more), always allow — reset any stuck state
+    if (isLoadMore && (state.isPaginationLoading || !state.hasMore)) return;
 
     final currentPage = isLoadMore ? state.page : 1;
 
     if (!isLoadMore) {
       emit(state.copyWith(
         loading: true,
+        isPaginationLoading: false,
         page: 1,
         ordersList: [],
         hasMore: true,
-        error: null,
+        clearError: true,
       ));
     } else {
       emit(state.copyWith(isPaginationLoading: true));
@@ -157,10 +159,11 @@ class OrdersCubit extends Cubit<OrdersState> {
           isPaginationLoading: false,
           loading: false,
           page: respPage + 1,
-          hasMore: hasMore,
+          hasMore: true,
           total: total,
+          ordersList: isLoadMore ? state.ordersList : [],
         ));
-        fetchOrders(
+        await fetchOrders(
           isLoadMore: true,
           search: search,
           status: status,

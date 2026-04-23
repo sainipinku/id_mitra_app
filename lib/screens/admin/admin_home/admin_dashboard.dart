@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
@@ -11,12 +12,13 @@ import 'package:idmitra/models/home/SchoolDashboardModel.dart';
 import 'package:idmitra/providers/admin_dashboard/admin_dashboard_cubit.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/login.dart';
-import 'package:idmitra/screens/dashboard/users/user_details_page.dart';
+import 'package:idmitra/screens/admin/admin_home/admin_user/admin_user_details_page.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:page_transition/page_transition.dart';
 
 import 'package:idmitra/screens/staff/staff_list.dart';
+import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import '../admin_edit_profile/admin_profile_page.dart';
 import 'admin_home.dart';
@@ -35,6 +37,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String _profileImage = '';
   String _schoolId = '';
   final StudentsCubit _studentsCubit = StudentsCubit();
+  final StaffCubit _staffCubit = StaffCubit();
 
   List<Widget> _getWidgets(String schoolId) {
     return [
@@ -43,7 +46,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         value: _studentsCubit,
         child: AdminStudentsScreen(schoolId: schoolId),
       ),
-      StaffListingPage(schoolId: schoolId),
+      BlocProvider.value(
+        value: _staffCubit,
+        child: StaffListingPage(schoolId: schoolId, showAppBar: false),
+      ),
     ];
   }
 
@@ -54,6 +60,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void dispose() {
     _studentsCubit.close();
+    _staffCubit.close();
     super.dispose();
   }
 
@@ -67,11 +74,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final user = await UserLocal.getUser();
     final school = await UserLocal.getSchool();
     if (mounted) {
+      final newSchoolId = school['schoolId'] ?? '';
       setState(() {
         _userName = user['name'] ?? 'Admin';
         _profileImage = user['profileImage'] ?? '';
-        _schoolId = school['schoolId'] ?? '';
+        _schoolId = newSchoolId;
       });
+      // Trigger staff fetch once we have a valid schoolId
+      if (newSchoolId.isNotEmpty) {
+        _staffCubit.fetchStaff(schoolId: newSchoolId);
+      }
     }
   }
 
@@ -91,7 +103,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
     navigateWithTransition(
       context: context,
-      page: UserDetailsPage(schoolDetailsModel: schoolModel),
+      page: AdminUserDetailsPage(schoolDetailsModel: schoolModel),
     );
   }
 
@@ -110,12 +122,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
             navigateAndRemoveUntil(context: context, page: const LoginScreen(), transition: PageTransitionType.leftToRight);
           }
         },
-        child: BlocBuilder<AdminDashboardCubit, AdminDashboardState>(
+        child: BlocConsumer<AdminDashboardCubit, AdminDashboardState>(
+          listener: (context, dashState) {
+            final dashSchoolId = dashState.dashboard?.data.school?.id;
+            if (dashSchoolId != null && dashSchoolId != 0) {
+              final id = dashSchoolId.toString();
+              if (_schoolId.isEmpty) {
+                // Dashboard loaded before _loadUser completed — use dashboard schoolId
+                _staffCubit.fetchStaff(schoolId: id);
+              }
+            }
+          },
           builder: (context, dashState) {
             final dashSchool = dashState.dashboard?.data.school;
-            final schoolId = dashSchool?.id.toString().isNotEmpty == true
-                ? dashSchool!.id.toString()
-                : _schoolId;
+            final dashSchoolId = dashSchool?.id != null && dashSchool!.id != 0
+                ? dashSchool.id.toString()
+                : '';
+            final schoolId = dashSchoolId.isNotEmpty ? dashSchoolId : _schoolId;
             return Scaffold(
               appBar: _appBar(context, dashSchool, dashState),
               body: Center(child: _getWidgets(schoolId).elementAt(_selectedIndex)),
@@ -173,7 +196,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       elevation: 0,
       automaticallyImplyLeading: false,
       titleSpacing: 0,
-      title: Padding(
+      title: dashState.loading
+          ? const DashboardAppBarShimmer()
+          : Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [

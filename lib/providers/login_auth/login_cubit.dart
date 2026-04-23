@@ -56,8 +56,15 @@ class LoginCubit extends Cubit<LoginState> {
         }
 
         // Save token securely
-        await UserSecureStorage.setToken(jsonData["token"]);
-        await UserSecureStorage.setRole(jsonData["user_type"]);
+        // token field "token" ya "sig" mein se jo bhi available ho
+        final token = jsonData["token"] ?? jsonData["user"]?["sig"];
+        print('Token from response: $token');
+        if (token != null) {
+          await UserSecureStorage.setToken(token);
+        } else {
+          print('WARNING: No token found in login response!');
+        }
+        await UserSecureStorage.setRole(jsonData["user_type"] ?? loginModel.user?.accountType);
         emit(LoginSuccess(loginModel: loginModel, loginWithType: '', schoolData: schoolData));
       } else if (response.statusCode == 403 || response.statusCode == 400 || response.statusCode == 401) {
         final message = jsonData['message'] ?? "User not found";

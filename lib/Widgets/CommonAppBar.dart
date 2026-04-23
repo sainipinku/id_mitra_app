@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 
@@ -175,7 +176,7 @@ PreferredSizeWidget dashboardAppBar(BuildContext context) {
 
         /// 🔄 LOADING
         if (state.loading) {
-          return const Center(child: CircularProgressIndicator());
+          return const DashboardAppBarShimmer();
         }
 
         /// ✅ SUCCESS

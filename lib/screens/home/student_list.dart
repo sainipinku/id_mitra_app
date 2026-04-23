@@ -14,6 +14,7 @@ import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 
@@ -54,16 +55,14 @@ class _StudentListingPageState extends State<StudentListingPage> {
         context.read<StudentsCubit>().prependStudent(result);
       } else {
         context.read<StudentsCubit>().fetchStudents(
-            search: searchController.text.trim(),
-            schoolId: widget.schoolId,
-            gender: '',
-            classId: ''
+          search: searchController.text.trim(),
+          schoolId: widget.schoolId,
+          gender: '',
+          classId: '',
         );
       }
     });
   }
-
-
 
   @override
   void initState() {
@@ -78,30 +77,30 @@ class _StudentListingPageState extends State<StudentListingPage> {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
-            isLoadMore: true,
-            search: '',
-            schoolId: widget.schoolId,
-            gender: '',
-            classId: ''
+          isLoadMore: true,
+          search: '',
+          schoolId: widget.schoolId,
+          gender: '',
+          classId: '',
         );
       }
     });
   }
+
   Future<void> refreshData() async {
     //  await Future.delayed(const Duration(seconds: 2));
     context.read<StudentsCubit>().fetchStudents(
-        search: '',
-        schoolId: widget.schoolId,
-        gender: '',
-        classId: ''
+      search: '',
+      schoolId: widget.schoolId,
+      gender: '',
+      classId: '',
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CommonAppBar(
-        title: 'Student Listings',
-      ),
+      appBar: CommonAppBar(title: 'Student Listings'),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.btnColor,
         tooltip: 'Add Student',
@@ -109,7 +108,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: RefreshIndicator(
-        onRefresh:  refreshData,
+        onRefresh: refreshData,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -117,53 +116,58 @@ class _StudentListingPageState extends State<StudentListingPage> {
               /// SCHOOL DROPDOWN + FILTER
               Row(
                 children: [
-
-                  Expanded(
-                    child: _searchBar(),
-                  ),
+                  Expanded(child: _searchBar()),
 
                   const SizedBox(width: 10),
 
                   GestureDetector(
                     onTap: () async {
-                      final result = await showModalBottomSheet<Map<String, dynamic>>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: AppTheme.whiteColor,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(25),
-                          ),
-                        ),
-                        builder: (_) {
-                          return BlocProvider(
-                            create: (_) => OrdersCubit()
-                              ..fetchSchoolClasses(widget.schoolId),
-                            child: FilterBottomSheet(schoolId: widget.schoolId),
+                      final result =
+                          await showModalBottomSheet<Map<String, dynamic>>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: AppTheme.whiteColor,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(25),
+                              ),
+                            ),
+                            builder: (_) {
+                              return BlocProvider(
+                                create: (_) =>
+                                    OrdersCubit()
+                                      ..fetchSchoolClasses(widget.schoolId),
+                                child: FilterBottomSheet(
+                                  schoolId: widget.schoolId,
+                                ),
+                              );
+                            },
                           );
-                        },
-                      );
 
                       if (result != null) {
                         print("Class: ${result['class']}");
                         print("Gender: ${result['gender']}");
 
                         final String? classId = result['class'];
-                        final String? gender =
-                        result['gender']?.toString().toLowerCase();
+                        final String? gender = result['gender']
+                            ?.toString()
+                            .toLowerCase();
 
                         if (_debounce?.isActive ?? false) {
                           _debounce!.cancel();
                         }
 
-                        _debounce = Timer(const Duration(milliseconds: 500), () {
-                          context.read<StudentsCubit>().fetchStudents(
-                            search: '',
-                            schoolId: widget.schoolId,
-                            classId: classId ?? '',     // null bhi ja sakta hai
-                            gender: gender ?? '',       // male / female / null
-                          );
-                        });
+                        _debounce = Timer(
+                          const Duration(milliseconds: 500),
+                          () {
+                            context.read<StudentsCubit>().fetchStudents(
+                              search: '',
+                              schoolId: widget.schoolId,
+                              classId: classId ?? '', // null bhi ja sakta hai
+                              gender: gender ?? '', // male / female / null
+                            );
+                          },
+                        );
                       }
                     },
                     child: Container(
@@ -177,53 +181,51 @@ class _StudentListingPageState extends State<StudentListingPage> {
                         clr: AppTheme.black_Color,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
-
-
 
               const SizedBox(height: 15),
 
               /// STUDENT LIST
-              BlocBuilder<StudentsCubit, StudentsState>(
-                builder: (context, state) {
-                  if (state.loading) {
-                    return Center(child: CircularProgressIndicator());
-                  }
+              Expanded(
+                child: BlocBuilder<StudentsCubit, StudentsState>(
+                  builder: (context, state) {
+                    if (state.loading) {
+                      return const ShimmerList(expanded: false);
+                    }
 
-                  return Expanded(
-                    child: state.studentsList.isEmpty
+                    return state.studentsList.isEmpty
                         ? Center(
-                      child: Image.asset(
-                        "assets/images/no_data.png",
-                        height: 200,
-                      ),
-                    )
-                        : ListView.builder(
-                      controller: _scrollController,
-                      itemCount:
-                      state.studentsList.length +
-                          (state.hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index < state.studentsList.length) {
-                          final item = state.studentsList[index];
-                          return StudentCard(
-                            studentData: item,
-                            schoolId: widget.schoolId,
-                          );
-                        } else {
-                          return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Center(
-                              child: CircularProgressIndicator(),
+                            child: Image.asset(
+                              "assets/images/no_data.png",
+                              height: 200,
                             ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            itemCount:
+                                state.studentsList.length +
+                                (state.hasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index < state.studentsList.length) {
+                                final item = state.studentsList[index];
+                                return StudentCard(
+                                  studentData: item,
+                                  schoolId: widget.schoolId,
+                                );
+                              } else {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+                            },
                           );
-                        }
-                      },
-                    ),
-                  );
-                },
+                  },
+                ),
               ),
             ],
           ),

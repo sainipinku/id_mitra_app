@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -374,11 +375,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                                 ? NetworkImage(_student.profilePhotoUrl!)
                                 : null,
                             child: _isUploading
-                                ? const SizedBox(
-                                    width: 30,
-                                    height: 30,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
+                                ? shimmerBox(width: 72, height: 72, radius: 36)
                                 : !hasPhoto
                                     ? Icon(Icons.person_rounded,
                                         size: 36, color: AppTheme.graySubTitleColor)

@@ -468,11 +468,11 @@ class SchoolDetailsModel {
     studentFormFields: json["student_form_fields"] == null
         ? []
         : List<StudentFormField>.from(
-            json["student_form_fields"].map((x) => StudentFormField.fromJson(x))),
+        json["student_form_fields"].map((x) => StudentFormField.fromJson(x))),
     availableStudentFormFields: json["available_student_form_fields"] == null
         ? []
         : List<StudentFormField>.from(
-            json["available_student_form_fields"].map((x) => StudentFormField.fromJson(x))),
+        json["available_student_form_fields"].map((x) => StudentFormField.fromJson(x))),
     sig: json["sig"],
   );
 
@@ -576,7 +576,7 @@ class Admin {
     dynamic emailVerifiedAt,
     int? phoneVerified,
     dynamic phoneVerifiedAt,
-   // Map<String, List<String>>? permissions,
+    // Map<String, List<String>>? permissions,
     int? status,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -600,7 +600,7 @@ class Admin {
         emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
         phoneVerified: phoneVerified ?? this.phoneVerified,
         phoneVerifiedAt: phoneVerifiedAt ?? this.phoneVerifiedAt,
-       // permissions: permissions ?? this.permissions,
+        // permissions: permissions ?? this.permissions,
         status: status ?? this.status,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -625,7 +625,7 @@ class Admin {
     emailVerifiedAt: json["email_verified_at"],
     phoneVerified: json["phone_verified"],
     phoneVerifiedAt: json["phone_verified_at"],
-   // permissions: Map.from(json["permissions"]!).map((k, v) => MapEntry<String, List<String>>(k, List<String>.from(v.map((x) => x)))),
+    // permissions: Map.from(json["permissions"]!).map((k, v) => MapEntry<String, List<String>>(k, List<String>.from(v.map((x) => x)))),
     status: json["status"],
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
@@ -650,7 +650,7 @@ class Admin {
     "email_verified_at": emailVerifiedAt,
     "phone_verified": phoneVerified,
     "phone_verified_at": phoneVerifiedAt,
-   // "permissions": Map.from(permissions!).map((k, v) => MapEntry<String, dynamic>(k, List<dynamic>.from(v.map((x) => x)))),
+    // "permissions": Map.from(permissions!).map((k, v) => MapEntry<String, dynamic>(k, List<dynamic>.from(v.map((x) => x)))),
     "status": status,
     "created_at": createdAt?.toIso8601String(),
     "updated_at": updatedAt?.toIso8601String(),

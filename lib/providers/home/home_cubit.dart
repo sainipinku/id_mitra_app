@@ -48,6 +48,9 @@ class HomeCubit extends Cubit<HomeState> {
         final dashboardBody = dashboardResponse.body.trim();
         final userBody = userResponse.body.trim();
 
+        print('Dashboard response: $dashboardBody');
+        print('User response: $userBody');
+
         // HTML response check - server ne error page diya
         if (userBody.startsWith('<') || dashboardBody.startsWith('<')) {
           emit(state.copyWith(loading: false, error: "Server error - invalid response"));

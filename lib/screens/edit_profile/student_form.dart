@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
@@ -664,7 +665,7 @@ class _StudentFormState extends State<StudentForm> {
       body: BlocBuilder<StudentFormCubit, StudentFormState>(
         builder: (context, state) {
           if (state.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return const StudentFormShimmer();
           }
 
           if (state.error != null && state.fields.isEmpty) {
@@ -674,10 +675,6 @@ class _StudentFormState extends State<StudentForm> {
                 style: MyStyles.regularText(size: 14, color: Colors.red),
               ),
             );
-          }
-
-          if (state.loading) {
-            return const Center(child: CircularProgressIndicator());
           }
 
           if (state.error != null && state.fields.isEmpty) {

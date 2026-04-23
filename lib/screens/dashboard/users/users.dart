@@ -6,6 +6,7 @@ import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/providers/school/school_state.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/screens/dashboard/users/users_details_widgets.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
@@ -61,42 +62,42 @@ class _SchoolsState extends State<Schools> {
             fillterList(),
             const SizedBox(height: 15),
             BlocBuilder<SchoolCubit, SchoolState>(
-          builder: (context, state) {
-            if (state.loading) {
-              return Center(child: CircularProgressIndicator());
-            }
+              builder: (context, state) {
+                if (state.loading) {
+                  return const SchoolListShimmer();
+                }
 
-            return Expanded(
-              child: state.students.isEmpty
-                  ? Center(
-                child: Image.asset(
-                  "assets/images/no_data.png",
-                  height: 200,
-                ),
-              )
-                  : ListView.builder(
-                controller: _scrollController,
-                itemCount: state.students.length +
-                    (state.hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index < state.students.length) {
-                    final item = state.students[index];
-                    return UsersDetailsWidgets(
-                      schoolDetailsModel: item,
-                    );
-                  } else {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                },
-              ),
-            );
-          },
-        )
+                return Expanded(
+                  child: state.students.isEmpty
+                      ? Center(
+                    child: Image.asset(
+                      "assets/images/no_data.png",
+                      height: 200,
+                    ),
+                  )
+                      : ListView.builder(
+                    controller: _scrollController,
+                    itemCount: state.students.length +
+                        (state.hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index < state.students.length) {
+                        final item = state.students[index];
+                        return UsersDetailsWidgets(
+                          schoolDetailsModel: item,
+                        );
+                      } else {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                );
+              },
+            )
 
           ],
         ),

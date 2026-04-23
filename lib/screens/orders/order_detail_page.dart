@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -52,7 +53,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       backgroundColor: AppTheme.appBackgroundColor,
       appBar: CommonAppBar(title: 'Order Details', backgroundColor: Colors.white, showText: true),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const OrderDetailShimmer()
           : _error != null
               ? Center(child: Text(_error!, style: MyStyles.regularText(size: 14, color: Colors.red)))
               : _order == null
