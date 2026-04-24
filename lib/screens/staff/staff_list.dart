@@ -197,19 +197,36 @@ class _StaffListBodyState extends State<_StaffListBody> {
                   }
 
                   if (state.error != null && state.list.isEmpty) {
+                    final isPermissionError = state.error!.toLowerCase().contains('permission') ||
+                        state.error!.toLowerCase().contains('denied') ||
+                        state.error!.toLowerCase().contains('unauthorized') ||
+                        state.error!.toLowerCase().contains('forbidden');
                     return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
-                          const SizedBox(height: 12),
-                          Text(state.error!, style: MyStyles.regularText(size: 13, color: Colors.red)),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: _refresh,
-                            child: const Text('Retry'),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPermissionError ? Icons.lock_outline : Icons.error_outline,
+                              size: 56,
+                              color: isPermissionError ? Colors.orange.shade400 : Colors.red.shade300,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              state.error!,
+                              style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (!isPermissionError) ...[
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: _refresh,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -244,7 +261,6 @@ class _StaffListBodyState extends State<_StaffListBody> {
   }
 }
 
-// ─── Staff Card ───────────────────────────────────────────────────────────────
 class _StaffCard extends StatelessWidget {
   final StaffListModel staff;
   final String schoolId;
@@ -256,6 +272,8 @@ class _StaffCard extends StatelessWidget {
         ? staff.name.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase()
         : '?';
 
+    final hasPhoto = staff.profilePhotoUrl != null && staff.profilePhotoUrl!.isNotEmpty;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -264,158 +282,107 @@ class _StaffCard extends StatelessWidget {
         ),
       ),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              color: AppTheme.btnColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            // Profile photo (same style as StudentCard)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: hasPhoto
+                  ? Image.network(
+                      staff.profilePhotoUrl!,
+                      height: 60,
+                      width: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(initials),
+                    )
+                  : _placeholder(initials),
             ),
-            child: Center(
-              child: Text(
-                initials,
-                style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          staff.name,
+                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (staff.department.isNotEmpty) ...[
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            '• ${staff.department}',
+                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  if ([staff.designation, staff.roleName].any((s) => s.isNotEmpty))
+                    Text(
+                      [staff.designation, staff.roleName]
+                          .where((s) => s.isNotEmpty)
+                          .join(' • '),
+                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                    ),
+                  const SizedBox(height: 3),
+                  if (staff.phone.isNotEmpty)
+                    Text(
+                      'Phone: ${staff.phone}',
+                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                    ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 12),
 
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Name + department chip
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        staff.name,
-                        style: MyStyles.boldText(size: 15, color: AppTheme.black_Color),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (staff.department.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppTheme.btnColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          staff.department,
-                          style: MyStyles.mediumText(size: 10, color: AppTheme.btnColor),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-
-                // Designation + role
-                Text(
-                  [staff.designation, staff.roleName]
-                      .where((s) => s.isNotEmpty)
-                      .join(' • '),
-                  style: MyStyles.mediumText(size: 12, color: AppTheme.graySubTitleColor),
-                ),
-                const SizedBox(height: 5),
-
-                if (staff.email.isNotEmpty) ...[
-                  _infoRow(Icons.email_outlined, staff.email),
-                  const SizedBox(height: 2),
-                ],
-                if (staff.phone.isNotEmpty) ...[
-                  _infoRow(Icons.phone_outlined, staff.phone),
-                  const SizedBox(height: 2),
-                ],
-                if (staff.assignedClasses.isNotEmpty) ...[
-                  _infoRow(Icons.class_outlined, staff.assignedClasses.join(', ')),
-                  const SizedBox(height: 2),
-                ],
-                if (staff.address != null && staff.address!.isNotEmpty)
-                  _infoRow(Icons.location_on_outlined, staff.address!),
-
-                // Status badge
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: staff.status == 1
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    staff.status == 1 ? 'Active' : 'Inactive',
-                    style: MyStyles.mediumText(
-                      size: 10,
-                      color: staff.status == 1 ? Colors.green : Colors.red,
-                    ),
-                  ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              onSelected: (_) {},
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(children: [
+                    Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete'),
+                  ]),
                 ),
               ],
             ),
-          ),
-
-          // 3-dot menu
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
-            onSelected: (_) {},
-            itemBuilder: (_) => const [
-              // PopupMenuItem(
-              //   value: 'view',
-              //   child: Row(children: [
-              //     Icon(Icons.visibility_outlined, size: 16, color: Colors.blue),
-              //     SizedBox(width: 8),
-              //     Text('View'),
-              //   ]),
-              // ),
-              // PopupMenuItem(
-              //   value: 'edit',
-              //   child: Row(children: [
-              //     Icon(Icons.edit_outlined, size: 16, color: Colors.blue),
-              //     SizedBox(width: 8),
-              //     Text('Edit'),
-              //   ]),
-              // ),
-              PopupMenuItem(
-                value: 'delete',
-                child: Row(children: [
-                  Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete'),
-                ]),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
-      ),
-    ); // GestureDetector
+    );
   }
 
-  Widget _infoRow(IconData icon, String text) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 12, color: AppTheme.graySubTitleColor),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              text,
-              style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      );
+  Widget _placeholder(String initials) {
+    return Container(
+      height: 60,
+      width: 60,
+      decoration: BoxDecoration(
+        color: AppTheme.btnColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: MyStyles.boldText(size: 18, color: AppTheme.btnColor),
+        ),
+      ),
+    );
+  }
 }

@@ -50,7 +50,11 @@ class _EmergencyContact {
 class AddStaffFormPage extends StatefulWidget {
   final String schoolId;
   final StaffDetailModel? editStudent;
-  const AddStaffFormPage({super.key, required this.editStudent,required this.schoolId});
+  const AddStaffFormPage({
+    super.key,
+    required this.editStudent,
+    required this.schoolId,
+  });
 
   @override
   State<AddStaffFormPage> createState() => _AddStaffFormPageState();
@@ -81,12 +85,61 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
 
   final List<_EmergencyContact> _emergencyContacts = [_EmergencyContact()];
 
+  bool get _isEditMode => widget.editStudent != null;
+
   @override
   void initState() {
     super.initState();
     _staffFormCubit = StaffFormCubit();
     _addStaffCubit = AddStaffCubit();
+    _prefillFromEdit();
     _initSchoolAndLoad();
+  }
+
+  void _prefillFromEdit() {
+    final s = widget.editStudent;
+    if (s == null) return;
+
+    _whatsapp.text = s.whatsappPhone ?? '';
+    _fatherName.text = s.fatherName ?? '';
+    _motherName.text = s.motherName ?? '';
+    _husbandName.text = s.husbandName ?? '';
+    _dob.text = s.dob ?? '';
+    _doj.text = s.dateOfJoining ?? '';
+    _address.text = s.address ?? '';
+    _pincode.text = s.pincode ?? '';
+    _employeeId.text = s.employeeId ?? '';
+    _nationalCode.text = s.nationalCode ?? '';
+
+    if (s.gender != null) {
+      final matched = _kGenderOptions.firstWhere(
+        (g) => g.toLowerCase() == s.gender!.toLowerCase(),
+        orElse: () => '',
+      );
+      _selectedGender = matched.isEmpty ? null : matched;
+    }
+
+    if (s.bloodGroup != null && _kBloodGroupOptions.contains(s.bloodGroup)) {
+      _selectedBloodGroup = s.bloodGroup;
+    }
+
+    if (s.roleName.isNotEmpty) {
+      _selectValues['role'] = s.roleName;
+    }
+
+    if (s.emergencyContacts.isNotEmpty) {
+      _emergencyContacts
+        ..clear()
+        ..addAll(
+          s.emergencyContacts.map(
+            (c) => _EmergencyContact(
+              relation: c.relation,
+              name: c.name,
+              phone: c.phone,
+            ),
+          ),
+        );
+    }
   }
 
   Future<void> _initSchoolAndLoad() async {
@@ -102,9 +155,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
   void dispose() {
     _staffFormCubit.close();
     _addStaffCubit.close();
-    for (final c in _controllers.values) {
-      c.dispose();
-    }
+    for (final c in _controllers.values) c.dispose();
     for (final c in [
       _whatsapp,
       _fatherName,
@@ -123,7 +174,36 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
   }
 
   TextEditingController _ctrl(String name) {
-    return _controllers.putIfAbsent(name, () => TextEditingController());
+    return _controllers.putIfAbsent(name, () {
+      final ctrl = TextEditingController();
+      if (_isEditMode) {
+        final s = widget.editStudent!;
+        switch (name) {
+          case 'name':
+            ctrl.text = s.name;
+            break;
+          case 'email':
+            ctrl.text = s.email;
+            break;
+          case 'phone':
+            ctrl.text = s.phone;
+            break;
+          case 'designation':
+            ctrl.text = s.designation;
+            break;
+          case 'department':
+            ctrl.text = s.department;
+            break;
+          case 'login_id':
+            ctrl.text = s.loginId ?? '';
+            break;
+          case 'whatsapp':
+            ctrl.text = s.whatsappPhone ?? '';
+            break;
+        }
+      }
+      return ctrl;
+    });
   }
 
   Widget _label(String text, {bool required = false}) => Padding(
@@ -216,7 +296,9 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
               Dropdown<StaffRole>(
                 value: roles.isNotEmpty && _selectValues['role'] != null
                     ? roles.firstWhere(
-                        (r) => r.id.toString() == _selectValues['role'],
+                        (r) =>
+                            r.id.toString() == _selectValues['role'] ||
+                            r.name == _selectValues['role'],
                         orElse: () => roles.first,
                       )
                     : null,
@@ -279,7 +361,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
             ),
           ],
         );
-      default: // text
+      default:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -322,11 +404,16 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
           if (state.success) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message ?? 'Staff added successfully'),
+                content: Text(
+                  state.message ??
+                      (_isEditMode
+                          ? 'Staff updated successfully'
+                          : 'Staff added successfully'),
+                ),
                 backgroundColor: Colors.green,
               ),
             );
-            Navigator.pop(context, true); // true = refresh list
+            Navigator.pop(context, true);
           } else if (state.error != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -345,7 +432,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
     return Scaffold(
       backgroundColor: AppTheme.appBackgroundColor,
       appBar: CommonAppBar(
-        title: 'Add Staff',
+        title: _isEditMode ? 'Edit Staff' : 'Add Staff',
         backgroundColor: Colors.white,
         showText: true,
       ),
@@ -386,7 +473,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                   ),
                                 ),
                         ),
-
                         _sectionCard(
                           title: 'Basic Information',
                           child: Column(
@@ -634,7 +720,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                     Expanded(
                       child: BlocBuilder<AddStaffCubit, AddStaffState>(
                         builder: (context, addState) => AppButton(
-                          title: 'Add',
+                          title: _isEditMode ? 'Update' : 'Add',
                           color: AppTheme.btnColor,
                           isLoading: addState.loading,
                           onTap: () {
@@ -677,20 +763,34 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
     fields['employee_id'] = _employeeId.text;
     fields['national_code'] = _nationalCode.text;
     if (_selectedGender != null) fields['gender'] = _selectedGender;
-    if (_selectedBloodGroup != null) {
+    if (_selectedBloodGroup != null)
       fields['blood_group'] = _selectedBloodGroup;
-    }
 
     final emergencyContacts = _emergencyContacts
         .where((e) => e.name.isNotEmpty || e.phone.isNotEmpty)
-        .map((e) => {'relation': e.relation, 'name': e.name, 'phone': e.phone})
+        .map(
+          (e) => <String, String>{
+            'relation': e.relation,
+            'name': e.name,
+            'phone': e.phone,
+          },
+        )
         .toList();
 
-    _addStaffCubit.submit(
-      schoolId: _schoolId,
-      fields: fields,
-      emergencyContacts: emergencyContacts,
-    );
+    if (_isEditMode) {
+      _addStaffCubit.update(
+        schoolId: _schoolId,
+        uuid: widget.editStudent!.uuid,
+        fields: fields,
+        emergencyContacts: emergencyContacts,
+      );
+    } else {
+      _addStaffCubit.submit(
+        schoolId: _schoolId,
+        fields: fields,
+        emergencyContacts: emergencyContacts,
+      );
+    }
   }
 }
 

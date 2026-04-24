@@ -81,13 +81,16 @@ class AddStaffCubit extends Cubit<AddStaffState> {
       final role = await UserSecureStorage.fetchRole();
       final isPartner = role == 'partner';
       final url = '${Config.baseUrl}${Routes.updateStaff(schoolId, uuid, isPartner: isPartner)}';
+      print('=== UPDATE STAFF URL: $url');
 
       final request = http.MultipartRequest('POST', Uri.parse(url));
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
       request.fields['_method'] = 'PUT';
 
-      _buildBody(schoolId, fields).forEach((k, v) {
+      final body = _buildBody(schoolId, fields);
+      print('=== UPDATE BODY: $body');
+      body.forEach((k, v) {
         if (v != null && v.toString().isNotEmpty) {
           request.fields[k] = v.toString();
         }
@@ -98,9 +101,12 @@ class AddStaffCubit extends Cubit<AddStaffState> {
           if (v.isNotEmpty) request.fields['emergency_contacts[$i][$k]'] = v;
         });
       }
+      print('=== EMERGENCY CONTACTS: $emergencyContacts');
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+      print('=== UPDATE RESPONSE STATUS: ${response.statusCode}');
+      print('=== UPDATE RESPONSE BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
@@ -165,6 +171,9 @@ class AddStaffCubit extends Cubit<AddStaffState> {
           break;
         case 'whatsapp':
           body['whatsapp_phone'] = str;
+          break;
+        case 'role':
+          body['role'] = str; // backend expects 'role' with numeric ID
           break;
         default:
           body[key] = str;

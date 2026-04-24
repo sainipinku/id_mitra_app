@@ -67,10 +67,11 @@ class _AdminUserDetailsContent extends StatelessWidget {
             elevation: 8,
             onSelected: (value) {
               if (value == 'image_settings') {
+                final schoolId = schoolDetailsModel?.id?.toString() ?? '';
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const AdminImageSettingsScreen()),
+                      builder: (context) => AdminImageSettingsScreen(schoolId: schoolId)),
                 );
               } else if (value == 'profile_settings') {
                 Navigator.push(

@@ -98,10 +98,23 @@ class StaffListCubit extends Cubit<StaffListState> {
           total: total,
         ));
       } else {
+        String errorMsg;
+        try {
+          final json = jsonDecode(response.body);
+          errorMsg = json['message'] ?? json['error'] ?? 'Something went wrong';
+        } catch (_) {
+          if (response.statusCode == 403) {
+            errorMsg = 'Permission Denied';
+          } else if (response.statusCode == 401) {
+            errorMsg = 'Unauthorized. Please login again.';
+          } else {
+            errorMsg = 'Failed to load staff (${response.statusCode})';
+          }
+        }
         emit(state.copyWith(
           loading: false,
           paginationLoading: false,
-          error: 'Failed to load staff (${response.statusCode})',
+          error: errorMsg,
         ));
       }
     } catch (e) {
