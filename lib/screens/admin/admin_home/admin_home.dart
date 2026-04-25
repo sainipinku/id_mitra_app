@@ -16,17 +16,21 @@ import 'package:idmitra/utils/MyStyles.dart';
 
 class AdminHome extends StatelessWidget {
   final VoidCallback? onStudentAdded;
-  const AdminHome({super.key, this.onStudentAdded});
+  final VoidCallback? onStudentsTap;
+  final VoidCallback? onStaffTap;
+  const AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap});
 
   @override
   Widget build(BuildContext context) {
-    return _AdminHomeView(onStudentAdded: onStudentAdded);
+    return _AdminHomeView(onStudentAdded: onStudentAdded, onStudentsTap: onStudentsTap, onStaffTap: onStaffTap);
   }
 }
 
 class _AdminHomeView extends StatelessWidget {
   final VoidCallback? onStudentAdded;
-  const _AdminHomeView({this.onStudentAdded});
+  final VoidCallback? onStudentsTap;
+  final VoidCallback? onStaffTap;
+  const _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap});
 
   @override
   Widget build(BuildContext context) {
@@ -80,14 +84,14 @@ class _AdminHomeView extends StatelessWidget {
                       value: '${data?.summary.students ?? 0}',
                       icon: Icons.school,
                       color: Colors.orange,
-                      button: () {},
+                      button: onStudentsTap ?? () {},
                     ),
                     StatCard(
                       title: "Total Staff",
                       value: '${data?.summary.staff ?? 0}',
                       icon: Icons.group,
                       color: Colors.blue,
-                      button: () {},
+                      button: onStaffTap ?? () {},
                     ),
                     StatCard(
                       title: "Total Orders",

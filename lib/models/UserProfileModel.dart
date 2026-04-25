@@ -206,8 +206,8 @@ class User {
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
     profilePic: json["profile_pic"],
-    type: json["type"] == null ? [] : List<String>.from(json["type"]!.map((x) => x)),
-    dealsIn: json["deals_in"] == null ? [] : List<String>.from(json["deals_in"]!.map((x) => x)),
+    type: json["type"] == null || json["type"] is! List ? [] : List<String>.from((json["type"] as List).map((x) => x?.toString() ?? '')),
+    dealsIn: json["deals_in"] == null || json["deals_in"] is! List ? [] : List<String>.from((json["deals_in"] as List).map((x) => x?.toString() ?? '')),
     profilePhotoUrl: json["profile_photo_url"],
     receivedAtFormatted: json["received_at_formatted"],
     receivedAt: json["received_at"],
@@ -663,6 +663,7 @@ class StudentFormField {
   GroupLabel? groupLabel;
   String? type;
   bool? required;
+  int? order;
 
   StudentFormField({
     this.name,
@@ -671,6 +672,7 @@ class StudentFormField {
     this.groupLabel,
     this.type,
     this.required,
+    this.order,
   });
 
   StudentFormField copyWith({
@@ -693,10 +695,11 @@ class StudentFormField {
   factory StudentFormField.fromJson(Map<String, dynamic> json) => StudentFormField(
     name: json["name"],
     label: json["label"],
-    group: groupValues.map[json["group"]]!,
-    groupLabel: groupLabelValues.map[json["group_label"]]!,
+    group: groupValues.map[json["group"]],
+    groupLabel: groupLabelValues.map[json["group_label"]],
     type: json["type"],
     required: json["required"],
+    order: json["order"],
   );
 
   Map<String, dynamic> toJson() => {

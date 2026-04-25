@@ -177,37 +177,55 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.network(
-                imageUrl,
-                height: 300,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 300,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.person, size: 80, color: Colors.grey),
+          child: Container(
+            color: Colors.black,
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    minScale: 0.8,
+                    maxScale: 4,
+                    child: Image.network(
+                      imageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const SizedBox(
+                          height: 300,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 300,
+                        width: double.infinity,
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: TextButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showPicker(context);
-                  },
-                  icon: const Icon(Icons.edit),
-                  label: const Text("Edit Profile Image"),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showPicker(context);
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Edit Profile Image"),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -325,20 +343,6 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
               ),
             ),
           ),
-          Positioned(
-            top: 8, right: 10,
-            child: GestureDetector(
-              onTap: () => _openEdit(context),
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppTheme.btnColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.edit, size: 16, color: AppTheme.btnColor),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
             child: Center(
@@ -453,6 +457,25 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openEdit(context),
+                      icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.btnColor),
+                      label: Text(
+                        'Edit Profile',
+                        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppTheme.btnColor, width: 1.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -496,50 +519,50 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  title: 'TC',
-                  height: 44,
-                  color: AppTheme.redBtnBgColor,
-                  onTap: () => _showComingSoon(context, 'TC'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppButton(
-                  title: 'Not in my class',
-                  height: 44,
-                  color: AppTheme.graySubTitleColor,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MultiBlocProvider(
-                          providers: [
-                            BlocProvider(
-                              create: (_) => StudentFormCubit()
-                                ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
-                            ),
-                            BlocProvider(
-                              create: (_) => StudentFormDataCubit()..load(schoolId),
-                            ),
-                            BlocProvider(create: (_) => AddStudentCubit()),
-                          ],
-                          child: AddStudentFormPage(
-                            schoolId: schoolId,
-                            editStudent: _student,
-                            initialTab: 1,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: AppButton(
+          //         title: 'TC',
+          //         height: 44,
+          //         color: AppTheme.redBtnBgColor,
+          //         onTap: () => _showComingSoon(context, 'TC'),
+          //       ),
+          //     ),
+          //     const SizedBox(width: 12),
+          //     Expanded(
+          //       child: AppButton(
+          //         title: 'Not in my class',
+          //         height: 44,
+          //         color: AppTheme.graySubTitleColor,
+          //         onTap: () {
+          //           Navigator.push(
+          //             context,
+          //             MaterialPageRoute(
+          //               builder: (_) => MultiBlocProvider(
+          //                 providers: [
+          //                   BlocProvider(
+          //                     create: (_) => StudentFormCubit()
+          //                       ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
+          //                   ),
+          //                   BlocProvider(
+          //                     create: (_) => StudentFormDataCubit()..load(schoolId),
+          //                   ),
+          //                   BlocProvider(create: (_) => AddStudentCubit()),
+          //                 ],
+          //                 child: AddStudentFormPage(
+          //                   schoolId: schoolId,
+          //                   editStudent: _student,
+          //                   initialTab: 1,
+          //                 ),
+          //               ),
+          //             ),
+          //           );
+          //         },
+          //       ),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );

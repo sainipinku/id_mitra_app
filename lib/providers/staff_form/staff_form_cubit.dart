@@ -55,6 +55,7 @@ class StaffFormCubit extends Cubit<StaffFormState> {
       final token = await UserSecureStorage.fetchToken();
       final role = await UserSecureStorage.fetchRole();
       final isPartner = role == 'partner';
+      print('=== USER ROLE: $role | isPartner: $isPartner | schoolId: $schoolId');
       final headers = {'Authorization': 'Bearer $token', 'Accept': 'application/json'};
 
       // Fetch both in parallel
@@ -67,6 +68,7 @@ class StaffFormCubit extends Cubit<StaffFormState> {
       final rolesResp = results[1];
 
       List<StudentFormField> fields = [];
+      print('=== FIELDS API STATUS: ${fieldsResp.statusCode}');
       if (fieldsResp.statusCode == 200) {
         final json = jsonDecode(fieldsResp.body);
         final List rawFields = json['data']?['fields'] ?? [];
@@ -74,12 +76,28 @@ class StaffFormCubit extends Cubit<StaffFormState> {
             .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
             .toList()
           ..sort((a, b) => a.order.compareTo(b.order));
+        print('=== FIELDS: ${fields.map((f) => '${f.name}(${f.type})').toList()}');
       }
 
       List<StaffRole> roles = [];
+      print('=== ROLES API STATUS: ${rolesResp.statusCode}');
+      print('=== ROLES API BODY: ${rolesResp.body}');
       if (rolesResp.statusCode == 200) {
         final json = jsonDecode(rolesResp.body);
-        final List rawRoles = json['data']?['roles'] ?? [];
+        print('=== ROLES JSON KEYS: ${json.keys}');
+        print('=== ROLES DATA: ${json['data']}');
+        // Try multiple possible structures
+        List rawRoles = [];
+        if (json['data'] is List) {
+          rawRoles = json['data'];
+        } else if (json['data'] is Map && json['data']['roles'] is List) {
+          rawRoles = json['data']['roles'];
+        } else if (json['roles'] is List) {
+          rawRoles = json['roles'];
+        } else if (json['data'] is Map && json['data']['data'] is List) {
+          rawRoles = json['data']['data'];
+        }
+        print('=== RAW ROLES COUNT: ${rawRoles.length}');
         roles = rawRoles.map((e) => StaffRole.fromJson(Map<String, dynamic>.from(e))).toList();
       }
 

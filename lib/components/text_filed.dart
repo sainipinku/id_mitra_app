@@ -10,13 +10,15 @@ import 'package:idmitra/helpers/helpers.dart';
 
 Widget nameTextField({
   required TextEditingController controller,
-  IconData? icon,String? hintName,String? validatorTxt,bool isRequired = true,bool readOnly = true
+  IconData? icon,String? hintName,String? validatorTxt,bool isRequired = true,bool readOnly = true,
+  TextInputType keyboardType = TextInputType.text,
 }) {
   return AppTextField(
     enabled: readOnly,
     controller: controller,
     hintText: hintName ?? 'Enter a name',
     icon: icon,
+    keyboardType: keyboardType,
     validator: isRequired
         ? (value) {
       if (value == null || value.trim().length < 3) {
@@ -53,8 +55,8 @@ Widget phoneNumberTextField({
     controller: controller,
     hintText: hintName ?? 'Please enter your phone number',
     keyboardType: TextInputType.number,
-    icon: isRequired
-        ? Icons.call : null,
+    // icon: isRequired
+    //     ? Icons.call : null,
     inputFormatters: [
       LengthLimitingTextInputFormatter(digitNo ?? 10),
       FilteringTextInputFormatter.digitsOnly,

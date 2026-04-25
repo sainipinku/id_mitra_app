@@ -38,7 +38,7 @@ class HomeCubit extends Cubit<HomeState> {
 
       /// Null check — agar koi bhi response null hai toh error emit karo
       if (dashboardResponse == null || userResponse == null) {
-        emit(state.copyWith(loading: false, error: "Server se response nahi mila"));
+        emit(state.copyWith(loading: false, error: "Unable to connect to the server. Please try again."));
         return;
       }
 
@@ -72,7 +72,7 @@ class HomeCubit extends Cubit<HomeState> {
           userResponse.statusCode == 403) {
         emit(state.copyWith(loading: false, error: "On Hold"));
       } else if (dashboardResponse.statusCode == 404) {
-        emit(state.copyWith(loading: false, error: "Dashboard API not found (404) — backend se check karein"));
+        emit(state.copyWith(loading: false, error: "Something went wrong. Please try again later"));
       } else {
         emit(state.copyWith(
           loading: false,

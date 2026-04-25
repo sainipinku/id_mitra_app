@@ -15,14 +15,53 @@ class FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
-  String? selectedClassId;
-  String? selectedClassName;
+  final Set<String> _selectedClassIds = {};
+  final Map<String, String> _selectedClassNames = {};
   String? selectedGender;
 
-  @override
-  void initState() {
-    super.initState();
-    // Classes are fetched by the BlocProvider in student_list.dart
+  static const _classOrder = [
+    'pre nursery', 'prenursery', 'pre-nursery',
+    'nursery',
+    'prep', 'pre prep', 'preprep', 'pre-prep',
+    'lkg', 'l.k.g', 'lower kg', 'lower kindergarten', 'l kg',
+    'ukg', 'u.k.g', 'upper kg', 'upper kindergarten', 'u kg',
+    'kg', 'k.g', 'kindergarten',
+    '1', 'i', 'class 1', 'grade 1',
+    '2', 'ii', 'class 2', 'grade 2',
+    '3', 'iii', 'class 3', 'grade 3',
+    '4', 'iv', 'class 4', 'grade 4',
+    '5', 'v', 'class 5', 'grade 5',
+    '6', 'vi', 'class 6', 'grade 6',
+    '7', 'vii', 'class 7', 'grade 7',
+    '8', 'viii', 'class 8', 'grade 8',
+    '9', 'ix', 'class 9', 'grade 9',
+    '10', 'x', 'class 10', 'grade 10',
+    '11', 'xi', 'class 11', 'grade 11',
+    '12', 'xii', 'class 12', 'grade 12',
+  ];
+
+  static int _sortIndex(String name) {
+    final lower = name.trim().toLowerCase();
+    for (int i = 0; i < _classOrder.length; i++) {
+      if (lower == _classOrder[i]) return i;
+    }
+    for (int i = 0; i < _classOrder.length; i++) {
+      if (lower.startsWith(_classOrder[i])) return i;
+    }
+    return 999;
+  }
+
+  List<OrderClass> _sorted(List<OrderClass> classes) {
+    final list = [...classes];
+    list.sort((a, b) {
+      final aName = a.nameWithprefix ?? a.name;
+      final bName = b.nameWithprefix ?? b.name;
+      final ai = _sortIndex(aName);
+      final bi = _sortIndex(bName);
+      if (ai != bi) return ai.compareTo(bi);
+      return aName.toLowerCase().compareTo(bName.toLowerCase());
+    });
+    return list;
   }
 
   @override
@@ -34,7 +73,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -53,37 +91,35 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             const Divider(),
             const SizedBox(height: 8),
 
-            // Selected class chip (if any)
-            if (selectedClassName != null) ...[
+            if (_selectedClassNames.isNotEmpty) ...[
               Wrap(
                 spacing: 8,
-                children: [
-                  Chip(
+                runSpacing: 4,
+                children: _selectedClassNames.entries.map((entry) {
+                  return Chip(
                     label: Text(
-                      selectedClassName!,
+                      entry.value,
                       style: MyStyles.regularText(size: 13, color: AppTheme.btnColor),
                     ),
                     backgroundColor: AppTheme.btnColor.withOpacity(0.1),
                     deleteIcon: const Icon(Icons.close, size: 14),
                     onDeleted: () => setState(() {
-                      selectedClassId = null;
-                      selectedClassName = null;
+                      _selectedClassIds.remove(entry.key);
+                      _selectedClassNames.remove(entry.key);
                     }),
                     side: BorderSide.none,
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 8),
             ],
 
-            // Class label
             Text(
               "Select Class",
               style: MyStyles.mediumText(size: 13, color: AppTheme.graySubTitleColor),
             ),
             const SizedBox(height: 8),
 
-            // Class list — fixed height, no full-screen overlay
             BlocBuilder<OrdersCubit, OrdersState>(
               buildWhen: (p, c) =>
                   p.availableClasses != c.availableClasses ||
@@ -91,38 +127,47 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               builder: (context, state) {
                 if (state.classesLoading) {
                   return Column(
-                    children: List.generate(5, (i) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: shimmerBox(height: 44, radius: 8),
-                    )),
+                    children: List.generate(
+                      5,
+                      (i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: shimmerBox(height: 44, radius: 8),
+                      ),
+                    ),
                   );
                 }
                 if (state.availableClasses.isEmpty) {
                   return Text(
                     "No classes available",
-                    style: MyStyles.regularText(
-                        size: 13, color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
                   );
                 }
+                final classes = _sorted(state.availableClasses);
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.35,
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
-                    itemCount: state.availableClasses.length,
+                    itemCount: classes.length,
                     separatorBuilder: (_, __) =>
                         Divider(height: 1, color: AppTheme.LineColor),
                     itemBuilder: (context, index) {
-                      final cls = state.availableClasses[index];
-                      final isSelected =
-                          selectedClassId == cls.id.toString();
+                      final cls = classes[index];
+                      final clsId = cls.id.toString();
+                      final clsName = cls.nameWithprefix ?? cls.name;
+                      final isSelected = _selectedClassIds.contains(clsId);
+
                       return InkWell(
                         onTap: () {
                           setState(() {
-                            selectedClassId = cls.id.toString();
-                            selectedClassName =
-                                cls.nameWithprefix ?? cls.name;
+                            if (isSelected) {
+                              _selectedClassIds.remove(clsId);
+                              _selectedClassNames.remove(clsId);
+                            } else {
+                              _selectedClassIds.add(clsId);
+                              _selectedClassNames[clsId] = clsName;
+                            }
                           });
                         },
                         borderRadius: BorderRadius.circular(8),
@@ -133,7 +178,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  cls.nameWithprefix ?? cls.name,
+                                  clsName,
                                   style: MyStyles.regularText(
                                     size: 14,
                                     color: isSelected
@@ -142,9 +187,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                   ),
                                 ),
                               ),
-                              if (isSelected)
-                                Icon(Icons.check_circle,
-                                    size: 18, color: AppTheme.btnColor),
+                              Icon(
+                                isSelected
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                size: 20,
+                                color: isSelected
+                                    ? AppTheme.btnColor
+                                    : AppTheme.graySubTitleColor,
+                              ),
                             ],
                           ),
                         ),
@@ -170,8 +221,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     ),
                     onPressed: () {
                       setState(() {
-                        selectedClassId = null;
-                        selectedClassName = null;
+                        _selectedClassIds.clear();
+                        _selectedClassNames.clear();
                         selectedGender = null;
                       });
                     },
@@ -189,8 +240,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       ),
                     ),
                     onPressed: () {
+                      final classIds = _selectedClassIds.join(',');
                       Navigator.pop(context, {
-                        "class": selectedClassId,
+                        "class": classIds.isEmpty ? null : classIds,
                         "gender": selectedGender,
                       });
                     },

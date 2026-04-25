@@ -31,16 +31,28 @@ class AddStaffCubit extends Cubit<AddStaffState> {
   }) async {
     emit(const AddStaffState(loading: true));
     try {
+      print('ADD STAFF CUBIT: schoolId = $schoolId');
+
       final token = await UserSecureStorage.fetchToken();
       final role = await UserSecureStorage.fetchRole();
       final isPartner = role == 'partner';
-      final url = '${Config.baseUrl}${Routes.addStaff(schoolId, isPartner: isPartner)}';
+
+      print('ADD STAFF CUBIT: role = $role, isPartner = $isPartner');
+
+      final url =
+          '${Config.baseUrl}${Routes.addStaff(schoolId, isPartner: isPartner)}';
+
+      print('ADD STAFF CUBIT: Full URL = $url');
 
       final request = http.MultipartRequest('POST', Uri.parse(url));
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
 
-      _buildBody(schoolId, fields).forEach((k, v) {
+      print('REQUEST URL: ${request.url}');
+
+      final body = _buildBody(schoolId, fields);
+      print('SUBMIT BODY: $body');
+      body.forEach((k, v) {
         if (v != null && v.toString().isNotEmpty) {
           request.fields[k] = v.toString();
         }
@@ -55,17 +67,24 @@ class AddStaffCubit extends Cubit<AddStaffState> {
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
 
+      print('ADD STAFF RESPONSE BODY: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
-        emit(AddStaffState(
-          success: true,
-          message: json['message'] ?? 'Staff added successfully',
-        ));
+        emit(
+          AddStaffState(
+            success: true,
+            message: json['message'] ?? 'Staff added successfully',
+          ),
+        );
       } else {
-        emit(AddStaffState(error: _parseError(response)));
+        final errorMsg = _parseError(response);
+        print('ADD STAFF ERROR: $errorMsg');
+        emit(AddStaffState(error: errorMsg));
       }
     } catch (e) {
-      emit(AddStaffState(error: e.toString()));
+      print('ADD STAFF EXCEPTION: $e');
+      emit(AddStaffState(error: 'Error: ${e.toString()}'));
     }
   }
 
@@ -74,68 +93,170 @@ class AddStaffCubit extends Cubit<AddStaffState> {
     required String uuid,
     required Map<String, dynamic> fields,
     required List<Map<String, String>> emergencyContacts,
+    String? roleId,
   }) async {
     emit(const AddStaffState(loading: true));
     try {
       final token = await UserSecureStorage.fetchToken();
-      final role = await UserSecureStorage.fetchRole();
-      final isPartner = role == 'partner';
-      final url = '${Config.baseUrl}${Routes.updateStaff(schoolId, uuid, isPartner: isPartner)}';
 
-      final request = http.MultipartRequest('POST', Uri.parse(url));
-      request.headers['Authorization'] = 'Bearer $token';
-      request.headers['Accept'] = 'application/json';
-      request.fields['_method'] = 'PUT';
+      final url = '${Config.baseUrl}/api/auth/school/$schoolId/staff/$uuid';
+      print('UPDATE STAFF URL: $url');
 
-      _buildBody(schoolId, fields).forEach((k, v) {
-        if (v != null && v.toString().isNotEmpty) {
-          request.fields[k] = v.toString();
-        }
-      });
+      final body = <String, dynamic>{};
 
-      for (int i = 0; i < emergencyContacts.length; i++) {
-        emergencyContacts[i].forEach((k, v) {
-          if (v.isNotEmpty) request.fields['emergency_contacts[$i][$k]'] = v;
-        });
+      _addIfNotEmpty(body, 'designation', fields['designation']);
+      _addIfNotEmpty(body, 'department', fields['department']);
+      _addIfNotEmpty(body, 'name', fields['name']);
+      _addIfNotEmpty(body, 'email', fields['email']);
+      _addIfNotEmpty(body, 'phone', fields['phone']);
+
+      _addIfNotEmpty(
+        body,
+        'whatsapp_phone',
+        fields['whatsapp'] ?? fields['whatsapp_phone'],
+      );
+
+      final roleRaw = roleId ?? fields['role'];
+      if (roleRaw != null && roleRaw.toString().isNotEmpty) {
+        final roleInt = int.tryParse(roleRaw.toString());
+        if (roleInt != null) body['role'] = roleInt;
       }
 
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
+      _addIfNotEmpty(body, 'father_name', fields['father_name']);
+      _addIfNotEmpty(body, 'mother_name', fields['mother_name']);
+      _addIfNotEmpty(body, 'husband_name', fields['husband_name']);
+      _addIfNotEmpty(body, 'dob', _convertDate(fields['date_of_birth']));
+      _addIfNotEmpty(
+        body,
+        'date_of_joining',
+        _convertDate(fields['date_of_joining']),
+      );
+      _addIfNotEmpty(body, 'address', fields['address']);
+      _addIfNotEmpty(body, 'pincode', fields['pincode']);
+      _addIfNotEmpty(body, 'employee_id', fields['employee_id']);
+      _addIfNotEmpty(body, 'national_code', fields['national_code']);
+
+      final gender = fields['gender']?.toString() ?? '';
+      if (gender.isNotEmpty && gender.toLowerCase() != '-select gender-') {
+        body['gender'] = gender.toLowerCase();
+      }
+
+      final bg = fields['blood_group']?.toString() ?? '';
+      if (bg.isNotEmpty && bg != 'Select Blood Group') {
+        body['blood_group'] = bg;
+      }
+
+      final validContacts = emergencyContacts
+          .where((e) => e['name']!.isNotEmpty || e['phone']!.isNotEmpty)
+          .toList();
+      if (validContacts.isNotEmpty) {
+        body['emergency_contacts'] = validContacts;
+      }
+
+      print('UPDATE BODY: $body');
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('UPDATE RESPONSE STATUS: ${response.statusCode}');
+      print('UPDATE RESPONSE BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final json = jsonDecode(response.body);
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
         final staffData = json['data'] as Map<String, dynamic>?;
-        emit(AddStaffState(
-          success: true,
-          message: json['message'] ?? 'Staff updated successfully',
-          updatedStaff: staffData != null ? StaffDetailModel.fromJson(staffData) : null,
-        ));
+
+        emit(
+          AddStaffState(
+            success: json['success'] == true,
+            message:
+                json['message']?.toString() ?? 'Staff updated successfully',
+            updatedStaff: staffData != null
+                ? StaffDetailModel.fromJson(staffData)
+                : null,
+          ),
+        );
       } else {
         emit(AddStaffState(error: _parseError(response)));
       }
     } catch (e) {
+      print('UPDATE STAFF EXCEPTION: $e');
       emit(AddStaffState(error: e.toString()));
     }
+  }
+
+  void _addIfNotEmpty(Map<String, dynamic> body, String key, dynamic value) {
+    if (value != null && value.toString().isNotEmpty) {
+      body[key] = value;
+    }
+  }
+
+  String? _convertDate(dynamic raw) {
+    if (raw == null) return null;
+    final str = raw.toString().trim();
+    if (str.isEmpty) return null;
+    final parts = str.split(RegExp(r'[./\-]'));
+    if (parts.length == 3) {
+      if (parts[0].length == 4) return str;
+      return '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+    }
+    return str;
   }
 
   String _parseError(http.Response response) {
     Map<String, dynamic> json = {};
     try {
       json = jsonDecode(response.body);
-    } catch (_) {}
-    String msg = json['message'] ?? 'Failed: ${response.statusCode}';
+    } catch (_) {
+      return response.body.isNotEmpty
+          ? response.body
+          : 'Request failed with status ${response.statusCode}';
+    }
+
+    String msg =
+        json['message'] ?? 'Request failed with status ${response.statusCode}';
+
     final errors = json['errors'] as Map<String, dynamic>?;
     if (errors != null && errors.isNotEmpty) {
-      msg = errors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+      final errorMessages = errors.values
+          .expand((v) => v is List ? v : [v])
+          .take(3)
+          .join('\n');
+      msg = errorMessages.isNotEmpty ? errorMessages : msg;
     }
+
+    if (response.statusCode == 404) {
+      msg = 'API endpoint not found. Please contact support.';
+    } else if (response.statusCode == 403) {
+      msg = 'You do not have permission to perform this action.';
+    } else if (response.statusCode == 401) {
+      msg = 'Session expired. Please login again.';
+    } else if (response.statusCode == 422) {
+      if (!msg.contains('required') && !msg.contains('invalid')) {
+        msg = 'Validation failed: $msg';
+      }
+    } else if (response.statusCode >= 500) {
+      msg = 'Server error. Please try again later.';
+    }
+
     return msg;
   }
 
-  Map<String, dynamic> _buildBody(String schoolId, Map<String, dynamic> fields) {
+  Map<String, dynamic> _buildBody(
+    String schoolId,
+    Map<String, dynamic> fields,
+  ) {
     String? convertDate(String? raw) {
       if (raw == null || raw.isEmpty) return null;
       final parts = raw.split(RegExp(r'[./\-]'));
       if (parts.length == 3) {
+        if (parts[0].length == 4) return raw;
         return '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
       }
       return raw;
@@ -165,6 +286,12 @@ class AddStaffCubit extends Cubit<AddStaffState> {
           break;
         case 'whatsapp':
           body['whatsapp_phone'] = str;
+          break;
+        case 'role':
+        case 'role_id':
+          if (int.tryParse(str) != null) {
+            body['role'] = str;
+          }
           break;
         default:
           body[key] = str;

@@ -159,7 +159,7 @@ class _AdminUsersState extends State<AdminUsers> {
         filled: true,
         fillColor: AppTheme.whiteColor,
         contentPadding: const EdgeInsets.all(12),
-        hintText: 'Search by name or company...',
+        hintText: 'Search by name...',
         prefixIcon: const Icon(Icons.search),
         enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
         focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),

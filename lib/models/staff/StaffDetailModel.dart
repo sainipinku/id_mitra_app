@@ -40,6 +40,7 @@ class StaffDetailModel {
   final String? loginId;
   final String profilePhotoUrl;
   final String roleName;
+  final int? roleId;
   final int status;
   final List<StaffEmergencyContact> emergencyContacts;
 
@@ -66,6 +67,7 @@ class StaffDetailModel {
     this.loginId,
     required this.profilePhotoUrl,
     required this.roleName,
+    this.roleId,
     required this.status,
     required this.emergencyContacts,
   });
@@ -96,6 +98,7 @@ class StaffDetailModel {
       loginId: json['login_id'],
       profilePhotoUrl: json['profile_photo_url'] ?? '',
       roleName: role?['name'] ?? '',
+      roleId: role?['id'] is int ? role!['id'] : int.tryParse(role?['id']?.toString() ?? ''),
       status: json['status'] ?? 1,
       emergencyContacts: contacts
           .map((e) => StaffEmergencyContact.fromJson(Map<String, dynamic>.from(e)))
