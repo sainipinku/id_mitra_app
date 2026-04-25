@@ -127,12 +127,15 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 
   /// Returns null if valid, otherwise returns an error message.
   /// Only validates fields that are actually visible on the screen.
-  String? _validateForm(List<StudentFormField> allFields) {
+  String? _validateForm(List<StudentFormField> allFields, StudentFormDataModel? data) {
     // 1. Required fields check - only for fields that exist in the form
     for (final f in allFields) {
       if (!f.required) continue;
-      
+
       if (f.type == 'select') {
+        // Skip validation if the dropdown has no options to choose from
+        if (_selectFieldHasNoOptions(f.name, data)) continue;
+
         final val = _selectVal[f.name];
         final isEmpty = val == null ||
             val.toString().isEmpty ||
@@ -166,6 +169,30 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 
     return null;
   }
+
+  /// Returns true if a select field has no selectable options (so validation should be skipped)
+  bool _selectFieldHasNoOptions(String name, StudentFormDataModel? data) {
+    switch (name) {
+      case 'class':
+        return (data?.classes ?? []).isEmpty;
+      case 'session':
+        return (data?.sessions ?? []).isEmpty;
+      case 'house':
+        return (data?.houses ?? []).isEmpty;
+      case 'class_section':
+        final selectedClassId = (_selectVal['class'] as int?);
+        if (selectedClassId == null) return true;
+        final selectedClass = data?.classes.firstWhere(
+          (c) => c.id == selectedClassId,
+          orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
+        );
+        return (selectedClass?.sections ?? []).isEmpty &&
+            (selectedClass?.sectionsIds ?? []).isEmpty;
+      default:
+        return false;
+    }
+  }
+
 
   void _prefillStudent(StudentDetailsData s) {
     setState(() {
@@ -1183,12 +1210,12 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                               onTap: state.loading
                                   ? () {}
                                   : () {
-                                      // Collect all visible fields for validation
+                                      // Only validate fields that are actually visible on screen
                                       final allVisibleFields = [
                                         ...currentFields,
-                                        ...additionalFields,
+                                        if (_additionalExpanded) ...additionalFields,
                                       ];
-                                      final validationError = _validateForm(allVisibleFields);
+                                      final validationError = _validateForm(allVisibleFields, data);
                                       if (validationError != null) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(

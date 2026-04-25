@@ -233,7 +233,7 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(),
+                            CircularProgressIndicator(color: AppTheme.btnColor),
                             SizedBox(height: 10),
                             Text('Loading...'),
                           ],

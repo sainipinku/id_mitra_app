@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -126,11 +126,14 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
   }
 
   /// Returns null if valid, otherwise returns an error message.
-  String? _validateForm(List<StudentFormField> allFields) {
+  String? _validateForm(List<StudentFormField> allFields, StudentFormDataModel? data) {
     // 1. Required fields check
     for (final f in allFields) {
       if (!f.required) continue;
       if (f.type == 'select') {
+        // Skip validation if the dropdown has no options to choose from
+        if (_selectFieldHasNoOptions(f.name, data)) continue;
+
         final val = _selectVal[f.name];
         final isEmpty = val == null ||
             val.toString().isEmpty ||
@@ -157,6 +160,29 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     }
 
     return null;
+  }
+
+  /// Returns true if a select field has no selectable options (so validation should be skipped)
+  bool _selectFieldHasNoOptions(String name, StudentFormDataModel? data) {
+    switch (name) {
+      case 'class':
+        return (data?.classes ?? []).isEmpty;
+      case 'session':
+        return (data?.sessions ?? []).isEmpty;
+      case 'house':
+        return (data?.houses ?? []).isEmpty;
+      case 'class_section':
+        final selectedClassId = (_selectVal['class'] as int?);
+        if (selectedClassId == null) return true;
+        final selectedClass = data?.classes.firstWhere(
+          (c) => c.id == selectedClassId,
+          orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
+        );
+        return (selectedClass?.sections ?? []).isEmpty &&
+            (selectedClass?.sectionsIds ?? []).isEmpty;
+      default:
+        return false;
+    }
   }
 
   void _prefillStudent(StudentDetailsData s) {
@@ -385,7 +411,6 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
   Widget _sessionDropdown(List<SessionOption> sessions) {
     if (sessions.isEmpty) return _loadingTile('Loading sessions...');
 
-    // Auto-select first session if not already set
     final val = (_selectVal['session'] as int?);
     if (val == null && sessions.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1175,9 +1200,9 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                                   : () {
                                       final allVisibleFields = [
                                         ...currentFields,
-                                        ...additionalFields,
+                                        if (_additionalExpanded) ...additionalFields,
                                       ];
-                                      final validationError = _validateForm(allVisibleFields);
+                                      final validationError = _validateForm(allVisibleFields, data);
                                       if (validationError != null) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(

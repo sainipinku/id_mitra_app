@@ -28,6 +28,7 @@ class AddStudentCubit extends Cubit<AddStudentState> {
     required String schoolId,
     required Map<String, dynamic> fields,
     required Map<String, File?> files,
+    List<String> formFieldNames = const [],
   }) async {
     emit(const AddStudentState(loading: true));
     try {
@@ -80,7 +81,18 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         String errorMsg = json['message'] ?? 'Failed: ${response.statusCode}';
         final errors = json['errors'] as Map<String, dynamic>?;
         if (errors != null && errors.isNotEmpty) {
-          errorMsg = errors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          // Only show errors for fields that were actually in the form
+          final relevantErrors = formFieldNames.isEmpty
+              ? errors
+              : Map.fromEntries(
+                  errors.entries.where((e) => formFieldNames.contains(e.key)),
+                );
+          if (relevantErrors.isNotEmpty) {
+            errorMsg = relevantErrors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          } else {
+            // All errors are for fields not in the form - show generic message
+            errorMsg = 'Failed to add student. Please try again.';
+          }
         }
         emit(AddStudentState(error: errorMsg));
       }
@@ -94,6 +106,7 @@ class AddStudentCubit extends Cubit<AddStudentState> {
     required String schoolId,
     required Map<String, dynamic> fields,
     required Map<String, File?> files,
+    List<String> formFieldNames = const [],
   }) async {
     emit(const AddStudentState(loading: true));
     try {
@@ -150,7 +163,16 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         String errorMsg = json['message'] ?? 'Failed: ${response.statusCode}';
         final errors = json['errors'] as Map<String, dynamic>?;
         if (errors != null && errors.isNotEmpty) {
-          errorMsg = errors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          final relevantErrors = formFieldNames.isEmpty
+              ? errors
+              : Map.fromEntries(
+                  errors.entries.where((e) => formFieldNames.contains(e.key)),
+                );
+          if (relevantErrors.isNotEmpty) {
+            errorMsg = relevantErrors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          } else {
+            errorMsg = 'Failed to update student. Please try again.';
+          }
         }
         emit(AddStudentState(error: errorMsg));
       }

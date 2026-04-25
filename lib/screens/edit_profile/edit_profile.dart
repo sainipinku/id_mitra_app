@@ -263,7 +263,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: AppTheme.bgColor),
+                            CircularProgressIndicator(color: AppTheme.btnColor),
                             SizedBox(height: 10.h),
                             const Text('Loading...'),
                           ],
