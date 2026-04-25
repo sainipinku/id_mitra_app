@@ -189,6 +189,24 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       return null;
     }
 
+    // Check if password field exists in form
+    final password = _f(['password']);
+    final passwordConfirmation = _f(['password_confirmation']);
+    
+    // Generate default password only if password field doesn't exist in form
+    final String? finalPassword;
+    final String? finalPasswordConfirmation;
+    
+    if (password != null && password.isNotEmpty) {
+      // User provided password
+      finalPassword = password;
+      finalPasswordConfirmation = passwordConfirmation ?? password;
+    } else {
+      // No password field in form - use default password
+      finalPassword = 'Student@123';
+      finalPasswordConfirmation = 'Student@123';
+    }
+
     return {
       'school_id': schoolId,
       'student_name': _f(['student_name']),
@@ -234,8 +252,8 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       'mother_email': _f(['mother_email']),
       'mother_phone': _f(['mother_phone']),
       'mother_wphone': _f(['mother_whatsapp_number', 'mother_whatsapp']),
-      'password': _f(['password']),
-      'password_confirmation': _f(['password_confirmation', 'password']),
+      'password': finalPassword,
+      'password_confirmation': finalPasswordConfirmation,
     };
   }
 }

@@ -67,6 +67,26 @@ class _SchoolsState extends State<Schools> {
                   return const SchoolListShimmer();
                 }
 
+                if (state.error != null && state.students.isEmpty) {
+                  return Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                          const SizedBox(height: 12),
+                          Text(state.error!, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => context.read<SchoolCubit>().fetchStudents(search: ''),
+                            child: const Text("Retry"),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
                 return Expanded(
                   child: state.students.isEmpty
                       ? Center(
@@ -75,26 +95,29 @@ class _SchoolsState extends State<Schools> {
                       height: 200,
                     ),
                   )
-                      : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: state.students.length +
-                        (state.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index < state.students.length) {
-                        final item = state.students[index];
-                        return UsersDetailsWidgets(
-                          schoolDetailsModel: item,
-                        );
-                      } else {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                            child: CircularProgressIndicator(),
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<SchoolCubit>().fetchStudents(search: searchController.text.trim());
+                          },
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: state.students.length + (state.hasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index < state.students.length) {
+                                final item = state.students[index];
+                                return UsersDetailsWidgets(
+                                  schoolDetailsModel: item,
+                                );
+                              } else {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              }
+                            },
                           ),
-                        );
-                      }
-                    },
-                  ),
+                        ),
                 );
               },
             )
@@ -163,7 +186,7 @@ class _SchoolsState extends State<Schools> {
         fillColor: AppTheme.whiteColor, // ✅ background color
 
         contentPadding: const EdgeInsets.all(12),
-        hintText: 'Search by name or company...',
+        hintText: 'Search by name...',
         prefixIcon: const Icon(Icons.search),
 
         enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),

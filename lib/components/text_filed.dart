@@ -55,8 +55,8 @@ Widget phoneNumberTextField({
     controller: controller,
     hintText: hintName ?? 'Please enter your phone number',
     keyboardType: TextInputType.number,
-    icon: isRequired
-        ? Icons.call : null,
+    // icon: isRequired
+    //     ? Icons.call : null,
     inputFormatters: [
       LengthLimitingTextInputFormatter(digitNo ?? 10),
       FilteringTextInputFormatter.digitsOnly,

@@ -123,7 +123,9 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       _selectedBloodGroup = s.bloodGroup;
     }
 
-    if (s.roleName.isNotEmpty) {
+    if (s.roleId != null) {
+      _selectValues['role'] = s.roleId.toString();
+    } else if (s.roleName.isNotEmpty) {
       _selectValues['role'] = s.roleName;
     }
 
@@ -972,13 +974,25 @@ class _EmergencyContactRowState extends State<_EmergencyContactRow> {
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll('/', '.').replaceAll('-', '.');
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length > 8) digits = digits.substring(0, 8);
+
+    String formatted = '';
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) formatted += '.';
+      formatted += digits[i];
+    }
+
     return newValue.copyWith(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

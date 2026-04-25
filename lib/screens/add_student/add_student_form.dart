@@ -125,6 +125,48 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
     });
   }
 
+  /// Returns null if valid, otherwise returns an error message.
+  /// Only validates fields that are actually visible on the screen.
+  String? _validateForm(List<StudentFormField> allFields) {
+    // 1. Required fields check - only for fields that exist in the form
+    for (final f in allFields) {
+      if (!f.required) continue;
+      
+      if (f.type == 'select') {
+        final val = _selectVal[f.name];
+        final isEmpty = val == null ||
+            val.toString().isEmpty ||
+            val.toString().startsWith('-Select') ||
+            val.toString() == 'Select Mode' ||
+            val.toString() == 'Select Blood Group';
+        if (isEmpty) return '${f.label} is required';
+      } else if (f.type == 'file') {
+        // file fields are optional for required check (no * shown)
+      } else {
+        final text = _ctrl[f.name]?.text.trim() ?? '';
+        if (text.isEmpty) return '${f.label} is required';
+      }
+    }
+
+    // 2. Confirm password match check - only if password field exists in form
+    final hasPasswordField = allFields.any((f) => f.name == 'password');
+    final hasConfirmField = allFields.any((f) => f.name == 'password_confirmation');
+    
+    if (hasPasswordField || hasConfirmField) {
+      final password = _ctrl['password']?.text ?? '';
+      final confirmPassword = _ctrl['password_confirmation']?.text ?? '';
+      
+      if (password.isNotEmpty && confirmPassword != password) {
+        return 'Password and Confirm Password do not match';
+      }
+      if (password.isNotEmpty && confirmPassword.isEmpty && hasConfirmField) {
+        return 'Please fill Confirm Password';
+      }
+    }
+
+    return null;
+  }
+
   void _prefillStudent(StudentDetailsData s) {
     setState(() {
       _setCtrl('student_name', s.name);
@@ -254,16 +296,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                     );
                     if (f != null) _cropAndSet(fieldName, File(f.path));
                   },
-                ),
-                _divider(),
-                _pickerOption(
-                  'assets/icons/remove_image.svg',
-                  'Remove Photo',
-                  () {
-                    setState(() => _files[fieldName] = null);
-                    Navigator.pop(bc);
-                  },
-                  isRemove: true,
                 ),
                 _divider(),
               ],
@@ -672,10 +704,15 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _label(f.label, required: f.required),
-            phoneNumberTextField(
+            AppTextField(
               controller: _ctrlFor(f.name),
-              hintName: '${f.label}...',
-              isRequired: f.required,
+              hintText: '${f.label}...',
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(10),
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              mxLine: 1,
             ),
           ],
         );
@@ -693,6 +730,50 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           ],
         );
       case 'password':
+        if (f.name == 'password_confirmation') {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _label(f.label, required: f.required),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _ctrlFor('password'),
+                builder: (_, passwordVal, __) {
+                  return ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _ctrlFor('password_confirmation'),
+                    builder: (_, confirmVal, __) {
+                      final passwordText = passwordVal.text;
+                      final confirmText = confirmVal.text;
+                      final mismatch = confirmText.isNotEmpty &&
+                          passwordText.isNotEmpty &&
+                          confirmText != passwordText;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppTextField(
+                            controller: _ctrlFor(f.name),
+                            hintText: '••••••',
+                            obscureText: true,
+                          ),
+                          if (mismatch)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Passwords do not match',
+                                style: MyStyles.regularText(
+                                  size: 11,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1102,6 +1183,21 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                               onTap: state.loading
                                   ? () {}
                                   : () {
+                                      // Collect all visible fields for validation
+                                      final allVisibleFields = [
+                                        ...currentFields,
+                                        ...additionalFields,
+                                      ];
+                                      final validationError = _validateForm(allVisibleFields);
+                                      if (validationError != null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(validationError),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                        return;
+                                      }
                                       final allFields = {
                                         ..._ctrl.map(
                                           (k, v) => MapEntry(k, v.text),
@@ -1146,13 +1242,25 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll('/', '.').replaceAll('-', '.');
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length > 8) digits = digits.substring(0, 8);
+
+    String formatted = '';
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) formatted += '.';
+      formatted += digits[i];
+    }
+
     return newValue.copyWith(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

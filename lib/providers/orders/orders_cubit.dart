@@ -11,13 +11,13 @@ class OrdersCubit extends Cubit<OrdersState> {
 
   final ApiManager _api = ApiManager();
 
-  // ─── Class sort order ─────────────────────────────────────────────────────
   static const _classOrder = [
-    'nursery', 'pre nursery', 'prenursery',
-    'prep', 'pre prep', 'preprep',
-    'lkg', 'l.k.g', 'lower kg', 'lower kindergarten',
-    'ukg', 'u.k.g', 'upper kg', 'upper kindergarten',
-    'kg', 'kindergarten',
+    'pre nursery', 'prenursery', 'pre-nursery',
+    'nursery',
+    'prep', 'pre prep', 'preprep', 'pre-prep',
+    'lkg', 'l.k.g', 'lower kg', 'lower kindergarten', 'l kg',
+    'ukg', 'u.k.g', 'upper kg', 'upper kindergarten', 'u kg',
+    'kg', 'k.g', 'kindergarten',
     '1', 'i', 'class 1', 'grade 1',
     '2', 'ii', 'class 2', 'grade 2',
     '3', 'iii', 'class 3', 'grade 3',
@@ -35,7 +35,10 @@ class OrdersCubit extends Cubit<OrdersState> {
   static int _classSortIndex(String name) {
     final lower = name.trim().toLowerCase();
     for (int i = 0; i < _classOrder.length; i++) {
-      if (lower == _classOrder[i] || lower.contains(_classOrder[i])) return i;
+      if (lower == _classOrder[i]) return i;
+    }
+    for (int i = 0; i < _classOrder.length; i++) {
+      if (lower.startsWith(_classOrder[i])) return i;
     }
     return 999;
   }
@@ -43,15 +46,16 @@ class OrdersCubit extends Cubit<OrdersState> {
   static List<OrderClass> _sortClasses(List<OrderClass> classes) {
     final sorted = [...classes];
     sorted.sort((a, b) {
-      final ai = _classSortIndex(a.name);
-      final bi = _classSortIndex(b.name);
+      final aName = a.nameWithprefix ?? a.name;
+      final bName = b.nameWithprefix ?? b.name;
+      final ai = _classSortIndex(aName);
+      final bi = _classSortIndex(bName);
       if (ai != bi) return ai.compareTo(bi);
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      return aName.toLowerCase().compareTo(bName.toLowerCase());
     });
     return sorted;
   }
 
-  // ─── Fetch school classes ─────────────────────────────────────────────────
   Future<void> fetchSchoolClasses(String schoolId) async {
     if (schoolId.isEmpty) return;
     emit(state.copyWith(classesLoading: true));
@@ -75,7 +79,6 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
-  // ─── Fetch orders list ────────────────────────────────────────────────────
   Future<void> fetchOrders({
     bool isLoadMore = false,
     String search = '',
@@ -85,7 +88,6 @@ class OrdersCubit extends Cubit<OrdersState> {
     String dateTo = '',
     String schoolId = '',
   }) async {
-    // For fresh fetch (not load more), always allow — reset any stuck state
     if (isLoadMore && (state.isPaginationLoading || !state.hasMore)) return;
 
     final currentPage = isLoadMore ? state.page : 1;
@@ -144,7 +146,6 @@ class OrdersCubit extends Cubit<OrdersState> {
 
       final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
 
-      // Frontend class filter — backend does not support class_id param
       final filtered = classId.isNotEmpty
           ? newOrders.where((o) => o.student?.classId?.toString() == classId).toList()
           : newOrders;
@@ -153,7 +154,6 @@ class OrdersCubit extends Cubit<OrdersState> {
 
       final hasMore = respPage < lastPage;
 
-      // If class filter active and no results on this page but more pages exist, auto-load next
       if (classId.isNotEmpty && filtered.isEmpty && hasMore) {
         emit(state.copyWith(
           isPaginationLoading: false,
@@ -192,7 +192,6 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
-  // ─── Update order status ──────────────────────────────────────────────────
   Future<bool> updateOrderStatus(String uuid, String newStatus) async {
     try {
       final url = Config.baseUrl + Routes.updateOrderStatus(uuid);
@@ -201,7 +200,6 @@ class OrdersCubit extends Cubit<OrdersState> {
       final json = jsonDecode(response.body);
       print('updateOrderStatus response: ${response.body}');
       if (json['success'] == true) return true;
-      // show validation errors if any
       final errors = json['errors'];
       if (errors != null) print('Validation errors: $errors');
       return false;
@@ -213,7 +211,6 @@ class OrdersCubit extends Cubit<OrdersState> {
 
 
 
-  // ─── Fetch staff orders total ─────────────────────────────────────────────
   Future<void> fetchStaffOrdersTotal() async {
     emit(state.copyWith(staffTotalLoading: true));
     try {

@@ -15,7 +15,6 @@ import 'package:idmitra/providers/manage_profile/manage_profile_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
 class AdminEditProfilePage extends StatefulWidget {
   const AdminEditProfilePage({super.key});
 
@@ -29,6 +28,7 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
   CroppedFile? croppedProfileFile;
   String gender = "Male";
   String? dob;
+  bool _isDialogShowing = false;
 
   final nameController = TextEditingController();
   final emailController = TextEditingController();
@@ -221,37 +221,43 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
           BlocListener<ManageProfileCubit, ManageProfileState>(
             listener: (context, state) {
               if (state is ManageProfileLoading) {
-                showDialog(
-                  barrierDismissible: false,
-                  context: context,
-                  builder: (_ctx) => Dialog(
-                    backgroundColor: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: AppTheme.bgColor),
-                          SizedBox(height: 10.h),
-                          const Text('Loading...'),
-                        ],
+                if (!_isDialogShowing) {
+                  _isDialogShowing = true;
+                  showDialog(
+                    barrierDismissible: false,
+                    context: context,
+                    builder: (_ctx) => const Dialog(
+                      backgroundColor: Colors.white,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 10),
+                            Text('Loading...'),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
+                  ).then((_) => _isDialogShowing = false);
+                }
               } else if (state is ManageProfileSuccess) {
-                Navigator.of(context, rootNavigator: true).pop();
+                if (_isDialogShowing) {
+                  _isDialogShowing = false;
+                  Navigator.of(context, rootNavigator: true).pop();
+                }
                 Navigator.pop(context, true);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text(state.userProfileModel.message ?? '')),
+                  SnackBar(content: Text(state.userProfileModel.message ?? 'Profile updated')),
                 );
               } else if (state is ManageProfileFailed) {
-                Navigator.of(context, rootNavigator: true).pop();
-                Navigator.pop(context, true);
+                if (_isDialogShowing) {
+                  _isDialogShowing = false;
+                  Navigator.of(context, rootNavigator: true).pop();
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.message ?? '')),
+                  SnackBar(content: Text(state.message ?? 'Something went wrong')),
                 );
               }
             },
@@ -408,12 +414,10 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
               "gender": gender,
               "dob": dob ?? '',
             };
-            if (croppedProfileFile != null) {
-              context.read<ManageProfileCubit>().updateProfile(
-                    payload,
-                    File(croppedProfileFile!.path),
-                  );
-            }
+            final imageFile = croppedProfileFile != null
+                ? File(croppedProfileFile!.path)
+                : null;
+            context.read<ManageProfileCubit>().updateProfile(payload, imageFile);
           }
         },
         isLoading: false,

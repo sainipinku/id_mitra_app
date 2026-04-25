@@ -325,20 +325,6 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
               ),
             ),
           ),
-          Positioned(
-            top: 8, right: 10,
-            child: GestureDetector(
-              onTap: () => _openEdit(context),
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppTheme.btnColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.edit, size: 16, color: AppTheme.btnColor),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
             child: Center(
@@ -453,6 +439,25 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openEdit(context),
+                      icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.btnColor),
+                      label: Text(
+                        'Edit Profile',
+                        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppTheme.btnColor, width: 1.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -496,50 +501,50 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  title: 'TC',
-                  height: 44,
-                  color: AppTheme.redBtnBgColor,
-                  onTap: () => _showComingSoon(context, 'TC'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppButton(
-                  title: 'Not in my class',
-                  height: 44,
-                  color: AppTheme.graySubTitleColor,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MultiBlocProvider(
-                          providers: [
-                            BlocProvider(
-                              create: (_) => StudentFormCubit()
-                                ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
-                            ),
-                            BlocProvider(
-                              create: (_) => StudentFormDataCubit()..load(schoolId),
-                            ),
-                            BlocProvider(create: (_) => AddStudentCubit()),
-                          ],
-                          child: AddStudentFormPage(
-                            schoolId: schoolId,
-                            editStudent: _student,
-                            initialTab: 1,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: AppButton(
+          //         title: 'TC',
+          //         height: 44,
+          //         color: AppTheme.redBtnBgColor,
+          //         onTap: () => _showComingSoon(context, 'TC'),
+          //       ),
+          //     ),
+          //     const SizedBox(width: 12),
+          //     Expanded(
+          //       child: AppButton(
+          //         title: 'Not in my class',
+          //         height: 44,
+          //         color: AppTheme.graySubTitleColor,
+          //         onTap: () {
+          //           Navigator.push(
+          //             context,
+          //             MaterialPageRoute(
+          //               builder: (_) => MultiBlocProvider(
+          //                 providers: [
+          //                   BlocProvider(
+          //                     create: (_) => StudentFormCubit()
+          //                       ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
+          //                   ),
+          //                   BlocProvider(
+          //                     create: (_) => StudentFormDataCubit()..load(schoolId),
+          //                   ),
+          //                   BlocProvider(create: (_) => AddStudentCubit()),
+          //                 ],
+          //                 child: AddStudentFormPage(
+          //                   schoolId: schoolId,
+          //                   editStudent: _student,
+          //                   initialTab: 1,
+          //                 ),
+          //               ),
+          //             ),
+          //           );
+          //         },
+          //       ),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );

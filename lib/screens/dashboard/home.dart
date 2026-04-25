@@ -22,7 +22,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 200),
       child: BlocBuilder<HomeCubit, HomeState>(
         builder: (context, state) {
 
@@ -35,174 +35,85 @@ class _HomeState extends State<Home> {
           else if (state.dashboard != null) {
             final data = state.dashboard!.data;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                /// 🔹 STATS GRID
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.4,
+            return RefreshIndicator(
+              onRefresh: () async {
+                await context.read<HomeCubit>().loadHomeData();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    StatCard(
-                      title: "Total Schools",
-                      value: data?.schools?.total?.toString() ?? "0",
-                      icon: Icons.person,
-                      color: Colors.blue,
-                      button: (){
-                        navigateWithTransition(
-                          context: context,
-                          page: Dashboard(index: 2,),
+                    /// 🔹 STATS GRID
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.4,
+                      children: [
 
-                        );
-                      },
+                        StatCard(
+                          title: "Total Schools",
+                          value: data?.schools?.total?.toString() ?? "0",
+                          icon: Icons.person,
+                          color: Colors.blue,
+                          button: (){
+                            navigateWithTransition(
+                              context: context,
+                              page: Dashboard(index: 1,),
+                            );
+                          },
+                        ),
+
+                        StatCard(
+                          title: "Active Schools",
+                          value: data?.schools?.active?.toString() ?? "0",
+                          icon: Icons.person_outline,
+                          color: Colors.green,
+                          button: (){},
+                        ),
+
+                        StatCard(
+                          title: "Total Students",
+                          value: data?.students?.total?.toString() ?? "0",
+                          icon: Icons.school,
+                          color: Colors.orange,
+                          button: (){},
+                        ),
+
+                        StatCard(
+                          title: "Total Employee",
+                          value: data?.employees?.total?.toString() ?? "0",
+                          icon: Icons.group,
+                          color: Colors.purple,
+                          button: (){},
+                        ),
+
+                        StatCard(
+                          title: "Total Orders",
+                          value: data?.orders?.total?.toString() ?? "0",
+                          icon: Icons.receipt_long,
+                          color: Colors.indigo,
+                          button: (){},
+                        ),
+
+                        StatCard(
+                          title: "Completed Orders",
+                          value: data?.orders?.completeOrders?.toString() ?? "0",
+                          icon: Icons.check_circle_outline,
+                          color: Colors.teal,
+                          button: (){},
+                        ),
+                      ],
                     ),
 
-                    StatCard(
-                      title: "Active Schools",
-                      value: data?.schools?.active?.toString() ?? "0",
-                      icon: Icons.person_outline,
-                      color: Colors.green,
-                      button: (){
-
-                      },
-                    ),
-
-                    StatCard(
-                      title: "Total Students",
-                      value: data?.students?.total?.toString() ?? "0",
-                      icon: Icons.school,
-                      color: Colors.orange,
-                      button: (){
-
-                      },
-                    ),
-
-                    StatCard(
-                      title: "Total Employee",
-                      value: data?.employees?.total?.toString() ?? "0",
-                      icon: Icons.group,
-                      color: Colors.purple,
-                      button: (){
-
-                      },
-                    ),
-
-                    StatCard(
-                      title: "Total Orders",
-                      value: data?.orders?.total?.toString() ?? "0",
-                      icon: Icons.receipt_long,
-                      color: Colors.indigo,
-                      button: (){},
-                    ),
-
-                    StatCard(
-                      title: "Completed Orders",
-                      value: data?.orders?.completeOrders?.toString() ?? "0",
-                      icon: Icons.check_circle_outline,
-                      color: Colors.teal,
-                      button: (){},
-                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
-
-                const SizedBox(height: 20),
-
-                /// 🔹 QUICK ACTIONS CARD
-                /*Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-
-                      const Text(
-                        "Quick Actions",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      /// 🔹 ADD USER BUTTON
-                      GestureDetector(
-                        onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            page: const SelectRolePage(),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xff1FA2FF), Color(0xff12D8FA)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-
-                              Container(
-                                height: 40,
-                                width: 40,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.btn10perOpacityColor,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: svgIcon(
-                                    icon: 'assets/icons/home/add_user.svg',
-                                    clr: AppTheme.whiteColor,
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              Expanded(
-                                child: Text(
-                                  "Add New Users",
-                                  style: MyStyles.semiBoldTxt(
-                                      AppTheme.whiteColor, 14),
-                                ),
-                              ),
-
-                              const CircleAvatar(
-                                radius: 14,
-                                backgroundColor: Colors.white,
-                                child: Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 14,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),*/
-              ],
+              ),
             );
           }
 

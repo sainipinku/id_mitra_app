@@ -203,6 +203,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                             ),
                           )
                         : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             controller: _scrollController,
                             itemCount:
                                 state.studentsList.length +
@@ -253,7 +254,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
         fillColor: AppTheme.whiteColor, // ✅ background color
 
         contentPadding: const EdgeInsets.all(12),
-        hintText: 'Search by name or company...',
+        hintText: 'Search by name...',
         prefixIcon: const Icon(Icons.search),
 
         enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),

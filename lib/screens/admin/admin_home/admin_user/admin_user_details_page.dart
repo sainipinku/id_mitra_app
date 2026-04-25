@@ -25,7 +25,7 @@ class AdminUserDetailsPage extends StatefulWidget {
 }
 
 class _AdminUserDetailsPageState extends State<AdminUserDetailsPage> {
-  List<String> tabs = ["Overview", "Documents", "Admin", "Activity"];
+  List<String> tabs = ["Overview", "Admin"];
   int selectedIndex = 0;
 
   @override
@@ -103,14 +103,14 @@ class _AdminUserDetailsContent extends StatelessWidget {
                   Text('Image Settings')
                 ]),
               ),
-              PopupMenuItem(
-                value: 'profile_settings',
-                child: Row(children: [
-                  Icon(Icons.person),
-                  SizedBox(width: 10),
-                  Text('Profile Settings')
-                ]),
-              ),
+              // PopupMenuItem(
+              //   value: 'profile_settings',
+              //   child: Row(children: [
+              //     Icon(Icons.person),
+              //     SizedBox(width: 10),
+              //     Text('Profile Settings')
+              //   ]),
+              // ),
               PopupMenuItem(
                 value: 'student_form',
                 child: Row(children: [
@@ -368,7 +368,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                 ),
               ),
 
-            if (selectedIndex == 2)
+            if (selectedIndex == 1)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

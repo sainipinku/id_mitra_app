@@ -6,7 +6,7 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/screens/dashboard/home.dart';
-import 'package:idmitra/screens/dashboard/reports.dart';
+// import 'package:idmitra/screens/dashboard/reports.dart';
 import 'package:idmitra/screens/dashboard/users/users.dart';
 import 'package:idmitra/screens/dashboard/setting.dart';
 import 'package:idmitra/screens/home/student_list.dart';
@@ -28,7 +28,7 @@ class _DashboardState extends State<Dashboard> {
   );
   static const List<Widget> _widgetOptions = <Widget>[
     Home(),
-    Reports(),
+    // Reports(),
     Schools(),
   ];
 
@@ -85,10 +85,10 @@ class _DashboardState extends State<Dashboard> {
                   items:  [
                     BottomNavigationBarItem(
                         icon: svgIcon(icon: 'assets/icons/home/home.svg', clr: _selectedIndex == 0 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Dashboard"),
+                    // BottomNavigationBarItem(
+                    //     icon: svgIcon(icon: 'assets/icons/home/report.svg', clr: _selectedIndex == 1 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Reports"),
                     BottomNavigationBarItem(
-                        icon: svgIcon(icon: 'assets/icons/home/report.svg', clr: _selectedIndex == 1 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Reports"),
-                    BottomNavigationBarItem(
-                        icon: svgIcon(icon: 'assets/icons/home/school.svg', clr: _selectedIndex == 2 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Schools"),
+                        icon: svgIcon(icon: 'assets/icons/home/school.svg', clr: _selectedIndex == 1 ? AppTheme.btnColor : AppTheme.black_Color,), label: "Schools"),
 
                   ],
                 ),

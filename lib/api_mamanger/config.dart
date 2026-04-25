@@ -48,6 +48,22 @@ class Routes {
       isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
   static String updateStaff(String schoolId, String uuid, {bool isPartner = false}) =>
       isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
+  static String deleteStaff(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid";
+  static String changeStaffPassword(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/password";
+  static String toggleStaffStatus(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/status";
+  static String staffAssignedClasses(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/assigned-classes";
+  static String staffAssignClass(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/assign-class";
+  static String staffRemoveAssignedClass(String schoolId, String assignedClassUuid) =>
+      "auth/school/$schoolId/staff/assigned-classes/$assignedClassUuid";
+  static String uploadStaffSignature(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/signature";
+  static String uploadStaffPhoto(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/photo";
   static String updateSchoolStudentFormFields(String schoolId) => "auth/school/$schoolId/form-fields/student";
   static String updateLeadsStatus(String leadsId,String status) => "leads/$leadsId/change-status/$status";
   static String toggleStudentStatus(String schoolId, String studentId) => "auth/school/$schoolId/students/$studentId/status";
