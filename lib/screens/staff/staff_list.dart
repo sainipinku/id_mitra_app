@@ -174,7 +174,6 @@ class _StaffListBodyState extends State<_StaffListBody> {
         onRefresh: _refresh,
         child: Column(
           children: [
-            // Search bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: TextField(
@@ -199,8 +198,6 @@ class _StaffListBodyState extends State<_StaffListBody> {
                 ),
               ),
             ),
-
-            // List
             Expanded(
               child: BlocBuilder<StaffListCubit, StaffListState>(
                 builder: (context, state) {

@@ -113,7 +113,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
 
     if (s.gender != null) {
       final matched = _kGenderOptions.firstWhere(
-        (g) => g.toLowerCase() == s.gender!.toLowerCase(),
+            (g) => g.toLowerCase() == s.gender!.toLowerCase(),
         orElse: () => '',
       );
       _selectedGender = matched.isEmpty ? null : matched;
@@ -134,7 +134,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
         ..clear()
         ..addAll(
           s.emergencyContacts.map(
-            (c) => _EmergencyContact(
+                (c) => _EmergencyContact(
               relation: c.relation,
               name: c.name,
               phone: c.phone,
@@ -216,11 +216,11 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
         style: MyStyles.mediumText(size: 13, color: AppTheme.black_Color),
         children: required
             ? [
-                TextSpan(
-                  text: ' *',
-                  style: MyStyles.mediumText(size: 13, color: Colors.red),
-                ),
-              ]
+          TextSpan(
+            text: ' *',
+            style: MyStyles.mediumText(size: 13, color: Colors.red),
+          ),
+        ]
             : [],
       ),
     ),
@@ -272,11 +272,11 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
   );
 
   Widget _stringDropdown(
-    String hint,
-    List<String> options,
-    String? value,
-    void Function(String?) onChange,
-  ) {
+      String hint,
+      List<String> options,
+      String? value,
+      void Function(String?) onChange,
+      ) {
     return Dropdown<String>(
       value: (value != null && options.contains(value)) ? value : null,
       items: options,
@@ -298,11 +298,11 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
               Dropdown<StaffRole>(
                 value: roles.isNotEmpty && _selectValues['role'] != null
                     ? roles.firstWhere(
-                        (r) =>
-                            r.id.toString() == _selectValues['role'] ||
-                            r.name == _selectValues['role'],
-                        orElse: () => roles.first,
-                      )
+                      (r) =>
+                  r.id.toString() == _selectValues['role'] ||
+                      r.name == _selectValues['role'],
+                  orElse: () => roles.first,
+                )
                     : null,
                 items: roles,
                 hintText: '-Select Role-',
@@ -323,7 +323,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
               options.first,
               options,
               _selectValues[field.name],
-              (v) => setState(() => _selectValues[field.name] = v),
+                  (v) => setState(() => _selectValues[field.name] = v),
             ),
           ],
         );
@@ -379,9 +379,9 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
   }
 
   List<Widget> _buildDynamicFieldRows(
-    List<StudentFormField> fields,
-    List<StaffRole> roles,
-  ) {
+      List<StudentFormField> fields,
+      List<StaffRole> roles,
+      ) {
     final rows = <Widget>[];
     for (int i = 0; i < fields.length; i += 2) {
       final left = _buildDynamicField(fields[i], roles);
@@ -453,27 +453,27 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                           title: 'Staff Details',
                           child: state.loading
                               ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(24),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
                               : state.error != null
                               ? Center(
-                                  child: Text(
-                                    state.error!,
-                                    style: MyStyles.regularText(
-                                      size: 13,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                )
+                            child: Text(
+                              state.error!,
+                              style: MyStyles.regularText(
+                                size: 13,
+                                color: Colors.red,
+                              ),
+                            ),
+                          )
                               : Column(
-                                  children: _buildDynamicFieldRows(
-                                    state.fields,
-                                    state.roles,
-                                  ),
-                                ),
+                            children: _buildDynamicFieldRows(
+                              state.fields,
+                              state.roles,
+                            ),
+                          ),
                         ),
                         _sectionCard(
                           title: 'Basic Information',
@@ -499,7 +499,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                       hintText: 'Father Name...',
                                       mxLine: 1,
                                       textCapitalization:
-                                          TextCapitalization.words,
+                                      TextCapitalization.words,
                                     ),
                                   ],
                                 ),
@@ -515,7 +515,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                       hintText: 'Mother Name...',
                                       mxLine: 1,
                                       textCapitalization:
-                                          TextCapitalization.words,
+                                      TextCapitalization.words,
                                     ),
                                   ],
                                 ),
@@ -528,7 +528,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                       hintText: 'Husband Name...',
                                       mxLine: 1,
                                       textCapitalization:
-                                          TextCapitalization.words,
+                                      TextCapitalization.words,
                                     ),
                                   ],
                                 ),
@@ -550,8 +550,8 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                       'Select Blood Group',
                                       _kBloodGroupOptions,
                                       _selectedBloodGroup,
-                                      (v) => setState(
-                                        () => _selectedBloodGroup = v,
+                                          (v) => setState(
+                                            () => _selectedBloodGroup = v,
                                       ),
                                     ),
                                   ],
@@ -574,7 +574,7 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                       '-Select Gender-',
                                       _kGenderOptions,
                                       _selectedGender,
-                                      (v) =>
+                                          (v) =>
                                           setState(() => _selectedGender = v),
                                     ),
                                   ],
@@ -649,22 +649,22 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                           child: Column(
                             children: [
                               ..._emergencyContacts.asMap().entries.map((
-                                entry,
-                              ) {
+                                  entry,
+                                  ) {
                                 final i = entry.key;
                                 final contact = entry.value;
                                 return _EmergencyContactRow(
                                   contact: contact,
                                   showRemove: _emergencyContacts.length > 1,
                                   onRemove: () => setState(
-                                    () => _emergencyContacts.removeAt(i),
+                                        () => _emergencyContacts.removeAt(i),
                                   ),
                                 );
                               }),
                               const SizedBox(height: 12),
                               GestureDetector(
                                 onTap: () => setState(
-                                  () => _emergencyContacts.add(
+                                      () => _emergencyContacts.add(
                                     _EmergencyContact(),
                                   ),
                                 ),
@@ -772,11 +772,11 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
         .where((e) => e.name.isNotEmpty || e.phone.isNotEmpty)
         .map(
           (e) => <String, String>{
-            'relation': e.relation,
-            'name': e.name,
-            'phone': e.phone,
-          },
-        )
+        'relation': e.relation,
+        'name': e.name,
+        'phone': e.phone,
+      },
+    )
         .toList();
 
     if (_isEditMode) {
