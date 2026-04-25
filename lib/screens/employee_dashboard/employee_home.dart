@@ -52,23 +52,27 @@ class _EmployeeHomeState extends State<EmployeeHome> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _topStatsRow(),
-          const SizedBox(height: 20),
-          _sectionHeader('Student Directory', onViewAll: () {}),
-          const SizedBox(height: 10),
-          _searchBar(),
-          const SizedBox(height: 14),
-          _attendanceButtons(),
-          const SizedBox(height: 20),
-          _sectionHeader('Recent Requests', onViewAll: () {}),
-          const SizedBox(height: 10),
-          ..._recentRequests.map(_requestCard),
-        ],
+    return RefreshIndicator(
+      onRefresh: () async => setState(() {}),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _topStatsRow(),
+            const SizedBox(height: 20),
+            _sectionHeader('Student Directory', onViewAll: () {}),
+            const SizedBox(height: 10),
+            _searchBar(),
+            const SizedBox(height: 14),
+            _attendanceButtons(),
+            const SizedBox(height: 20),
+            _sectionHeader('Recent Requests', onViewAll: () {}),
+            const SizedBox(height: 10),
+            ..._recentRequests.map(_requestCard),
+          ],
+        ),
       ),
     );
   }

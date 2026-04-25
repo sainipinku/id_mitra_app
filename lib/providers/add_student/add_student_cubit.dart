@@ -28,6 +28,7 @@ class AddStudentCubit extends Cubit<AddStudentState> {
     required String schoolId,
     required Map<String, dynamic> fields,
     required Map<String, File?> files,
+    List<String> formFieldNames = const [],
   }) async {
     emit(const AddStudentState(loading: true));
     try {
@@ -80,7 +81,18 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         String errorMsg = json['message'] ?? 'Failed: ${response.statusCode}';
         final errors = json['errors'] as Map<String, dynamic>?;
         if (errors != null && errors.isNotEmpty) {
-          errorMsg = errors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          // Only show errors for fields that were actually in the form
+          final relevantErrors = formFieldNames.isEmpty
+              ? errors
+              : Map.fromEntries(
+                  errors.entries.where((e) => formFieldNames.contains(e.key)),
+                );
+          if (relevantErrors.isNotEmpty) {
+            errorMsg = relevantErrors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          } else {
+            // All errors are for fields not in the form - show generic message
+            errorMsg = 'Failed to add student. Please try again.';
+          }
         }
         emit(AddStudentState(error: errorMsg));
       }
@@ -94,6 +106,7 @@ class AddStudentCubit extends Cubit<AddStudentState> {
     required String schoolId,
     required Map<String, dynamic> fields,
     required Map<String, File?> files,
+    List<String> formFieldNames = const [],
   }) async {
     emit(const AddStudentState(loading: true));
     try {
@@ -150,7 +163,16 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         String errorMsg = json['message'] ?? 'Failed: ${response.statusCode}';
         final errors = json['errors'] as Map<String, dynamic>?;
         if (errors != null && errors.isNotEmpty) {
-          errorMsg = errors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          final relevantErrors = formFieldNames.isEmpty
+              ? errors
+              : Map.fromEntries(
+                  errors.entries.where((e) => formFieldNames.contains(e.key)),
+                );
+          if (relevantErrors.isNotEmpty) {
+            errorMsg = relevantErrors.values.expand((v) => v is List ? v : [v]).take(3).join('\n');
+          } else {
+            errorMsg = 'Failed to update student. Please try again.';
+          }
         }
         emit(AddStudentState(error: errorMsg));
       }
@@ -187,6 +209,24 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         if (v != null && v.isNotEmpty) return v;
       }
       return null;
+    }
+
+    // Check if password field exists in form
+    final password = _f(['password']);
+    final passwordConfirmation = _f(['password_confirmation']);
+    
+    // Generate default password only if password field doesn't exist in form
+    final String? finalPassword;
+    final String? finalPasswordConfirmation;
+    
+    if (password != null && password.isNotEmpty) {
+      // User provided password
+      finalPassword = password;
+      finalPasswordConfirmation = passwordConfirmation ?? password;
+    } else {
+      // No password field in form - use default password
+      finalPassword = 'Student@123';
+      finalPasswordConfirmation = 'Student@123';
     }
 
     return {
@@ -234,8 +274,8 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       'mother_email': _f(['mother_email']),
       'mother_phone': _f(['mother_phone']),
       'mother_wphone': _f(['mother_whatsapp_number', 'mother_whatsapp']),
-      'password': _f(['password']),
-      'password_confirmation': _f(['password_confirmation', 'password']),
+      'password': finalPassword,
+      'password_confirmation': finalPasswordConfirmation,
     };
   }
 }

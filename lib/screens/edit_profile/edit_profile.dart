@@ -263,7 +263,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: AppTheme.bgColor),
+                            CircularProgressIndicator(color: AppTheme.btnColor),
                             SizedBox(height: 10.h),
                             const Text('Loading...'),
                           ],
@@ -509,28 +509,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // ---------------- SAVE BUTTON ----------------
   Widget _saveButton() {
     return SizedBox(
-        width: double.infinity,
-        child: CustomButton(
-          text: 'Save'.toUpperCase(),
-          color: AppTheme.black_Color,
-          textColor: AppTheme.whiteColor,
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              // API CALL
-              final payload = {
-                "name": nameController.text.trim(),
-                "phone": phoneController.text.trim(),
-                "email": emailController.text.trim(),
-                "gender": gender,
-                "dob": dob ?? '',
-              };
-              print("profile---------${File(croppedProfileFile!.path)}");
-              context.read<ManageProfileCubit>().updateProfile(payload,File(croppedProfileFile!.path));
-            }
-          },
-          isLoading: false,
-        )
-
+      width: double.infinity,
+      child: CustomButton(
+        text: 'Save'.toUpperCase(),
+        color: AppTheme.black_Color,
+        textColor: AppTheme.whiteColor,
+        onPressed: () {
+          if (_formKey.currentState!.validate()) {
+            final payload = {
+              "name": nameController.text.trim(),
+              "phone": phoneController.text.trim(),
+              "email": emailController.text.trim(),
+              "gender": gender,
+              "dob": dob ?? '',
+            };
+            final imageFile = croppedProfileFile != null
+                ? File(croppedProfileFile!.path)
+                : null;
+            context.read<ManageProfileCubit>().updateProfile(payload, imageFile);
+          }
+        },
+        isLoading: false,
+      ),
     );
   }
 }

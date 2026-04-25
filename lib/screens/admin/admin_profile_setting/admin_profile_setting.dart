@@ -163,11 +163,15 @@ class _AdminProfileSettingState extends State<AdminProfileSetting> {
   Widget _menuSection(BuildContext context) {
     return ListView(
       children: [
-        _menuItem("Edit Profile", Icons.person_outline, () {
-          navigateWithTransition(
+        _menuItem("Edit Profile", Icons.person_outline, () async {
+          final result = await navigateWithTransition(
             context: context,
             page: const AdminEditProfilePage(),
           );
+          // If profile was updated, refresh home data
+          if (result == true && mounted) {
+            context.read<HomeCubit>().loadHomeData();
+          }
         }),
         _divider(),
         _menuItem("Privacy & Policy", Icons.privacy_tip, () {

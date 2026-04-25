@@ -41,7 +41,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   List<Widget> _getWidgets(String schoolId) {
     return [
-      AdminHome(onStudentAdded: _onStudentAdded),
+      AdminHome(onStudentAdded: _onStudentAdded, onStudentsTap: _onStudentsTap, onStaffTap: _onStaffTap),
       BlocProvider.value(
         value: _studentsCubit,
         child: AdminStudentsScreen(schoolId: schoolId),
@@ -55,6 +55,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   void _onStudentAdded() {
     setState(() => _selectedIndex = 1);
+  }
+
+  void _onStudentsTap() {
+    setState(() => _selectedIndex = 1);
+  }
+
+  void _onStaffTap() {
+    setState(() => _selectedIndex = 2);
   }
 
   @override

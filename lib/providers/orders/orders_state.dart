@@ -64,6 +64,6 @@ class OrdersState {
 class OrderClass {
   final int id;
   final String name;
-  final String nameWithprefix;
-  const OrderClass(this.id, this.name,this.nameWithprefix);
+  final String? nameWithprefix;
+  const OrderClass(this.id, this.name, this.nameWithprefix);
 }

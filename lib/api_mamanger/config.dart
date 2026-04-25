@@ -35,19 +35,35 @@ class Routes {
   static String getStaffFormFields(String schoolId, {bool isPartner = false}) =>
       isPartner ? "auth/partner/school/$schoolId/form-fields/staff" : "auth/school/$schoolId/form-fields/staff";
   static String getStaffRoles(String schoolId, {bool isPartner = false}) =>
-      isPartner ? "auth/partner/school/$schoolId/staff/roles/list" : "auth/school/$schoolId/staff/roles/list";
+      isPartner
+          ? "auth/partner/school/$schoolId/staff/roles/list"
+          : "auth/school/$schoolId/staff/roles/list";
   static String addStaff(String schoolId, {bool isPartner = false}) =>
       isPartner ? "auth/partner/school/$schoolId/staff" : "auth/school/$schoolId/staff";
   static String getStaffList(String schoolId, {int page = 1, String search = '', bool isPartner = false}) {
-    final base = isPartner
-        ? "auth/partner/school/$schoolId/staff?page=$page"
-        : "auth/school/$schoolId/staff?page=$page";
+    final base = "auth/school/$schoolId/staff?page=$page";
     return search.isNotEmpty ? "$base&search=$search" : base;
   }
   static String getStaffDetail(String schoolId, String uuid, {bool isPartner = false}) =>
       isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
   static String updateStaff(String schoolId, String uuid, {bool isPartner = false}) =>
       isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
+  static String deleteStaff(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid";
+  static String changeStaffPassword(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/password";
+  static String toggleStaffStatus(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/status";
+  static String staffAssignedClasses(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/assigned-classes";
+  static String staffAssignClass(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/assign-class";
+  static String staffRemoveAssignedClass(String schoolId, String assignedClassUuid) =>
+      "auth/school/$schoolId/staff/assigned-classes/$assignedClassUuid";
+  static String uploadStaffSignature(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/signature";
+  static String uploadStaffPhoto(String schoolId, String uuid) =>
+      "auth/school/$schoolId/staff/$uuid/photo";
   static String updateSchoolStudentFormFields(String schoolId) => "auth/school/$schoolId/form-fields/student";
   static String updateLeadsStatus(String leadsId,String status) => "leads/$leadsId/change-status/$status";
   static String toggleStudentStatus(String schoolId, String studentId) => "auth/school/$schoolId/students/$studentId/status";
@@ -63,5 +79,6 @@ class Routes {
   static String getSchoolDashboard() => "auth/school/dashboard/stats";
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";
   static String getSubCategoryProductById(String subCatId) => "product/subcategory/$subCatId";
+  static String updateImageSettings(String schoolId) => "auth/school/image-settings/$schoolId";
 }
 

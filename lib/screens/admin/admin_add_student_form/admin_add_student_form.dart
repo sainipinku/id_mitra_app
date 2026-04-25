@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -123,6 +123,66 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
       _selectVal.clear();
       _files.clear();
     });
+  }
+
+  /// Returns null if valid, otherwise returns an error message.
+  String? _validateForm(List<StudentFormField> allFields, StudentFormDataModel? data) {
+    // 1. Required fields check
+    for (final f in allFields) {
+      if (!f.required) continue;
+      if (f.type == 'select') {
+        // Skip validation if the dropdown has no options to choose from
+        if (_selectFieldHasNoOptions(f.name, data)) continue;
+
+        final val = _selectVal[f.name];
+        final isEmpty = val == null ||
+            val.toString().isEmpty ||
+            val.toString().startsWith('-Select') ||
+            val.toString() == 'Select Mode' ||
+            val.toString() == 'Select Blood Group';
+        if (isEmpty) return '${f.label} is required';
+      } else if (f.type == 'file') {
+        // file fields skip
+      } else {
+        final text = _ctrl[f.name]?.text.trim() ?? '';
+        if (text.isEmpty) return '${f.label} is required';
+      }
+    }
+
+    // 2. Confirm password match check
+    final password = _ctrl['password']?.text ?? '';
+    final confirmPassword = _ctrl['password_confirmation']?.text ?? '';
+    if (password.isNotEmpty && confirmPassword.isEmpty) {
+      return 'Please fill Confirm Password';
+    }
+    if (password.isNotEmpty && confirmPassword != password) {
+      return 'Password and Confirm Password do not match';
+    }
+
+    return null;
+  }
+
+  /// Returns true if a select field has no selectable options (so validation should be skipped)
+  bool _selectFieldHasNoOptions(String name, StudentFormDataModel? data) {
+    switch (name) {
+      case 'class':
+        return (data?.classes ?? []).isEmpty;
+      case 'session':
+        return (data?.sessions ?? []).isEmpty;
+      case 'house':
+        return (data?.houses ?? []).isEmpty;
+      case 'class_section':
+        final selectedClassId = (_selectVal['class'] as int?);
+        if (selectedClassId == null) return true;
+        final selectedClass = data?.classes.firstWhere(
+          (c) => c.id == selectedClassId,
+          orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
+        );
+        return (selectedClass?.sections ?? []).isEmpty &&
+            (selectedClass?.sectionsIds ?? []).isEmpty;
+      default:
+        return false;
+    }
   }
 
   void _prefillStudent(StudentDetailsData s) {
@@ -256,16 +316,6 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                   },
                 ),
                 _divider(),
-                _pickerOption(
-                  'assets/icons/remove_image.svg',
-                  'Remove Photo',
-                  () {
-                    setState(() => _files[fieldName] = null);
-                    Navigator.pop(bc);
-                  },
-                  isRemove: true,
-                ),
-                _divider(),
               ],
             ),
           ),
@@ -361,7 +411,6 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
   Widget _sessionDropdown(List<SessionOption> sessions) {
     if (sessions.isEmpty) return _loadingTile('Loading sessions...');
 
-    // Auto-select first session if not already set
     final val = (_selectVal['session'] as int?);
     if (val == null && sessions.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -672,10 +721,15 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _label(f.label, required: f.required),
-            phoneNumberTextField(
+            AppTextField(
               controller: _ctrlFor(f.name),
-              hintName: '${f.label}...',
-              isRequired: f.required,
+              hintText: '${f.label}...',
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(10),
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              mxLine: 1,
             ),
           ],
         );
@@ -693,13 +747,55 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
           ],
         );
       case 'password':
+        if (f.name == 'password_confirmation') {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _label(f.label, required: f.required),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _ctrlFor('password'),
+                builder: (_, passwordVal, __) {
+                  return ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _ctrlFor('password_confirmation'),
+                    builder: (_, confirmVal, __) {
+                      final mismatch = confirmVal.text.isNotEmpty &&
+                          passwordVal.text.isNotEmpty &&
+                          confirmVal.text != passwordVal.text;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppTextField(
+                            controller: _ctrlFor(f.name),
+                            hintText: '••••••',
+                            obscureText: true,
+                          ),
+                          if (mismatch)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Passwords do not match',
+                                style: MyStyles.regularText(
+                                  size: 11,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _label(f.label, required: f.required),
             AppTextField(
               controller: _ctrlFor(f.name),
-              hintText: 'â€¢â€¢â€¢â€¢â€¢â€¢',
+              hintText: '••••••',
               obscureText: true,
             ),
           ],
@@ -1102,6 +1198,20 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                               onTap: state.loading
                                   ? () {}
                                   : () {
+                                      final allVisibleFields = [
+                                        ...currentFields,
+                                        if (_additionalExpanded) ...additionalFields,
+                                      ];
+                                      final validationError = _validateForm(allVisibleFields, data);
+                                      if (validationError != null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(validationError),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                        return;
+                                      }
                                       final allFields = {
                                         ..._ctrl.map(
                                           (k, v) => MapEntry(k, v.text),

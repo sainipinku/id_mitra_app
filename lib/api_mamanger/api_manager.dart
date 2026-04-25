@@ -124,6 +124,33 @@ Response: ${response.body}
     }
   }
 
+  putRequestWithBody(String url, Map<String, dynamic> body) async {
+    var token = await UserSecureStorage.fetchToken();
+
+    var response = await http.put(
+      Uri.parse(url),
+      body: jsonEncode(body),
+      headers: {
+        "Authorization": "Bearer $token",
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
+    print('status code-----${response.statusCode} and base url----${url}');
+    print('response body-----${response.body}');
+    if (response.statusCode == 201 ||
+        response.statusCode == 200 ||
+        response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.statusCode == 422 ||
+        response.statusCode == 203 ||
+        response.statusCode == 400) {
+      return response;
+    } else {
+      return null;
+    }
+  }
+
   putRequest(String url) async {
     var token = await UserSecureStorage.fetchToken();
 

@@ -18,7 +18,12 @@ class OrdersPage extends StatelessWidget {
   final String schoolId;
   final String schoolName;
   final int? totalOrderCount;
-  const OrdersPage({super.key, required this.schoolId, this.schoolName = '', this.totalOrderCount});
+  const OrdersPage({
+    super.key,
+    required this.schoolId,
+    this.schoolName = '',
+    this.totalOrderCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +32,11 @@ class OrdersPage extends StatelessWidget {
         ..fetchOrders(schoolId: schoolId)
         ..fetchSchoolClasses(schoolId),
       child: Builder(
-        builder: (_) => _OrdersView(schoolId: schoolId, schoolName: schoolName, totalOrderCount: totalOrderCount),
+        builder: (_) => _OrdersView(
+          schoolId: schoolId,
+          schoolName: schoolName,
+          totalOrderCount: totalOrderCount,
+        ),
       ),
     );
   }
@@ -37,7 +46,11 @@ class _OrdersView extends StatefulWidget {
   final String schoolId;
   final String schoolName;
   final int? totalOrderCount;
-  const _OrdersView({required this.schoolId, this.schoolName = '', this.totalOrderCount});
+  const _OrdersView({
+    required this.schoolId,
+    this.schoolName = '',
+    this.totalOrderCount,
+  });
 
   @override
   State<_OrdersView> createState() => _OrdersViewState();
@@ -57,7 +70,8 @@ class _OrdersViewState extends State<_OrdersView> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
         context.read<OrdersCubit>().fetchOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
@@ -92,6 +106,22 @@ class _OrdersViewState extends State<_OrdersView> {
     );
   }
 
+  bool get _hasActiveFilters =>
+      _selectedStatus.isNotEmpty ||
+      _selectedClass.isNotEmpty ||
+      _dateFromCtrl.text.isNotEmpty ||
+      _dateToCtrl.text.isNotEmpty;
+
+  void _clearFilters() {
+    setState(() {
+      _selectedStatus = '';
+      _selectedClass = '';
+      _dateFromCtrl.clear();
+      _dateToCtrl.clear();
+    });
+    _resetAndFetch();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,19 +130,26 @@ class _OrdersViewState extends State<_OrdersView> {
         title: 'Orders',
         backgroundColor: Colors.white,
         showText: true,
+        showDivider: true,
         actions: [
+          // Staff Cards button
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 4),
             child: TextButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => StaffOrdersPage(schoolId: widget.schoolId)),
+                MaterialPageRoute(
+                  builder: (_) => StaffOrdersPage(schoolId: widget.schoolId),
+                ),
               ),
-              icon: const Icon(Icons.badge_outlined, size: 16),
-              label: Text('Staff Cards', style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
+              icon: const Icon(Icons.badge_outlined, size: 15),
+              label: Text(
+                'Staff',
+                style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor),
+              ),
               style: TextButton.styleFrom(
                 foregroundColor: AppTheme.btnColor,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
             ),
           ),
@@ -120,13 +157,20 @@ class _OrdersViewState extends State<_OrdersView> {
       ),
       body: Column(
         children: [
-          // Filters
+          // Search bar always visible
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: _searchBar(),
+          ),
+
+          // Filters always visible
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Column(
               children: [
-                _searchBar(),
+                const Divider(height: 1, color: AppTheme.LineColor),
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -138,90 +182,153 @@ class _OrdersViewState extends State<_OrdersView> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(child: _dateField(_dateFromCtrl, 'dd-mm-yyyy')),
+                    Expanded(
+                      child: _dateField(_dateFromCtrl, 'From dd-mm-yyyy'),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: _dateField(_dateToCtrl, 'dd-mm-yyyy')),
+                    Expanded(child: _dateField(_dateToCtrl, 'To dd-mm-yyyy')),
                   ],
                 ),
+                if (_hasActiveFilters) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: _clearFilters,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.lightRedColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.close,
+                              size: 12,
+                              color: AppTheme.cancelTextColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Clear Filters',
+                              style: MyStyles.mediumText(
+                                size: 11,
+                                color: AppTheme.cancelTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-
-          // Stats
-          // BlocBuilder<OrdersCubit, OrdersState>(
-          //   buildWhen: (p, c) => p.statistics != c.statistics || p.statsLoading != c.statsLoading,
-          //   builder: (_, state) {
-          //     final s = state.statistics;
-          //     return Padding(
-          //       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          //       child: Row(
-          //         children: [
-          //           _statCard('Total', s != null ? '${s.totalOrders}' : '-', Icons.receipt_long_outlined),
-          //           const SizedBox(width: 8),
-          //           _statCard('Pending', s != null ? '${s.pendingOrders}' : '-', Icons.hourglass_empty),
-          //           const SizedBox(width: 8),
-          //           _statCard('Completed', s != null ? '${s.completedOrders}' : '-', Icons.check_circle_outline),
-          //           const SizedBox(width: 8),
-          //           _statCard('Rate', s != null ? '${s.completionRate.toStringAsFixed(0)}%' : '-', Icons.trending_up),
-          //         ],
-          //       ),
-          //     );
-          //   },
-          // ),
-
-          // Total count banner
-          if (widget.totalOrderCount != null)
-            Container(
-              width: double.infinity,
-              color: AppTheme.btnColor.withOpacity(0.08),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(Icons.receipt_long_outlined, size: 16, color: AppTheme.btnColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Total Orders: ${widget.totalOrderCount}',
-                    style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
-                  ),
-                ],
-              ),
-            ),
 
           // List
           Expanded(
             child: BlocBuilder<OrdersCubit, OrdersState>(
               builder: (_, state) {
-                if (state.loading) {
-                  return const OrderListShimmer();
+                if (state.loading && state.ordersList.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: OrderListShimmer(),
+                  );
                 }
                 if (state.error != null && state.ordersList.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(state.error!, style: MyStyles.regularText(size: 14, color: Colors.red)),
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red.shade300,
+                        ),
                         const SizedBox(height: 12),
-                        TextButton(onPressed: _resetAndFetch, child: const Text('Retry')),
+                        Text(
+                          state.error!,
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: Colors.red,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _resetAndFetch,
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.btnColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   );
                 }
                 if (state.ordersList.isEmpty) {
-                  return Center(child: Image.asset('assets/images/no_data.png', height: 200));
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/no_data.png',
+                          height: 160,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No orders found',
+                          style: MyStyles.mediumText(
+                            size: 14,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                        ),
+                        if (_hasActiveFilters) ...[
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: _clearFilters,
+                            child: Text(
+                              'Clear filters',
+                              style: MyStyles.mediumText(
+                                size: 13,
+                                color: AppTheme.btnColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
                 }
                 return RefreshIndicator(
+                  color: AppTheme.btnColor,
                   onRefresh: () async => _resetAndFetch(),
                   child: ListView.builder(
                     controller: _scrollCtrl,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: state.ordersList.length + (state.hasMore ? 1 : 0),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                    itemCount:
+                        state.ordersList.length + (state.hasMore ? 1 : 0),
                     itemBuilder: (_, i) {
                       if (i < state.ordersList.length) {
                         return _OrderCard(order: state.ordersList[i]);
                       }
                       return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.btnColor,
+                            strokeWidth: 2,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -235,64 +342,96 @@ class _OrdersViewState extends State<_OrdersView> {
   }
 
   Widget _searchBar() => TextField(
-        controller: _searchCtrl,
-        style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
-        onChanged: (_) {
-          if (_debounce?.isActive ?? false) _debounce!.cancel();
-          _debounce = Timer(const Duration(milliseconds: 500), _resetAndFetch);
-        },
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: AppTheme.appBackgroundColor,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          hintText: 'Search order...',
-          prefixIcon: const Icon(Icons.search, size: 20),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: AppTheme.backBtnBgColor),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: AppTheme.btnColor),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          hintStyle: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
-        ),
-      );
+    controller: _searchCtrl,
+    style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+    onChanged: (_) {
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 500), _resetAndFetch);
+    },
+    decoration: InputDecoration(
+      filled: true,
+      fillColor: AppTheme.appBackgroundColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      hintText: 'Search by student name, order ID...',
+      prefixIcon: const Icon(
+        Icons.search_rounded,
+        size: 20,
+        color: AppTheme.graySubTitleColor,
+      ),
+      suffixIcon: _searchCtrl.text.isNotEmpty
+          ? GestureDetector(
+              onTap: () {
+                _searchCtrl.clear();
+                setState(() {});
+                _resetAndFetch();
+              },
+              child: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppTheme.graySubTitleColor,
+              ),
+            )
+          : null,
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: AppTheme.btnColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      hintStyle: MyStyles.regularText(
+        size: 13,
+        color: AppTheme.graySubTitleColor,
+      ),
+    ),
+  );
 
   Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
-        buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.classesLoading != c.classesLoading,
-        builder: (_, state) {
-          return _dropdown(
-            value: _selectedClass.isEmpty ? '' : _selectedClass,
-            hint: 'Filter By Classes',
-            loading: state.classesLoading,
-            items: [
-              const DropdownMenuItem(value: '', child: Text('Filter By Classes')),
-              ...state.availableClasses.map((c) => DropdownMenuItem(
-                    value: c.id.toString(),
-                    child: Text(c.name, overflow: TextOverflow.ellipsis),
-                  )),
-            ],
-            onChanged: (v) {
-              setState(() => _selectedClass = v ?? '');
-              WidgetsBinding.instance.addPostFrameCallback((_) => _resetAndFetch());
-            },
-          );
-        },
-      );
-
-  Widget _statusDropdown() => _dropdown(
-        value: _selectedStatus,
-        hint: 'Filter By Status',
-        items: kOrderFilterStatuses.map((s) => DropdownMenuItem<String>(
-              value: s.value,
-              child: Text(s.label, overflow: TextOverflow.ellipsis),
-            )).toList(),
+    buildWhen: (p, c) =>
+        p.availableClasses != c.availableClasses ||
+        p.classesLoading != c.classesLoading,
+    builder: (_, state) {
+      return _dropdown(
+        value: _selectedClass.isEmpty ? '' : _selectedClass,
+        hint: 'All Classes',
+        loading: state.classesLoading,
+        items: [
+          const DropdownMenuItem(value: '', child: Text('All Classes')),
+          ...state.availableClasses.map(
+            (c) => DropdownMenuItem(
+              value: c.id.toString(),
+              child: Text(
+                c.nameWithprefix ?? c.name,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
         onChanged: (v) {
-          setState(() => _selectedStatus = v ?? '');
+          setState(() => _selectedClass = v ?? '');
           WidgetsBinding.instance.addPostFrameCallback((_) => _resetAndFetch());
         },
       );
+    },
+  );
+
+  Widget _statusDropdown() => _dropdown(
+    value: _selectedStatus,
+    hint: 'All Status',
+    items: kOrderFilterStatuses
+        .map(
+          (s) => DropdownMenuItem<String>(
+            value: s.value,
+            child: Text(s.label, overflow: TextOverflow.ellipsis),
+          ),
+        )
+        .toList(),
+    onChanged: (v) {
+      setState(() => _selectedStatus = v ?? '');
+      WidgetsBinding.instance.addPostFrameCallback((_) => _resetAndFetch());
+    },
+  );
 
   Widget _dropdown({
     required String value,
@@ -300,29 +439,39 @@ class _OrdersViewState extends State<_OrdersView> {
     required List<DropdownMenuItem<String>> items,
     required void Function(String?) onChanged,
     bool loading = false,
-  }) =>
-      Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: AppTheme.appBackgroundColor,
-          border: Border.all(color: AppTheme.backBtnBgColor),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            menuMaxHeight: 300,
-            icon: loading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.keyboard_arrow_down, size: 18),
-            style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
-            items: items,
-            onChanged: onChanged,
-          ),
-        ),
-      );
+  }) => Container(
+    height: 44,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    decoration: BoxDecoration(
+      color: AppTheme.appBackgroundColor,
+      border: Border.all(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: value,
+        isExpanded: true,
+        menuMaxHeight: 300,
+        icon: loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.btnColor,
+                ),
+              )
+            : const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppTheme.graySubTitleColor,
+              ),
+        style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
+        items: items,
+        onChanged: onChanged,
+      ),
+    ),
+  );
 
   Widget _dateField(TextEditingController ctrl, String hint) {
     return StatefulBuilder(
@@ -341,7 +490,10 @@ class _OrdersViewState extends State<_OrdersView> {
                   ctrl.clear();
                   setLocal(() {});
                   if (_debounce?.isActive ?? false) _debounce!.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 200), _resetAndFetch);
+                  _debounce = Timer(
+                    const Duration(milliseconds: 200),
+                    _resetAndFetch,
+                  );
                 },
                 child: const Icon(Icons.close, size: 16),
               )
@@ -350,38 +502,15 @@ class _OrdersViewState extends State<_OrdersView> {
           setLocal(() {});
           if (ctrl.text.length == 10 || ctrl.text.isEmpty) {
             if (_debounce?.isActive ?? false) _debounce!.cancel();
-            _debounce = Timer(const Duration(milliseconds: 400), _resetAndFetch);
+            _debounce = Timer(
+              const Duration(milliseconds: 400),
+              _resetAndFetch,
+            );
           }
         },
       ),
     );
   }
-
-  Widget _statCard(String label, String value, IconData icon) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: AppTheme.btnColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Icon(icon, size: 14, color: AppTheme.btnColor),
-              ),
-              const SizedBox(height: 5),
-              Text(value, style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
-              Text(label, style: MyStyles.regularText(size: 10, color: AppTheme.graySubTitleColor)),
-            ],
-          ),
-        ),
-      );
 }
 
 class _OrderCard extends StatefulWidget {
@@ -402,16 +531,54 @@ class _OrderCardState extends State<_OrderCard> {
     _currentStatus = widget.order.status;
   }
 
+  Color get _statusColor {
+    switch (_currentStatus) {
+      case 'completed':
+        return const Color(0xFF2DC24E);
+      case 'cancelled':
+        return AppTheme.cancelTextColor;
+      case 'work_in_process':
+        return AppTheme.btnColor;
+      case 're_order':
+        return AppTheme.PendingDotColor;
+      default:
+        return AppTheme.graySubTitleColor;
+    }
+  }
+
+  Color get _statusBg {
+    switch (_currentStatus) {
+      case 'completed':
+        return const Color(0xFFE8F9ED);
+      case 'cancelled':
+        return AppTheme.lightRedColor;
+      case 'work_in_process':
+        return AppTheme.lightBlueColor;
+      case 're_order':
+        return AppTheme.PendingLightColor;
+      default:
+        return AppTheme.appBackgroundColor;
+    }
+  }
+
   String get _statusLabel {
     return kOrderStatuses
-        .firstWhere((s) => s.value == _currentStatus,
-            orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')))
+        .firstWhere(
+          (s) => s.value == _currentStatus,
+          orElse: () => OrderStatusOption(
+            _currentStatus,
+            _currentStatus.replaceAll('_', ' '),
+          ),
+        )
         .label;
   }
 
   Future<void> _updateStatus(String newStatus) async {
     setState(() => _updating = true);
-    final success = await context.read<OrdersCubit>().updateOrderStatus(widget.order.uuid, newStatus);
+    final success = await context.read<OrdersCubit>().updateOrderStatus(
+      widget.order.uuid,
+      newStatus,
+    );
     if (mounted) {
       setState(() {
         _updating = false;
@@ -419,9 +586,15 @@ class _OrderCardState extends State<_OrderCard> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Status updated successfully' : 'Failed to update status'),
+          content: Text(
+            success ? 'Status updated successfully' : 'Failed to update status',
+          ),
           backgroundColor: success ? AppTheme.btnColor : Colors.red,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(12),
         ),
       );
     }
@@ -429,133 +602,191 @@ class _OrderCardState extends State<_OrderCard> {
 
   @override
   Widget build(BuildContext context) {
+    final student = widget.order.student;
+    final school = widget.order.school;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => OrderDetailPage(uuid: widget.order.uuid)),
+        MaterialPageRoute(
+          builder: (_) => OrderDetailPage(uuid: widget.order.uuid),
+        ),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.btnColor.withOpacity(0.05),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              child: Row(
+            // ── Avatar ──
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child:
+                  (student?.profilePhotoUrl != null &&
+                      student!.profilePhotoUrl!.isNotEmpty)
+                  ? Image.network(
+                      student.profilePhotoUrl!,
+                      height: 60,
+                      width: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
+
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('#${widget.order.id}', style: MyStyles.boldText(size: 13, color: AppTheme.btnColor)),
-                  const Spacer(),
-                  _statusChip(),
-                  const SizedBox(width: 4),
-                  // 3-dot status update menu
-                  _updating
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : PopupMenuButton<String>(
-                          icon: Icon(Icons.more_vert, size: 18, color: AppTheme.graySubTitleColor),
-                          offset: const Offset(0, 32),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 8,
-                          onSelected: _updateStatus,
-                          itemBuilder: (_) => [
-                            PopupMenuItem<String>(
-                              value: 'completed',
-                              enabled: _currentStatus != 'completed',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.check_circle_outline,
-                                    size: 16,
-                                    color: _currentStatus == 'completed'
-                                        ? AppTheme.btnColor
-                                        : AppTheme.graySubTitleColor,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Mark as Completed',
-                                    style: MyStyles.regularText(
-                                      size: 13,
-                                      color: _currentStatus == 'completed'
-                                          ? AppTheme.btnColor
-                                          : AppTheme.black_Color,
-                                    ),
-                                  ),
-                                  if (_currentStatus == 'completed') ...[
-                                    const Spacer(),
-                                    Icon(Icons.check, size: 14, color: AppTheme.btnColor),
-                                  ],
-                                ],
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          student?.name ?? '-',
+                          style: MyStyles.boldText(
+                            size: 16,
+                            color: AppTheme.black_Color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (student?.className != null) ...[
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            '• ${student!.className!}',
+                            style: MyStyles.boldText(
+                              size: 14,
+                              color: AppTheme.btnColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  // School name
+                  if (school?.name != null)
+                    Text(
+                      school!.name,
+                      style: MyStyles.regularText(
+                        size: 12,
+                        color: AppTheme.graySubTitleColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(height: 3),
+                  // Order info row
+                  Row(
+                    children: [
+                      // Text(
+                      //   '#${widget.order.id} • ${widget.order.typeLabel}',
+                      //   style: MyStyles.regularText(
+                      //     size: 12,
+                      //     color: AppTheme.graySubTitleColor,
+                      //   ),
+                      // ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Status + date row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: _statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _statusLabel,
+                              style: MyStyles.mediumText(
+                                size: 11,
+                                color: _statusColor,
                               ),
                             ),
                           ],
                         ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: AppTheme.LineColor),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: widget.order.student?.profilePhotoUrl != null
-                        ? Image.network(
-                            widget.order.student!.profilePhotoUrl!,
-                            height: 56, width: 56, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholder(),
-                          )
-                        : _placeholder(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.order.student?.name ?? '-',
-                          style: MyStyles.boldText(size: 14, color: AppTheme.black_Color),
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 11,
+                        color: AppTheme.graySubTitleColor,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        widget.order.orderedAt,
+                        style: MyStyles.regularText(
+                          size: 11,
+                          color: AppTheme.graySubTitleColor,
                         ),
-                        if (widget.order.student?.className != null) ...[
-                          const SizedBox(height: 2),
-                          Text(widget.order.student!.className!, style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
-                        ],
-                        const SizedBox(height: 4),
-                        Text(widget.order.school?.name ?? '', style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor), overflow: TextOverflow.ellipsis),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            Divider(height: 1, color: AppTheme.LineColor),
-            // Footer
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  _infoChip(Icons.credit_card_outlined, widget.order.typeLabel),
-                  const SizedBox(width: 8),
-                  _infoChip(Icons.style_outlined, widget.order.orderCardsLabel),
-                  const Spacer(),
-                  _infoChip(Icons.calendar_today_outlined, widget.order.orderedAt),
-                ],
-              ),
-            ),
+            _updating
+                ? const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.btnColor,
+                      ),
+                    ),
+                  )
+                : _currentStatus == 'completed'
+                ? const SizedBox.shrink()
+                : PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    offset: const Offset(0, 32),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 8,
+                    onSelected: _updateStatus,
+                    itemBuilder: (_) => [
+                      const PopupMenuItem<String>(
+                        value: 'completed',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                              color: AppTheme.graySubTitleColor,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Mark as Completed'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
           ],
         ),
       ),
@@ -563,31 +794,23 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   Widget _placeholder() => Container(
-        height: 56, width: 56,
-        decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
-        child: const Icon(Icons.person, color: Colors.grey),
-      );
-
-  Widget _statusChip() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: AppTheme.btnColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-        child: Text(_statusLabel, style: MyStyles.mediumText(size: 11, color: AppTheme.btnColor)),
-      );
-
-  Widget _infoChip(IconData icon, String label) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: AppTheme.graySubTitleColor),
-          const SizedBox(width: 4),
-          Text(label, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
-        ],
-      );
+    height: 60,
+    width: 60,
+    color: Colors.grey.shade300,
+    child: const Icon(Icons.person, color: Colors.grey),
+  );
 }
 
 class _DotDateFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
-    return newValue.copyWith(text: text, selection: TextSelection.collapsed(offset: text.length));
+    return newValue.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 }

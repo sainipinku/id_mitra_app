@@ -86,8 +86,8 @@ class Data {
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     schools: json["schools"] == null ? null : Schools.fromJson(json["schools"]),
     total: json["total"],
-    perPage: json["per_page"],
-    currentPage: json["current_page"],
+    perPage: json["per_page"]?.toString(),
+    currentPage: json["current_page"]?.toString(),
     lastPage: json["last_page"],
     permissionSchool: json["permission_school"] == null ? [] : List<PermissionSchool>.from(json["permission_school"]!.map((x) => PermissionSchool.fromJson(x))),
     filters: json["filters"] == null ? null : Filters.fromJson(json["filters"]),
@@ -188,7 +188,7 @@ class PermissionSchool {
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
-    penal: penalValues.map[json["penal"]]!,
+    penal: penalValues.map[json["penal"]],
   );
 
   Map<String, dynamic> toJson() => {
@@ -448,9 +448,9 @@ class SchoolDetailsModel {
     countryId: json["country_id"],
     stateId: json["state_id"],
     cityId: json["city_id"],
-    address: json["address"],
-    pincode: json["pincode"],
-    logoPhoto: json["logo_photo"],
+    address: json["address"]?.toString(),
+    pincode: json["pincode"]?.toString(),
+    logoPhoto: json["logo_photo"]?.toString(),
     status: json["status"],
     createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
@@ -458,10 +458,10 @@ class SchoolDetailsModel {
     studentCount: json["student_count"],
     staffCount: json["staff_count"],
     orderCount: json["order_count"],
-    logoUrl: json["logo_url"],
+    logoUrl: json["logo_url"]?.toString(),
     currentSession: json["current_session"],
-    schoolStorage: json["school_storage"] == null ? null : SchoolStorage.fromJson(json["school_storage"]),
-    schoolStorageCapturedByCamera: json["school_storage_captured_by_camera"] == null ? null : SchoolStorage.fromJson(json["school_storage_captured_by_camera"]),
+    schoolStorage: (json["school_storage"] is Map) ? SchoolStorage.fromJson(json["school_storage"]) : null,
+    schoolStorageCapturedByCamera: (json["school_storage_captured_by_camera"] is Map) ? SchoolStorage.fromJson(json["school_storage_captured_by_camera"]) : null,
     partner: json["partner"] == null ? null : Partner.fromJson(json["partner"]),
     admin: json["admin"] == null ? null : Admin.fromJson(json["admin"]),
     socialLinks: json["social_links"],
@@ -682,7 +682,8 @@ class Partner {
   DateTime? updatedAt;
   dynamic deletedAt;
   String? profilePic;
-
+  List<String>? type;
+  List<String>? dealsIn;
   String? profilePhotoUrl;
   String? receivedAtFormatted;
   String? receivedAt;
@@ -711,6 +712,8 @@ class Partner {
     this.updatedAt,
     this.deletedAt,
     this.profilePic,
+    this.type,
+    this.dealsIn,
     this.profilePhotoUrl,
     this.receivedAtFormatted,
     this.receivedAt,
@@ -740,7 +743,8 @@ class Partner {
     DateTime? updatedAt,
     dynamic deletedAt,
     String? profilePic,
-
+    List<String>? type,
+    List<String>? dealsIn,
     String? profilePhotoUrl,
     String? receivedAtFormatted,
     String? receivedAt,
@@ -769,6 +773,8 @@ class Partner {
         updatedAt: updatedAt ?? this.updatedAt,
         deletedAt: deletedAt ?? this.deletedAt,
         profilePic: profilePic ?? this.profilePic,
+        type: type ?? this.type,
+        dealsIn: dealsIn ?? this.dealsIn,
         profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
         receivedAtFormatted: receivedAtFormatted ?? this.receivedAtFormatted,
         receivedAt: receivedAt ?? this.receivedAt,
@@ -798,10 +804,19 @@ class Partner {
     updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
     profilePic: json["profile_pic"],
+    // ✅ FIX: null-safe parsing for type and deals_in lists
+    type: json["type"] == null
+        ? []
+        : List<String>.from(
+        (json["type"] as List).map((x) => x?.toString() ?? '')),
+    dealsIn: json["deals_in"] == null
+        ? []
+        : List<String>.from(
+        (json["deals_in"] as List).map((x) => x?.toString() ?? '')),
     profilePhotoUrl: json["profile_photo_url"],
-    receivedAtFormatted: json["received_at_formatted"],
-    receivedAt: json["received_at"],
-    receivedAtHuman: json["received_at_human"],
+    receivedAtFormatted: json["received_at_formatted"]?.toString(),
+    receivedAt: json["received_at"]?.toString(),
+    receivedAtHuman: json["received_at_human"]?.toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -827,6 +842,8 @@ class Partner {
     "updated_at": updatedAt?.toIso8601String(),
     "deleted_at": deletedAt,
     "profile_pic": profilePic,
+    "type": type == null ? [] : List<dynamic>.from(type!.map((x) => x)),
+    "deals_in": dealsIn == null ? [] : List<dynamic>.from(dealsIn!.map((x) => x)),
     "profile_photo_url": profilePhotoUrl,
     "received_at_formatted": receivedAtFormatted,
     "received_at": receivedAt,
@@ -865,11 +882,11 @@ class SchoolStorage {
       );
 
   factory SchoolStorage.fromJson(Map<String, dynamic> json) => SchoolStorage(
-    studentsPhoto: json["students_photo"],
-    documents: json["documents"],
-    parentPhoto: json["parent_photo"],
-    guardianPhoto: json["guardian_photo"],
-    staffPhoto: json["staff_photo"],
+    studentsPhoto: json["students_photo"]?.toString(),
+    documents: json["documents"]?.toString(),
+    parentPhoto: json["parent_photo"]?.toString(),
+    guardianPhoto: json["guardian_photo"]?.toString(),
+    staffPhoto: json["staff_photo"]?.toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -908,8 +925,8 @@ class Link {
       );
 
   factory Link.fromJson(Map<String, dynamic> json) => Link(
-    url: json["url"],
-    label: json["label"],
+    url: json["url"]?.toString(),
+    label: json["label"]?.toString(),
     page: json["page"],
     active: json["active"],
   );

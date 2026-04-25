@@ -19,8 +19,8 @@ final class SignUpOtpSuccess extends ManageProfileState {
 final class ManageProfileResendSuccess extends ManageProfileState {}
 
 class ManageProfileFailed extends ManageProfileState {
-  final String message;
-  ManageProfileFailed({required this.message});
+  final String? message;
+  ManageProfileFailed({this.message});
 }
 
 

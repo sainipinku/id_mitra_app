@@ -29,6 +29,26 @@ class StaffListModel {
     required this.assignedClasses,
   });
 
+  /// Fix malformed URL like "https://server/.../https://cdn/.../file.jpg"
+  /// Also replaces localhost URLs with production domain
+  static String? _fixUrl(dynamic raw) {
+    if (raw == null) return null;
+    String url = raw.toString().trim();
+    if (url.isEmpty) return null;
+    // If multiple http(s):// found, take from the last one
+    final regex = RegExp(r'https?://');
+    final matches = regex.allMatches(url).toList();
+    if (matches.length > 1) {
+      url = url.substring(matches.last.start);
+    }
+    // Replace localhost/127.0.0.1 with production domain
+    url = url
+        .replaceAll('http://127.0.0.1:8000', 'https://idmitra.com')
+        .replaceAll('http://localhost:8000', 'https://idmitra.com')
+        .replaceAll('http://localhost', 'https://idmitra.com');
+    return url;
+  }
+
   factory StaffListModel.fromJson(Map<String, dynamic> json) {
     final role = json['role'] as Map<String, dynamic>?;
     final classes = json['assigned_classes'] as List? ?? [];
@@ -43,7 +63,7 @@ class StaffListModel {
       phone: json['phone'] ?? '',
       whatsappPhone: json['whatsapp_phone'],
       address: json['address'],
-      profilePhotoUrl: json['profile_photo_url'],
+      profilePhotoUrl: _fixUrl(json['profile_photo_url']),
       roleName: role?['name'] ?? '',
       status: json['status'] ?? 1,
       assignedClasses: classes.map((c) {

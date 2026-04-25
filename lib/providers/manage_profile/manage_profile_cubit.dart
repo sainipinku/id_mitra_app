@@ -12,6 +12,7 @@ import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/models/UserProfileModel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'manage_profile_state.dart';
 class ManageProfileCubit extends Cubit<ManageProfileState> {
@@ -35,10 +36,18 @@ class ManageProfileCubit extends Cubit<ManageProfileState> {
 
       if (response.statusCode == 200) {
         if (response.data != null) {
-          await UserLocal.saveUser(response.data);
-
           UserProfileDetailsModel userProfileModel =
           UserProfileDetailsModel.fromJson(response.data);
+
+          // Save updated user info to local storage
+          final userData = response.data['user'];
+          if (userData != null) {
+            final prefs = await SharedPreferences.getInstance();
+            prefs.setString("name", userData['name'] ?? '');
+            prefs.setString("email", userData['email'] ?? '');
+            prefs.setString("phone", userData['phone']?.toString() ?? '');
+            prefs.setString("profileImage", userData['profile_photo_url'] ?? '');
+          }
 
           emit(ManageProfileSuccess(userProfileModel: userProfileModel));
         } else {
@@ -48,7 +57,7 @@ class ManageProfileCubit extends Cubit<ManageProfileState> {
         emit(ManageProfileOnHold());
       } else {
         emit(ManageProfileFailed(
-          message: response.data?["message"] ?? response.message,
+          message: response.data?["message"]?.toString() ?? response.message?.toString() ?? "Something went wrong",
         ));
       }
     } on SocketException {
