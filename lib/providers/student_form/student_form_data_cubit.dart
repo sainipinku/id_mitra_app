@@ -27,7 +27,13 @@ class StudentFormDataCubit extends Cubit<StudentFormDataState> {
         headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
       );
       if (response.statusCode == 200) {
-        final model = StudentFormDataModel.fromJson(jsonDecode(response.body));
+        final decoded = jsonDecode(response.body);
+        print('form-data response: $decoded');
+        final model = StudentFormDataModel.fromJson(decoded);
+        print('Classes loaded: ${model.classes.length}');
+        for (final c in model.classes) {
+          print('  Class: ${c.nameWithPrefix} (id=${c.id}) sections=${c.sections.map((s) => '${s.name}(${s.id})').toList()} sectionsIds=${c.sectionsIds}');
+        }
         emit(StudentFormDataState(data: model));
       } else {
         emit(StudentFormDataState(error: 'Failed: ${response.statusCode}'));

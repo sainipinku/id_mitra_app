@@ -47,6 +47,12 @@ class LoginCubit extends Cubit<LoginState> {
             schoolId: schoolData['id']?.toString() ?? loginModel.user?.id?.toString() ?? '',
             schoolName: schoolData['name']?.toString() ?? '',
           );
+        } else if (loginModel.user?.schoolId != null) {
+          // Staff user — has school_id but no school object
+          await UserLocal.saveSchool(
+            schoolId: loginModel.user!.schoolId.toString(),
+            schoolName: '',
+          );
         } else {
           // super_admin without school — use user id as fallback
           await UserLocal.saveSchool(

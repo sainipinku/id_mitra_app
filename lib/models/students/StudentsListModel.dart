@@ -69,12 +69,17 @@ class Data {
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     currentPage: json["current_page"],
-    data: json["data"] == null ? [] : List<StudentDetailsData>.from(json["data"]!.map((x) => StudentDetailsData.fromJson(x))),
+    data: json["data"] == null
+        ? []
+        : List<StudentDetailsData>.from(
+        json["data"]!.map((x) => StudentDetailsData.fromJson(x))),
     firstPageUrl: json["first_page_url"],
     from: json["from"],
     lastPage: json["last_page"],
     lastPageUrl: json["last_page_url"],
-    links: json["links"] == null ? [] : List<Link>.from(json["links"]!.map((x) => Link.fromJson(x))),
+    links: json["links"] == null
+        ? []
+        : List<Link>.from(json["links"]!.map((x) => Link.fromJson(x))),
     nextPageUrl: json["next_page_url"],
     path: json["path"],
     perPage: json["per_page"],
@@ -85,12 +90,16 @@ class Data {
 
   Map<String, dynamic> toJson() => {
     "current_page": currentPage,
-    "data": data == null ? [] : List<dynamic>.from(data!.map((x) => x.toJson())),
+    "data": data == null
+        ? []
+        : List<dynamic>.from(data!.map((x) => x.toJson())),
     "first_page_url": firstPageUrl,
     "from": from,
     "last_page": lastPage,
     "last_page_url": lastPageUrl,
-    "links": links == null ? [] : List<dynamic>.from(links!.map((x) => x.toJson())),
+    "links": links == null
+        ? []
+        : List<dynamic>.from(links!.map((x) => x.toJson())),
     "next_page_url": nextPageUrl,
     "path": path,
     "per_page": perPage,
@@ -250,6 +259,8 @@ class StudentDetailsData {
     this.house,
     this.section,
   });
+
+  // ✅ FULLY UPDATED copyWith — all fields included
   StudentDetailsData copyWith({
     String? profilePhotoUrl,
     String? name,
@@ -270,6 +281,23 @@ class StudentDetailsData {
     dynamic phone,
     dynamic religion,
     int? status,
+    // ✅ NEW FIELDS ADDED:
+    dynamic aadharNo,
+    dynamic rollNo,
+    dynamic regNo,
+    String? srNo,
+    dynamic rfidNo,
+    dynamic admissionNo,
+    dynamic panNo,
+    dynamic schoolHouseId,
+    dynamic transportMode,
+    dynamic isRteStudent,
+    dynamic bloodGroup,
+    dynamic gender,
+    dynamic fatherEmail,
+    dynamic motherEmail,
+    dynamic motherWphone,
+    dynamic fatherWphoneNew,
   }) {
     return StudentDetailsData(
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
@@ -291,107 +319,150 @@ class StudentDetailsData {
       phone: phone ?? this.phone,
       religion: religion ?? this.religion,
       status: status ?? this.status,
-      // copy all remaining fields
-      id: id, uuid: uuid, schoolId: schoolId, srNo: srNo,
-      panNo: panNo, photo: photo, signature: signature,
-      barcodePhoto: barcodePhoto, dobTimestamp: dobTimestamp,
-      gender: gender, bloodGroup: bloodGroup, schoolClassId: schoolClassId,
-      schoolHouseId: schoolHouseId, schoolSessionId: schoolSessionId,
-      schoolClassSectionId: schoolClassSectionId, transportMode: transportMode,
-      regNo: regNo, rollNo: rollNo, aadharNo: aadharNo, admissionNo: admissionNo,
-      rfidNo: rfidNo, countryId: countryId, stateId: stateId, cityId: cityId,
+      // ✅ NEW:
+      aadharNo: aadharNo ?? this.aadharNo,
+      rollNo: rollNo ?? this.rollNo,
+      regNo: regNo ?? this.regNo,
+      srNo: srNo ?? this.srNo,
+      rfidNo: rfidNo ?? this.rfidNo,
+      admissionNo: admissionNo ?? this.admissionNo,
+      panNo: panNo ?? this.panNo,
+      schoolHouseId: schoolHouseId ?? this.schoolHouseId,
+      transportMode: transportMode ?? this.transportMode,
+      isRteStudent: isRteStudent ?? this.isRteStudent,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      gender: gender ?? this.gender,
+      fatherEmail: fatherEmail ?? this.fatherEmail,
+      motherEmail: motherEmail ?? this.motherEmail,
+      motherWphone: motherWphone ?? this.motherWphone,
+      // unchanged fields:
+      id: id,
+      uuid: uuid,
+      schoolId: schoolId,
+      photo: photo,
+      signature: signature,
+      barcodePhoto: barcodePhoto,
+      dobTimestamp: dobTimestamp,
+      schoolClassId: schoolClassId,
+      schoolSessionId: schoolSessionId,
+      schoolClassSectionId: schoolClassSectionId,
+      countryId: countryId,
+      stateId: stateId,
+      cityId: cityId,
       loginId: loginId,
-      createdAt: createdAt, updatedAt: updatedAt, deletedAt: deletedAt,
-      fatherEmail: fatherEmail,
-      fatherPhoto: fatherPhoto, fatherSignature: fatherSignature,
-      motherEmail: motherEmail,
-      motherWphone: motherWphone, motherPhoto: motherPhoto, motherSignature: motherSignature,
-      relation: relation, missingFields: missingFields, guardianName: guardianName,
-      guardianEmail: guardianEmail, guardianPhone: guardianPhone,
-      guardianWhatsappPhone: guardianWhatsappPhone, guardianPhoto: guardianPhoto,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      deletedAt: deletedAt,
+      fatherPhoto: fatherPhoto,
+      fatherSignature: fatherSignature,
+      motherPhoto: motherPhoto,
+      motherSignature: motherSignature,
+      relation: relation,
+      missingFields: missingFields,
+      guardianName: guardianName,
+      guardianEmail: guardianEmail,
+      guardianPhone: guardianPhone,
+      guardianWhatsappPhone: guardianWhatsappPhone,
+      guardianPhoto: guardianPhoto,
       guardianSignature: guardianSignature,
-      isRteStudent: isRteStudent,
-      pdfProfilePhotoUrl: pdfProfilePhotoUrl, signatureUrl: signatureUrl,
-      fatherPhotoUrl: fatherPhotoUrl, fatherSignatureUrl: fatherSignatureUrl,
-      motherPhotoUrl: motherPhotoUrl, motherSignatureUrl: motherSignatureUrl,
-      session: session, datumClass: datumClass, house: house, section: section,
+      pdfProfilePhotoUrl: pdfProfilePhotoUrl,
+      signatureUrl: signatureUrl,
+      fatherPhotoUrl: fatherPhotoUrl,
+      fatherSignatureUrl: fatherSignatureUrl,
+      motherPhotoUrl: motherPhotoUrl,
+      motherSignatureUrl: motherSignatureUrl,
+      session: session,
+      datumClass: datumClass,
+      house: house,
+      section: section,
     );
   }
-  factory StudentDetailsData.fromJson(Map<String, dynamic> json) => StudentDetailsData(
-    id: json["id"],
-    uuid: json["uuid"],
-    schoolId: json["school_id"],
-    uidNo: json["uid_no"],
-    srNo: json["sr_no"],
-    panNo: json["pan_no"],
-    name: json["name"],
-    email: json["email"],
-    phone: json["phone"],
-    whatsappPhone: json["whatsapp_phone"],
-    landLineNo: json["land_line_no"],
-    photo: json["photo"],
-    signature: json["signature"],
-    barcodePhoto: json["barcode_photo"],
-    dob: json["dob"],
-    dobTimestamp: json["dob_timestamp"],
-    gender: json["gender"],
-    bloodGroup: json["blood_group"],
-    schoolClassId: json["school_class_id"],
-    schoolHouseId: json["school_house_id"],
-    schoolSessionId: json["school_session_id"],
-    schoolClassSectionId: json["school_class_section_id"],
-    transportMode: json["transport_mode"],
-    regNo: json["reg_no"],
-    rollNo: json["roll_no"],
-    aadharNo: json["aadhar_no"],
-    admissionNo: json["admission_no"],
-    rfidNo: json["rfid_no"],
-    countryId: json["country_id"],
-    stateId: json["state_id"],
-    cityId: json["city_id"],
-    address: json["address"],
-    pincode: json["pincode"],
-    loginId: json["login_id"],
-    status: json["status"],
-    createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-    updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
-    deletedAt: json["deleted_at"],
-    fatherName: json["father_name"],
-    fatherEmail: json["father_email"],
-    fatherPhone: json["father_phone"],
-    fatherWphone: json["father_wphone"],
-    fatherPhoto: json["father_photo"],
-    fatherSignature: json["father_signature"],
-    motherName: json["mother_name"],
-    motherEmail: json["mother_email"],
-    motherPhone: json["mother_phone"],
-    motherWphone: json["mother_wphone"],
-    motherPhoto: json["mother_photo"],
-    motherSignature: json["mother_signature"],
-    relation: json["relation"],
-    guardianName: json["guardian_name"],
-    guardianEmail: json["guardian_email"],
-    guardianPhone: json["guardian_phone"],
-    guardianWhatsappPhone: json["guardian_whatsapp_phone"],
-    guardianPhoto: json["guardian_photo"],
-    guardianSignature: json["guardian_signature"],
-    studentNicId: json["student_nic_id"],
-    caste: json["caste"],
-    isRteStudent: json["is_rte_student"],
-    religion: json["religion"],
-    missingFields: json["missing_fields"] == null ? [] : List<String>.from(json["missing_fields"]),
-    profilePhotoUrl: json["profile_photo_url"],
-    pdfProfilePhotoUrl: json["pdf_profile_photo_url"],
-    signatureUrl: json["signature_url"],
-    fatherPhotoUrl: json["father_photo_url"],
-    fatherSignatureUrl: json["father_signature_url"],
-    motherPhotoUrl: json["mother_photo_url"],
-    motherSignatureUrl: json["mother_signature_url"],
-    session: json["session"] == null ? null : Session.fromJson(json["session"]),
-    datumClass: json["class"] == null ? null : Class.fromJson(json["class"]),
-    house: json["house"],
-    section: json["section"] == null ? null : Section.fromJson(json["section"]),
-  );
+
+  factory StudentDetailsData.fromJson(Map<String, dynamic> json) =>
+      StudentDetailsData(
+        id: json["id"],
+        uuid: json["uuid"],
+        schoolId: json["school_id"],
+        uidNo: json["uid_no"],
+        srNo: json["sr_no"],
+        panNo: json["pan_no"],
+        name: json["name"],
+        email: json["email"],
+        phone: json["phone"],
+        whatsappPhone: json["whatsapp_phone"],
+        landLineNo: json["land_line_no"],
+        photo: json["photo"],
+        signature: json["signature"],
+        barcodePhoto: json["barcode_photo"],
+        dob: json["dob"],
+        dobTimestamp: json["dob_timestamp"],
+        gender: json["gender"],
+        bloodGroup: json["blood_group"],
+        schoolClassId: json["school_class_id"] is int ? json["school_class_id"] : int.tryParse(json["school_class_id"]?.toString() ?? ''),
+        schoolHouseId: json["school_house_id"],
+        schoolSessionId: json["school_session_id"] is int ? json["school_session_id"] : int.tryParse(json["school_session_id"]?.toString() ?? ''),
+        schoolClassSectionId: json["school_class_section_id"] is int ? json["school_class_section_id"] : int.tryParse(json["school_class_section_id"]?.toString() ?? ''),
+        transportMode: json["transport_mode"],
+        regNo: json["reg_no"],
+        rollNo: json["roll_no"],
+        aadharNo: json["aadhar_no"],
+        admissionNo: json["admission_no"],
+        rfidNo: json["rfid_no"],
+        countryId: json["country_id"],
+        stateId: json["state_id"],
+        cityId: json["city_id"],
+        address: json["address"],
+        pincode: json["pincode"],
+        loginId: json["login_id"],
+        status: json["status"],
+        createdAt: json["created_at"] == null
+            ? null
+            : DateTime.parse(json["created_at"]),
+        updatedAt: json["updated_at"] == null
+            ? null
+            : DateTime.parse(json["updated_at"]),
+        deletedAt: json["deleted_at"],
+        fatherName: json["father_name"],
+        fatherEmail: json["father_email"],
+        fatherPhone: json["father_phone"],
+        fatherWphone: json["father_wphone"],
+        fatherPhoto: json["father_photo"],
+        fatherSignature: json["father_signature"],
+        motherName: json["mother_name"],
+        motherEmail: json["mother_email"],
+        motherPhone: json["mother_phone"],
+        motherWphone: json["mother_wphone"],
+        motherPhoto: json["mother_photo"],
+        motherSignature: json["mother_signature"],
+        relation: json["relation"],
+        guardianName: json["guardian_name"],
+        guardianEmail: json["guardian_email"],
+        guardianPhone: json["guardian_phone"],
+        guardianWhatsappPhone: json["guardian_whatsapp_phone"],
+        guardianPhoto: json["guardian_photo"],
+        guardianSignature: json["guardian_signature"],
+        studentNicId: json["student_nic_id"],
+        caste: json["caste"],
+        isRteStudent: json["is_rte_student"],
+        religion: json["religion"],
+        missingFields: json["missing_fields"] == null
+            ? []
+            : List<String>.from(json["missing_fields"]),
+        profilePhotoUrl: json["profile_photo_url"],
+        pdfProfilePhotoUrl: json["pdf_profile_photo_url"],
+        signatureUrl: json["signature_url"],
+        fatherPhotoUrl: json["father_photo_url"],
+        fatherSignatureUrl: json["father_signature_url"],
+        motherPhotoUrl: json["mother_photo_url"],
+        motherSignatureUrl: json["mother_signature_url"],
+        session:
+        json["session"] == null ? null : Session.fromJson(json["session"]),
+        datumClass:
+        json["class"] == null ? null : Class.fromJson(json["class"]),
+        house: json["house"],
+        section:
+        json["section"] == null ? null : Section.fromJson(json["section"]),
+      );
 
   Map<String, dynamic> toJson() => {
     "id": id,
@@ -518,21 +589,32 @@ class Class {
     uuid: json["uuid"],
     name: json["name"],
     nameWithprefix: json["name_withprefix"],
-    sectionsIds: json["sections_ids"] == null ? [] : List<int>.from(json["sections_ids"]!.map((x) => x)),
+    sectionsIds: json["sections_ids"] == null
+        ? []
+        : List<int>.from(json["sections_ids"]!.map((x) => x)),
     classTeachers: json["class_teachers"],
     schoolId: json["school_id"],
     classPrefixId: json["class_prefix_id"],
     status: json["status"],
     priority: json["priority"],
-    createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-    updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
+    createdAt: json["created_at"] == null
+        ? null
+        : DateTime.parse(json["created_at"]),
+    updatedAt: json["updated_at"] == null
+        ? null
+        : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
     startTime: json["start_time"],
     endTime: json["end_time"],
     sendMessageTime: json["send_message_time"],
     extra: json["extra"],
-    sections: json["sections"] == null ? [] : List<Section>.from(json["sections"]!.map((x) => Section.fromJson(x))),
-    classPrefix: json["class_prefix"] == null ? null : Section.fromJson(json["class_prefix"]),
+    sections: json["sections"] == null
+        ? []
+        : List<Section>.from(
+        json["sections"]!.map((x) => Section.fromJson(x))),
+    classPrefix: json["class_prefix"] == null
+        ? null
+        : Section.fromJson(json["class_prefix"]),
   );
 
   Map<String, dynamic> toJson() => {
@@ -540,7 +622,9 @@ class Class {
     "uuid": uuid,
     "name": name,
     "name_withprefix": nameWithprefix,
-    "sections_ids": sectionsIds == null ? [] : List<dynamic>.from(sectionsIds!.map((x) => x)),
+    "sections_ids": sectionsIds == null
+        ? []
+        : List<dynamic>.from(sectionsIds!.map((x) => x)),
     "class_teachers": classTeachers,
     "school_id": schoolId,
     "class_prefix_id": classPrefixId,
@@ -553,7 +637,9 @@ class Class {
     "end_time": endTime,
     "send_message_time": sendMessageTime,
     "extra": extra,
-    "sections": sections == null ? [] : List<dynamic>.from(sections!.map((x) => x.toJson())),
+    "sections": sections == null
+        ? []
+        : List<dynamic>.from(sections!.map((x) => x.toJson())),
     "class_prefix": classPrefix?.toJson(),
   };
 }
@@ -583,8 +669,12 @@ class Section {
     id: json["id"],
     uuid: json["uuid"],
     status: json["status"],
-    createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-    updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
+    createdAt: json["created_at"] == null
+        ? null
+        : DateTime.parse(json["created_at"]),
+    updatedAt: json["updated_at"] == null
+        ? null
+        : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
     schoolId: json["school_id"],
     name: json["name"],
@@ -602,33 +692,18 @@ class Section {
   };
 }
 
-enum SectionName {
-  A,
-  B
-}
+enum SectionName { A, B }
 
-final sectionNameValues = EnumValues({
-  "A": SectionName.A,
-  "B": SectionName.B
-});
+final sectionNameValues = EnumValues({"A": SectionName.A, "B": SectionName.B});
 
-enum Prefix {
-  ALPHA_NUMERIC
-}
+enum Prefix { ALPHA_NUMERIC }
 
-final prefixValues = EnumValues({
-  "Alpha Numeric": Prefix.ALPHA_NUMERIC
-});
+final prefixValues = EnumValues({"Alpha Numeric": Prefix.ALPHA_NUMERIC});
 
-enum NameWithprefix {
-  THE_10_TH,
-  THE_1_ST
-}
+enum NameWithprefix { THE_10_TH, THE_1_ST }
 
-final nameWithprefixValues = EnumValues({
-  "10th": NameWithprefix.THE_10_TH,
-  "1st": NameWithprefix.THE_1_ST
-});
+final nameWithprefixValues = EnumValues(
+    {"10th": NameWithprefix.THE_10_TH, "1st": NameWithprefix.THE_1_ST});
 
 class Session {
   int? id;
@@ -657,18 +732,25 @@ class Session {
     this.deletedAt,
   });
 
-
   factory Session.fromJson(Map<String, dynamic> json) => Session(
     id: json["id"],
     uuid: json["uuid"],
     schoolId: json["school_id"],
     name: json["name"],
-    sessionStart: json["session_start"] == null ? null : DateTime.parse(json["session_start"]),
-    sessionEnd: json["session_end"] == null ? null : DateTime.parse(json["session_end"]),
+    sessionStart: json["session_start"] == null
+        ? null
+        : DateTime.parse(json["session_start"]),
+    sessionEnd: json["session_end"] == null
+        ? null
+        : DateTime.parse(json["session_end"]),
     status: json["status"],
     isSubjectWiseAttendence: json["is_subject_wise_attendence"],
-    createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-    updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
+    createdAt: json["created_at"] == null
+        ? null
+        : DateTime.parse(json["created_at"]),
+    updatedAt: json["updated_at"] == null
+        ? null
+        : DateTime.parse(json["updated_at"]),
     deletedAt: json["deleted_at"],
   );
 
@@ -686,7 +768,6 @@ class Session {
     "deleted_at": deletedAt,
   };
 }
-
 
 class Link {
   String? url;
@@ -734,7 +815,10 @@ class Filters {
   });
 
   factory Filters.fromJson(Map<String, dynamic> json) => Filters(
-    classOptions: json["class_options"] == null ? [] : List<ClassOption>.from(json["class_options"]!.map((x) => ClassOption.fromJson(x))),
+    classOptions: json["class_options"] == null
+        ? []
+        : List<ClassOption>.from(
+        json["class_options"]!.map((x) => ClassOption.fromJson(x))),
     search: json["search"],
     status: json["status"],
     gender: json["gender"],
@@ -743,7 +827,9 @@ class Filters {
   );
 
   Map<String, dynamic> toJson() => {
-    "class_options": classOptions == null ? [] : List<dynamic>.from(classOptions!.map((x) => x.toJson())),
+    "class_options": classOptions == null
+        ? []
+        : List<dynamic>.from(classOptions!.map((x) => x.toJson())),
     "search": search,
     "status": status,
     "gender": gender,

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -28,20 +29,24 @@ class _ProfileSettingState extends State<ProfileSetting> {
   late LoginCubit loginCubit;
   final formkey = GlobalKey<FormState>();
   late BuildContext buildContext;
+
   initCubit() {
     loginCubit = context.read<LoginCubit>();
   }
 
   @override
   void initState() {
-    // TODO: implement initState
     initCubit();
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CommonAppBar(title: 'Profile Setting',backgroundColor: Colors.white,),
+      appBar: CommonAppBar(
+        title: 'Profile Setting',
+        backgroundColor: Colors.white,
+      ),
       body: BlocListener<LoginCubit, LoginState>(
         listener: (context, state) {
           if (state is LoginLoading) {
@@ -81,7 +86,6 @@ class _ProfileSettingState extends State<ProfileSetting> {
               Icons.done,
               Colors.green,
             );
-
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
           } else if (state is LoginFailed) {
             Navigator.of(context).pop();
@@ -90,7 +94,6 @@ class _ProfileSettingState extends State<ProfileSetting> {
               Icons.warning,
               Colors.red,
             );
-
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
           } else if (state is LoginOnHold) {
             Navigator.of(context).pop();
@@ -99,7 +102,6 @@ class _ProfileSettingState extends State<ProfileSetting> {
               Icons.warning,
               Colors.red,
             );
-
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
           } else if (state is LoginTimeout) {
             Navigator.of(context).pop();
@@ -108,7 +110,6 @@ class _ProfileSettingState extends State<ProfileSetting> {
               Icons.warning,
               Colors.red,
             );
-
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
           } else if (state is LoginInternetError) {
             Navigator.of(context).pop();
@@ -117,20 +118,17 @@ class _ProfileSettingState extends State<ProfileSetting> {
               Icons.wifi,
               Colors.red,
             );
-
             ScaffoldMessenger.of(context).showSnackBar(_snackBar);
           }
         },
         child: Column(
           children: [
-
             _profileHeader(),
             const Divider(height: 1),
             Expanded(child: _menuSection(context)),
           ],
         ),
-      )
-      ,
+      ),
     );
   }
 
@@ -138,7 +136,6 @@ class _ProfileSettingState extends State<ProfileSetting> {
   Widget _profileHeader() {
     return BlocBuilder<HomeCubit, HomeState>(
       builder: (context, state) {
-
         /// 🔄 LOADING
         if (state.loading) {
           return const ProfileHeaderShimmer();
@@ -146,30 +143,54 @@ class _ProfileSettingState extends State<ProfileSetting> {
 
         /// ✅ SUCCESS
         else if (state.dashboard != null) {
-          final data = state.user!.user;
+          final data = state.user?.user;
+          final imageUrl = data?.profilePhotoUrl ?? '';
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Column(
               children: [
-                SizedBox(height: 40,),
-                 CircleAvatar(
-                  radius: 60,
-                  backgroundImage: NetworkImage(
-                    data!.profilePhotoUrl ?? '',
+                const SizedBox(height: 40),
+                // ✅ ValueKey add kiya — URL change hone par cache bypass hoga
+                CachedNetworkImage(
+                  key: ValueKey(imageUrl),
+                  imageUrl: imageUrl,
+                  imageBuilder: (context, imageProvider) => CircleAvatar(
+                    radius: 60,
+                    backgroundImage: imageProvider,
+                  ),
+                  placeholder: (context, url) => CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Colors.grey.shade200,
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  errorWidget: (context, url, error) => CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Colors.grey.shade200,
+                    child: const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  data!.name ?? '',
-                  style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                  data?.name ?? '',
+                  style: MyStyles.boldText(
+                    size: 16,
+                    color: AppTheme.black_Color,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  data!.email ?? '',
-                  style: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+                  data?.email ?? '',
+                  style: MyStyles.regularText(
+                    size: 14,
+                    color: AppTheme.graySubTitleColor,
+                  ),
                 ),
-                SizedBox(height: 40,),
+                const SizedBox(height: 40),
               ],
             ),
           );
@@ -182,8 +203,7 @@ class _ProfileSettingState extends State<ProfileSetting> {
           );
         }
       },
-    )
-      ;
+    );
   }
 
   // 🔹 SIMPLE MENU
@@ -195,7 +215,7 @@ class _ProfileSettingState extends State<ProfileSetting> {
             context: context,
             page: const EditProfilePage(),
           );
-          // If profile was updated, refresh home data
+          // ✅ Profile update hone par HomeCubit refresh karo
           if (result == true && mounted) {
             context.read<HomeCubit>().loadHomeData();
           }
@@ -203,29 +223,50 @@ class _ProfileSettingState extends State<ProfileSetting> {
         _divider(),
         _menuItem("Privacy & Policy", Icons.privacy_tip, () {
           navigateWithTransition(
-              context: context,
-              page: WebViewPage(url: 'https://idmitra.com/privacy-policy',title: 'Privacy & Policy',));
+            context: context,
+            page: WebViewPage(
+              url: 'https://idmitra.com/privacy-policy',
+              title: 'Privacy & Policy',
+            ),
+          );
         }),
         _divider(),
         _menuItem("Terms & Conditions", Icons.description, () {
           navigateWithTransition(
-              context: context,
-              page: WebViewPage(url: 'https://idmitra.com/term-and-condition',title: 'Terms & Conditions',));
+            context: context,
+            page: WebViewPage(
+              url: 'https://idmitra.com/term-and-condition',
+              title: 'Terms & Conditions',
+            ),
+          );
         }),
         _divider(),
-        _menuItem("Logout", Icons.logout, () {
-          LogoutBottomDilog(buildContext: context,button: (){
-            loginCubit.constLogoutFun();
-          },title: 'Logout ?',desc: 'Are You Sure You Want to Logout');
-
-        }, isLogout: true),
+        _menuItem(
+          "Logout",
+          Icons.logout,
+              () {
+            LogoutBottomDilog(
+              buildContext: context,
+              button: () {
+                loginCubit.constLogoutFun();
+              },
+              title: 'Logout ?',
+              desc: 'Are You Sure You Want to Logout',
+            );
+          },
+          isLogout: true,
+        ),
       ],
     );
   }
 
   // 🔹 MENU ITEM
-  Widget _menuItem(String title, IconData icon, VoidCallback onTap,
-      {bool isLogout = false}) {
+  Widget _menuItem(
+      String title,
+      IconData icon,
+      VoidCallback onTap, {
+        bool isLogout = false,
+      }) {
     return ListTile(
       leading: Icon(icon, color: isLogout ? Colors.red : Colors.black),
       title: Text(

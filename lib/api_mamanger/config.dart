@@ -5,6 +5,13 @@ class Config {
   static String baseUrl = proBaseUrl;
   // Base URL without /api/ suffix (for school panel routes)
   static String schoolBaseUrl = "https://idmitra.com/";
+
+  /// Safely joins baseUrl + route, removing any accidental double slashes
+  static String url(String route) {
+    final base = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    final path = route.startsWith('/') ? route.substring(1) : route;
+    return '$base$path';
+  }
 }
 
 class Routes {
@@ -33,21 +40,21 @@ class Routes {
   static String getStudentFormFields(String schoolId) => "auth/partner/school/$schoolId/student-form-fields";
   static String getSchoolFormFields(String schoolId) => "auth/school/$schoolId/form-fields";
   static String getStaffFormFields(String schoolId, {bool isPartner = false}) =>
-      isPartner ? "auth/partner/school/$schoolId/form-fields/staff" : "auth/school/$schoolId/form-fields/staff";
+      "auth/school/$schoolId/form-fields/staff";
   static String getStaffRoles(String schoolId, {bool isPartner = false}) =>
       isPartner
           ? "auth/partner/school/$schoolId/staff/roles/list"
           : "auth/school/$schoolId/staff/roles/list";
   static String addStaff(String schoolId, {bool isPartner = false}) =>
-      isPartner ? "auth/partner/school/$schoolId/staff" : "auth/school/$schoolId/staff";
+      "auth/school/$schoolId/staff";
   static String getStaffList(String schoolId, {int page = 1, String search = '', bool isPartner = false}) {
     final base = "auth/school/$schoolId/staff?page=$page";
     return search.isNotEmpty ? "$base&search=$search" : base;
   }
   static String getStaffDetail(String schoolId, String uuid, {bool isPartner = false}) =>
-      isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
+      "auth/school/$schoolId/staff/$uuid";
   static String updateStaff(String schoolId, String uuid, {bool isPartner = false}) =>
-      isPartner ? "auth/partner/school/$schoolId/staff/$uuid" : "auth/school/$schoolId/staff/$uuid";
+      "auth/school/$schoolId/staff/$uuid";
   static String deleteStaff(String schoolId, String uuid) =>
       "auth/school/$schoolId/staff/$uuid";
   static String changeStaffPassword(String schoolId, String uuid) =>
