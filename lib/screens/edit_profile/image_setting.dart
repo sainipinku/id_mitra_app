@@ -96,7 +96,7 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
       "gradient_end_color": gradientEndController.text,
       "gradient_direction": selectedGradientDirection ?? "to right",
     };
-
+   print('setting body----$body');
     context.read<ImageSettingsCubit>().saveImageSettings(
           schoolId: schoolId,
           body: body,

@@ -33,51 +33,54 @@ class StudentsCubit extends Cubit<StudentsState> {
     String gender = "",
     String classId = "",
   }) async {
-
-    // 🔴 Prevent multiple calls
     if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
 
     int currentPage = isLoadMore ? state.page : 1;
 
-    // 🔥 RESET LIST ON SEARCH
     if (!isLoadMore) {
       emit(state.copyWith(
         loading: true,
         page: 1,
-        studentsList: [],
         hasMore: true,
+        // studentsList empty mat karo
       ));
     } else {
       emit(state.copyWith(isPaginationLoading: true));
     }
 
+    try {
+      final response = await apiManager
+          .getRequest(
+        "${Config.baseUrl}auth/school/$schoolId?perPage=10&search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
+      );
 
-    final response = await apiManager.getRequest(
-      "${Config.baseUrl}auth/school/$schoolId?perPage=10&search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
-    );
+      final jsonData = jsonDecode(response.body);
 
-    final jsonData = jsonDecode(response.body);
+      List list = jsonData["data"]?["data"] ?? [];
 
-    List list = jsonData["data"]?["data"] ?? [];
+      List<StudentDetailsData> newList =
+      list.map((e) => StudentDetailsData.fromJson(e)).toList();
 
-    List<StudentDetailsData> newList =
-    list.map((e) => StudentDetailsData.fromJson(e)).toList();
+      final total = jsonData["data"]["total"] ?? 0;
 
-    final total = jsonData["data"]["total"] ?? 0;
+      List<StudentDetailsData> updatedList = isLoadMore
+          ? [...state.studentsList, ...newList]
+          : newList;
 
-    List<StudentDetailsData> updatedList = isLoadMore
-        ? [...state.studentsList, ...newList]
-        : newList;
-
-    bool hasMore = updatedList.length < total;
-
-    emit(state.copyWith(
-      loading: false,
-      isPaginationLoading: false,
-      studentsList: updatedList,
-      page: currentPage + 1,
-      hasMore: hasMore,
-    ));
+      emit(state.copyWith(
+        loading: false,
+        isPaginationLoading: false,
+        studentsList: updatedList,
+        page: currentPage + 1,
+        hasMore: updatedList.length < total,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        loading: false,
+        isPaginationLoading: false,
+      ));
+      debugPrint("Fetch Error: $e");
+    }
   }
 
   void prependStudent(StudentDetailsData student) {
