@@ -46,6 +46,7 @@ const List<String> _kBloodGroupOptions = [
   'O-',
 ];
 const List<String> _kRteOptions = ['-Select-', 'Yes', 'No'];
+const List<String> _kSectionOptions = ['A', 'B', 'C', 'D'];
 
 class AddStudentFormPage extends StatefulWidget {
   final String schoolId;
@@ -131,6 +132,8 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
     // 1. Required fields check - only for fields that exist in the form
     for (final f in allFields) {
       if (!f.required) continue;
+      // Edit mode mein class_section required nahi hoga
+      if (f.name == 'class_section' && widget.editStudent != null) continue;
 
       if (f.type == 'select') {
         // Skip validation if the dropdown has no options to choose from
@@ -186,8 +189,8 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           (c) => c.id == selectedClassId,
           orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
         );
-        return (selectedClass?.sections ?? []).isEmpty &&
-            (selectedClass?.sectionsIds ?? []).isEmpty;
+        // Static A,B,C,D options hamesha available hain
+        return false;
       default:
         return false;
     }
@@ -494,26 +497,39 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
   }
 
   Widget _sectionDropdown(List<SectionOption> sections) {
-    final List<SectionOption> opts = sections.isNotEmpty
-        ? sections
-        : [
-            'A',
-            'B',
-            'C',
-            'D',
-            'E',
-          ].map((n) => SectionOption(id: n.codeUnitAt(0), name: n)).toList();
-
     final val = (_selectVal['class_section'] as int?);
-    final selected = (val != null && opts.any((s) => s.id == val))
-        ? opts.firstWhere((s) => s.id == val)
-        : null;
+    SectionOption? selected;
+    if (val != null) {
+      if (sections.any((s) => s.id == val)) {
+        selected = sections.firstWhere((s) => s.id == val);
+      } else {
+        // Edit mode: section id set hai lekin sections list abhi load nahi hui
+        // Ek temporary item banao taaki dropdown blank na dikhe
+        selected = SectionOption(id: val, name: 'Section $val');
+        if (!sections.contains(selected)) {
+          sections = [selected, ...sections];
+        }
+      }
+    }
     return Dropdown<SectionOption>(
       value: selected,
-      items: opts,
-      hintText: 'Select Section',
+      items: sections,
+      hintText: sections.isEmpty ? 'No sections available' : 'Select Section',
       onChange: (v) => setState(() => _selectVal['class_section'] = v?.id),
       displayText: (_, o) => o.name,
+      showClearButton: false,
+    );
+  }
+
+  Widget _staticSectionDropdown() {
+    final val = (_selectVal['class_section'] as String?);
+    final selected = (val != null && _kSectionOptions.contains(val)) ? val : null;
+    return Dropdown<String>(
+      value: selected,
+      items: _kSectionOptions,
+      hintText: 'Select Section',
+      onChange: (v) => setState(() => _selectVal['class_section'] = v),
+      displayText: (_, o) => o,
       showClearButton: false,
     );
   }
@@ -813,6 +829,16 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           ],
         );
       default:
+        // date_of_birth field — apply dot formatter regardless of type value from API
+        if (f.name == 'date_of_birth' || f.name == 'dob') {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _label(f.label, required: f.required),
+              _dateField(f.name, 'DD.MM.YYYY'),
+            ],
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -846,6 +872,9 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
         return _stringDropdown(name, _kRteOptions);
       case 'class_section':
         final selectedClassId = (_selectVal['class'] as int?);
+        if (selectedClassId == null) {
+          return _loadingTile('Select a class first');
+        }
         final selectedClass = data?.classes.firstWhere(
           (c) => c.id == selectedClassId,
           orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
@@ -857,6 +886,10 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           sections = selectedClass!.sectionsIds
               .map((id) => SectionOption(id: id, name: 'Section $id'))
               .toList();
+        }
+        // Agar API se sections nahi aaye to static A, B, C, D show karo
+        if (sections.isEmpty) {
+          return _staticSectionDropdown();
         }
         return _sectionDropdown(sections);
       default:

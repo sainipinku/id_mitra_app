@@ -11,6 +11,7 @@ import 'package:idmitra/components/app_theme.dart';
 
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/screens/profile_setting/profile_setting.dart';
@@ -181,7 +182,7 @@ PreferredSizeWidget dashboardAppBar(BuildContext context) {
 
         /// ✅ SUCCESS
         else if (state.dashboard != null) {
-          final data = state.user!.user;
+          final data = state.user?.user;
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -189,17 +190,25 @@ PreferredSizeWidget dashboardAppBar(BuildContext context) {
               children: [
 
                 /// Profile Image
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage: (data?.profilePhotoUrl != null &&
-                      data!.profilePhotoUrl!.isNotEmpty)
-                      ? NetworkImage(data.profilePhotoUrl!)
-                      : null,
-                  child: (data?.profilePhotoUrl == null ||
-                      data!.profilePhotoUrl!.isEmpty)
-                      ? Icon(Icons.person, color: Colors.grey)
-                      : null,
+                CachedNetworkImage(
+                  imageUrl: data?.profilePhotoUrl ?? '',
+                  imageBuilder: (context, imageProvider) => CircleAvatar(
+                    radius: 20,
+                    backgroundImage: imageProvider,
+                  ),
+                  placeholder: (context, url) => CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.grey.shade200,
+                    child: const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.grey.shade200,
+                    child: const Icon(Icons.person, color: Colors.grey),
+                  ),
                 ),
 
                 const SizedBox(width: 12),
@@ -210,7 +219,7 @@ PreferredSizeWidget dashboardAppBar(BuildContext context) {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        data!.name ?? '',
+                        data?.name ?? '',
                         style: MyStyles.boldText(size: 20, color: AppTheme.black_Color),
                       ),
                       Text(

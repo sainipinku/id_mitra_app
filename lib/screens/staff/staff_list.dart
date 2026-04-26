@@ -141,7 +141,7 @@ class _StaffListBodyState extends State<_StaffListBody> {
       context,
       MaterialPageRoute(
         builder: (_) => AddStaffFormPage(
-          editStudent: null,
+          editStaff: null,
           schoolId: _schoolId,
         ),
       ),

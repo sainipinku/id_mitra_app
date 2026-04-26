@@ -349,6 +349,10 @@ Response: ${response.body}
       var response = await request.send();
       var responseBody = await response.stream.bytesToString();
 
+      print("multipartApiCall URL: $url");
+      print("multipartApiCall Status: ${response.statusCode}");
+      print("multipartApiCall Response: $responseBody");
+
       var jsonResponse = json.decode(responseBody);
 
       /// SUCCESS
@@ -511,7 +515,6 @@ Response: ${response.body}
 
       return http.Response.fromStream(response);
     } catch (error) {
-      // Handle errors
 
       return http.Response('Error sending request', 500);
     }

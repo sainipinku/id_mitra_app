@@ -13,6 +13,9 @@ class UserLocal {
     prefs.setString("profileImage", user.profilePhotoUrl ?? "");
     prefs.setString("userId", user.id.toString() ?? "");
     prefs.setString("designation", user.designation ?? "");
+    if (user.schoolId != null) {
+      prefs.setString("schoolId", user.schoolId.toString());
+    }
   }
 
   static Future saveSchool({required String schoolId, required String schoolName}) async {
@@ -40,6 +43,7 @@ class UserLocal {
       "gender": prefs.getString("gender"),
       "profileImage": prefs.getString("profileImage"),
       "userId": prefs.getString("userId"),
+      "designation": prefs.getString("designation"),
     };
   }
 

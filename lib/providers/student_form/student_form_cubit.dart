@@ -213,6 +213,61 @@ List<StudentFormField> get _masterAvailableFields => _kAllAvailableFields
     .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
     .toList();
 
+// Core fields jo hamesha form mein hone chahiye
+const List<Map<String, dynamic>> _kCoreFields = [
+  {
+    'name': 'student_name',
+    'label': 'Student Name',
+    'type': 'text',
+    'group': 'student',
+    'group_label': 'Personal Details',
+    'required': true,
+    'order': 0,
+  },
+  {
+    'name': 'session',
+    'label': 'Session',
+    'type': 'select',
+    'group': 'school',
+    'group_label': 'Academic Details',
+    'required': false,
+    'order': 1,
+  },
+  {
+    'name': 'class',
+    'label': 'Class',
+    'type': 'select',
+    'group': 'school',
+    'group_label': 'Academic Details',
+    'required': false,
+    'order': 2,
+  },
+  {
+    'name': 'class_section',
+    'label': 'Class Section',
+    'type': 'select',
+    'group': 'school',
+    'group_label': 'Academic Details',
+    'required': false,
+    'order': 3,
+  },
+];
+
+/// API se aayi fields mein core fields ensure karo
+List<StudentFormField> _ensureCoreFields(List<StudentFormField> fields) {
+  final result = List<StudentFormField>.from(fields);
+  for (final core in _kCoreFields) {
+    final name = core['name'] as String;
+    if (!result.any((f) => f.name == name)) {
+      result.insert(
+        0,
+        StudentFormField.fromJson(Map<String, dynamic>.from(core)),
+      );
+    }
+  }
+  return result;
+}
+
 class StudentFormCubit extends Cubit<StudentFormState> {
   StudentFormCubit() : super(StudentFormState());
 

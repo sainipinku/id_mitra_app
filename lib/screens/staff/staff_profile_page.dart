@@ -209,7 +209,7 @@ class _StaffProfileBodyState extends State<_StaffProfileBody> {
       context,
       MaterialPageRoute(
         builder: (_) => AddStaffFormPage(
-          editStudent: staff,
+          editStaff: staff,
           schoolId: widget.schoolId,
         ),
       ),

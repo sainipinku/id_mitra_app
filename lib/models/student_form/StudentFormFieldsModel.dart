@@ -14,21 +14,22 @@ class StudentFormFieldsModel {
     if (json.containsKey('props')) {
       school = json["props"]?["school"] ?? {};
     } else if (json.containsKey('data')) {
-      // Direct API response
       school = json["data"] ?? {};
     } else {
       school = json;
     }
 
-    final List current   = school["student_form_fields"] ?? [];
+    final List current = school["student_form_fields"] ?? [];
     final List available = school["available_student_form_fields"] ?? [];
 
     return StudentFormFieldsModel(
       schoolName: school["name"] ?? '',
-      studentFormFields:
-          current.map((e) => StudentFormField.fromJson(e)).toList(),
-      availableStudentFormFields:
-          available.map((e) => StudentFormField.fromJson(e)).toList(),
+      studentFormFields: current
+          .map((e) => StudentFormField.fromJson(e))
+          .toList(),
+      availableStudentFormFields: available
+          .map((e) => StudentFormField.fromJson(e))
+          .toList(),
     );
   }
 }
@@ -54,23 +55,23 @@ class StudentFormField {
 
   factory StudentFormField.fromJson(Map<String, dynamic> json) {
     return StudentFormField(
-      name:       json["name"]        ?? '',
-      label:      json["label"]       ?? '',
-      group:      json["group"]       ?? '',
+      name: json["name"] ?? '',
+      label: json["label"] ?? '',
+      group: json["group"] ?? '',
       groupLabel: json["group_label"] ?? '',
-      type:       json["type"]        ?? 'text',
-      required:   json["required"]    ?? false,
-      order:      json["order"]       ?? 0,
+      type: json["type"] ?? 'text',
+      required: json["required"] ?? false,
+      order: json["order"] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    "name":        name,
-    "label":       label,
-    "group":       group,
+    "name": name,
+    "label": label,
+    "group": group,
     "group_label": groupLabel,
-    "type":        type,
-    "required":    required,
-    "order":       order,
+    "type": type,
+    "required": required,
+    "order": order,
   };
 }

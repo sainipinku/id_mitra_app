@@ -110,6 +110,7 @@ class User {
   String? designation;
   String? sig;
   Map<String, dynamic>? school;
+  int? schoolId;
 
   User({
     this.id,
@@ -166,6 +167,7 @@ class User {
     this.designation,
     this.sig,
     this.school,
+    this.schoolId,
   });
 
   User copyWith({
@@ -328,6 +330,7 @@ class User {
     designation: json["designation"],
     sig: json["sig"],
     school: json["school"] == null ? null : Map<String, dynamic>.from(json["school"]),
+    schoolId: json["school_id"],
   );
 
   Map<String, dynamic> toJson() => {
