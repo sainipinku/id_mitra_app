@@ -62,8 +62,15 @@ class OrdersState {
 }
 
 class OrderClass {
-  final int id;
+  final int classId;
+  final List<int> sectionIds;
   final String name;
   final String? nameWithprefix;
-  const OrderClass(this.id, this.name, this.nameWithprefix);
+
+  const OrderClass({
+    required this.classId,
+    required this.sectionIds,
+    required this.name,
+    this.nameWithprefix,
+  });
 }

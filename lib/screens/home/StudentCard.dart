@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_exif_rotation/flutter_exif_rotation.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -34,13 +35,22 @@ class _StudentCardState extends State<StudentCard> {
   bool isUploading = false;
 
   /// 📸 Camera — no crop, direct upload
+
+  /// 📸 Camera — fix rotation then direct upload
   Future<void> _fromCamera() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 100,
+    );
+
     if (pickedFile != null) {
-      await _uploadImage(pickedFile.path);
+      File rotatedImage = await FlutterExifRotation.rotateImage(
+        path: pickedFile.path,
+      );
+
+      await _uploadImage(rotatedImage.path);
     }
   }
-
   /// 🖼 Gallery — crop then upload
   Future<void> _fromGallery() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -77,13 +87,19 @@ class _StudentCardState extends State<StudentCard> {
   /// ⬆️ Upload image
   Future<void> _uploadImage(String path) async {
     setState(() => isUploading = true);
+
     try {
+      File fixedImage = await FlutterExifRotation.rotateImage(path: path);
+
       var response = await ApiManager().multiRequestRoute(
-        path,
-        Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
+        fixedImage.path,
+        Config.baseUrl +
+            Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
       );
+
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
+
         setState(() {
           studentDetailsData = studentDetailsData.copyWith(
             profilePhotoUrl: jsonData['data']['profile_photo_url'],
@@ -93,6 +109,7 @@ class _StudentCardState extends State<StudentCard> {
     } catch (e) {
       debugPrint("Upload error: $e");
     }
+
     setState(() => isUploading = false);
   }
 
@@ -137,7 +154,7 @@ class _StudentCardState extends State<StudentCard> {
                 },
               ),
 
-              _divider(),
+       /*       _divider(),
 
               _pickerItem(
                 icon: 'assets/icons/remove_image.svg',
@@ -152,7 +169,7 @@ class _StudentCardState extends State<StudentCard> {
                   });
                   Navigator.pop(context);
                 },
-              ),
+              ),*/
             ],
           ),
         );

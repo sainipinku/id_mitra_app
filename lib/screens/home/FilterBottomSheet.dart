@@ -154,7 +154,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         Divider(height: 1, color: AppTheme.LineColor),
                     itemBuilder: (context, index) {
                       final cls = classes[index];
-                      final clsId = cls.id.toString();
+                      final clsId = cls.classId.toString();
                       final clsName = cls.nameWithprefix ?? cls.name;
                       final isSelected = _selectedClassIds.contains(clsId);
 
