@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
-import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/providers/image_settings/image_settings_cubit.dart';
@@ -12,7 +11,8 @@ import 'package:idmitra/utils/json_file.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 
 class ImageSettingsScreen extends StatefulWidget {
-  const ImageSettingsScreen({super.key});
+  final String schoolId;
+  const ImageSettingsScreen({super.key, required this.schoolId});
 
   @override
   State<ImageSettingsScreen> createState() => _ImageSettingsScreenState();
@@ -72,8 +72,7 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
       "#${color.value.toRadixString(16).substring(2)}";
 
   Future<void> _onSave(BuildContext context) async {
-    final school = await UserLocal.getSchool();
-    final schoolId = school["schoolId"] ?? "";
+    final schoolId = widget.schoolId;
 
     if (schoolId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

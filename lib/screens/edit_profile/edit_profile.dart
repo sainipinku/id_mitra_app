@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,13 +12,13 @@ import 'package:idmitra/components/custom_button.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/helpers/keyboard.dart';
+import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/providers/manage_profile/manage_profile_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class EditProfilePage extends StatefulWidget {
-
   const EditProfilePage({super.key});
 
   @override
@@ -31,193 +32,207 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String gender = "Male";
   String? dob;
 
-  final nameController =
-  TextEditingController(text: "John Doe");
-  final emailController =
-  TextEditingController(text: "doejohn@gmail.com");
-  final phoneController =
-  TextEditingController(text: "9876543210");
+  final nameController = TextEditingController(text: "John Doe");
+  final emailController = TextEditingController(text: "doejohn@gmail.com");
+  final phoneController = TextEditingController(text: "9876543210");
+
+  // ✅ Camera se image lo
   _FromCamera(BuildContext context) async {
     final pickedFile =
     await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
       setState(() {
-        profileImageFile = pickedFile != null ? File(pickedFile.path) : null;
-        _cropImage();
+        profileImageFile = File(pickedFile.path);
       });
+      _cropImage();
     }
   }
+
+  // ✅ Image crop karo
   Future<void> _cropImage() async {
+    if (profileImageFile == null) return;
+
     CroppedFile? croppedFile = await ImageCropper().cropImage(
       sourcePath: profileImageFile!.path,
-      aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
         AndroidUiSettings(
-            toolbarTitle: 'Cropper',
-            toolbarColor: AppTheme.MainColor,
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.ratio4x3,
-            lockAspectRatio: true,
-            hideBottomControls: true),
+          toolbarTitle: 'Cropper',
+          toolbarColor: AppTheme.MainColor,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.ratio4x3,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
         IOSUiSettings(
-            title: 'Cropper',
-            minimumAspectRatio: 1.1,
-            aspectRatioLockEnabled: true,
-            resetButtonHidden: true
-        )
+          title: 'Cropper',
+          minimumAspectRatio: 1.1,
+          aspectRatioLockEnabled: true,
+          resetButtonHidden: true,
+        ),
       ],
     );
-    if (profileImageFile != null) {
-      if (croppedFile != null) {
-        setState(() {
-          croppedProfileFile = croppedFile;
-        });
-        final path = croppedProfileFile!.path;
 
-      }
+    if (croppedFile != null) {
+      setState(() {
+        croppedProfileFile = croppedFile;
+      });
+      print("✅ Cropped image path: ${croppedProfileFile!.path}");
     }
-
   }
+
+  // ✅ Gallery se image lo
   _FromGallery(BuildContext context) async {
     final pickedFile =
     await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        profileImageFile = pickedFile != null ? File(pickedFile.path) : null;
-        _cropImage();
+        profileImageFile = File(pickedFile.path);
       });
+      _cropImage();
     }
   }
+
+  // ✅ Image picker bottom sheet
   void _showPicker(context) {
     showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: AppTheme.whiteColor,
-        shape: const RoundedRectangleBorder( // <-- SEE HERE
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(25.0),
-          ),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.whiteColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(25.0),
         ),
-        builder: (BuildContext bc) {
-          return  SingleChildScrollView(
-            child: AnimatedPadding(
-              duration: const Duration(milliseconds: 100),
-              curve: Curves.easeOut,
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: Center(
-                child: Padding(padding: const EdgeInsets.all(10),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Align(
-                        alignment: Alignment.center,
-                        child: Text('Choose Your Picher',
-                            style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
+      ),
+      builder: (BuildContext bc) {
+        return SingleChildScrollView(
+          child: AnimatedPadding(
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Choose Your Picher',
+                        style: MyStyles.boldText(
+                            size: 14, color: AppTheme.black_Color),
                       ),
-                      InkWell(
-                        onTap: (){
-                          //checkCameraPermission(context);
-                          _FromCamera(context);
-                          KeyboardUtil.hideKeyboard(context);
-                          Navigator.of(context).pop();
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children:  [
-                            SvgPicture.asset(
-                              'assets/icons/camera_single.svg',
+                    ),
+                    InkWell(
+                      onTap: () {
+                        _FromCamera(context);
+                        KeyboardUtil.hideKeyboard(context);
+                        Navigator.of(context).pop();
+                      },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          SvgPicture.asset('assets/icons/camera_single.svg'),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
+                            child: Text(
+                              'Camera',
+                              style: MyStyles.regularText(
+                                  size: 14, color: AppTheme.black_Color),
                             ),
-                            Padding(
-                              padding: EdgeInsets.only(left: 10.0),
-                              child: Text('Camera',
-                                  style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Container(
-                        height: 1,
-                        margin: const EdgeInsets.only(top: 10.0,bottom: 10.0),
-                        width: MediaQuery.of(context).size.width,
-                        color: AppTheme.cardBgSecColor,
-                      ),
-                      InkWell(
-                        onTap: () async{
-                          _FromGallery(context);
-                          // checkGalleryPermission(context);
-                          KeyboardUtil.hideKeyboard(context);
-                          Navigator.of(context).pop();
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children:  [
-                            SvgPicture.asset(
-                              'assets/icons/choose_from_gallery.svg',
+                    ),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+                      width: MediaQuery.of(context).size.width,
+                      color: AppTheme.cardBgSecColor,
+                    ),
+                    InkWell(
+                      onTap: () async {
+                        _FromGallery(context);
+                        KeyboardUtil.hideKeyboard(context);
+                        Navigator.of(context).pop();
+                      },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          SvgPicture.asset(
+                              'assets/icons/choose_from_gallery.svg'),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
+                            child: Text(
+                              "Choose From Gallery",
+                              style: MyStyles.regularText(
+                                  size: 14, color: AppTheme.black_Color),
                             ),
-                            Padding(
-                              padding: EdgeInsets.only(left: 10.0),
-                              child: Text("Choose From Gallery",
-                                  style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Container(
-                        height: 1,
-                        margin: const EdgeInsets.only(top: 10.0,bottom: 10.0),
-                        width: MediaQuery.of(context).size.width,
-                        color: AppTheme.cardBgSecColor,
-                      ),
-                      InkWell(
-                        onTap: (){
-                          setState((){
-                            Navigator.of(context).pop();
-
-                          });
-
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children:  [
-                            SvgPicture.asset(
-                              'assets/icons/remove_image.svg',
-                              allowDrawingOutsideViewBox:
-                              true,
+                    ),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+                      width: MediaQuery.of(context).size.width,
+                      color: AppTheme.cardBgSecColor,
+                    ),
+                    InkWell(
+                      onTap: () {
+                        // ✅ Remove photo — local file clear karo
+                        setState(() {
+                          croppedProfileFile = null;
+                          profileImageFile = null;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/icons/remove_image.svg',
+                            allowDrawingOutsideViewBox: true,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
+                            child: Text(
+                              'Remove Photo',
+                              style: MyStyles.regularText(
+                                  size: 14, color: AppTheme.redBtnBgColor),
                             ),
-                            Padding(
-                              padding: EdgeInsets.only(left: 10.0),
-                              child: Text('Remove Photo',
-                                  style: MyStyles.regularText(size: 14, color: AppTheme.redBtnBgColor)),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Container(
-                        height: 1,
-                        margin: const EdgeInsets.only(top: 10.0,bottom: 10.0),
-                        width: MediaQuery.of(context).size.width,
-                        color: AppTheme.cardBgSecColor,
-                      )
-
-                    ],
-                  ) ,)
-                ,
+                    ),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+                      width: MediaQuery.of(context).size.width,
+                      color: AppTheme.cardBgSecColor,
+                    ),
+                  ],
+                ),
               ),
-            )
-            ,
-          );
-        });
+            ),
+          ),
+        );
+      },
+    );
   }
-
 
   String profile = '';
   String name = '';
   String email = '';
-  getUserDetails() async{
+
+  // ✅ SharedPrefs se user details load karo
+  getUserDetails() async {
     var token = await UserLocal.getUser();
     print('user------$token');
     setState(() {
@@ -225,17 +240,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
       nameController.text = token['name'] ?? '';
       emailController.text = token['email'] ?? '';
       phoneController.text = token['phone'] ?? '';
-     // gender = token['gender'] ?? '';
       dob = token['dob'] ?? '';
     });
-
   }
+
   @override
   void initState() {
-    // TODO: implement initState
     getUserDetails();
     super.initState();
   }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,7 +272,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       body: MultiBlocListener(
         listeners: [
           BlocListener<ManageProfileCubit, ManageProfileState>(
-            listener: (context, state) {
+            listener: (context, state) async {
               if (state is ManageProfileLoading) {
                 showDialog(
                   barrierDismissible: false,
@@ -263,7 +285,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: AppTheme.btnColor),
+                            CircularProgressIndicator(
+                                color: AppTheme.btnColor),
                             SizedBox(height: 10.h),
                             const Text('Loading...'),
                           ],
@@ -272,29 +295,70 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     );
                   },
                 );
-              }else if (state is ManageProfileSuccess){
-                /// 🔥 Close ONLY dialog
+              } else if (state is ManageProfileSuccess) {
+                // ✅ Loading dialog band karo
                 Navigator.of(context, rootNavigator: true).pop();
 
-                /// 🔥 VERY IMPORTANT: return true
-                Navigator.pop(context, true);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.userProfileModel.message ?? '')),
-                );
-              }
-              else if (state is ManageProfileFailed){
-                /// 🔥 Close ONLY dialog
+                // ✅ Naya photo URL server se ya state se lo
+                final updatedPhotoUrl = state.updatedPhotoUrl ?? '';
+
+                if (updatedPhotoUrl.isNotEmpty) {
+                  // ✅ CachedNetworkImage ka purana cache evict karo
+                  await CachedNetworkImage.evictFromCache(updatedPhotoUrl);
+
+                  if (mounted) {
+                    setState(() {
+                      profile = updatedPhotoUrl; // ✅ local variable update
+                      croppedProfileFile = null; // ✅ local file clear
+                      profileImageFile = null;
+                    });
+                  }
+                }
+
+                // ✅ HomeCubit refresh karo taaki ProfileSetting screen bhi update ho
+                if (mounted) {
+                  await context.read<HomeCubit>().loadHomeData();
+                }
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        state.userProfileModel.message ??
+                            'Profile updated successfully',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  // ✅ True return karo — ProfileSetting refresh karega
+                  Navigator.pop(context, true);
+                }
+              } else if (state is ManageProfileFailed) {
+                // ✅ Loading dialog band karo
                 Navigator.of(context, rootNavigator: true).pop();
 
-                /// 🔥 VERY IMPORTANT: return true
-                Navigator.pop(context, true);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.message ?? '')),
-                );
+                // ✅ Error dikhao — page pop mat karo retry ke liye
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'Something went wrong'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } else if (state is ManageProfileOnHold) {
+                Navigator.of(context, rootNavigator: true).pop();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Account on hold. Contact owner.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
               }
             },
           ),
-
         ],
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -305,25 +369,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
               children: [
                 _profileImage(),
                 const SizedBox(height: 30),
-
                 RequiredLabel('Name'),
                 nameTextField(
                     controller: nameController, hintName: 'Enter Name'),
-
                 TextLabel('Email Address'),
                 nameTextField(controller: emailController),
-
                 TextLabel('Phone Number'),
                 phoneNumberTextField(controller: phoneController),
-
                 TextLabel('Select Gender'),
                 _genderDropdown(),
-
                 TextLabel('Select DOB'),
                 _dobPicker(),
-
-                const SizedBox(height: 80), // 👈 space for bottom button
-              ].map((e) => Padding(
+                const SizedBox(height: 80),
+              ]
+                  .map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: e,
               ))
@@ -331,8 +390,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ),
         ),
-      )
-      ,
+      ),
     );
   }
 
@@ -345,42 +403,57 @@ class _EditProfilePageState extends State<EditProfilePage> {
         child: Stack(
           alignment: Alignment.bottomCenter,
           children: [
-            croppedProfileFile != null ?
-            CircleAvatar(
+            // ✅ Pehle local cropped file dikhao, nahi to network image
+            croppedProfileFile != null
+                ? CircleAvatar(
               radius: 60,
-              backgroundImage: FileImage(File(croppedProfileFile!.path)),
+              backgroundImage:
+              FileImage(File(croppedProfileFile!.path)),
             )
-                : ClipRRect(
-              borderRadius: BorderRadius.circular(5),
-              child: Center(
-                child: FadeInImage(
-                  image: NetworkImage(profile),
-                  fit: BoxFit.fill,
-                  placeholder:
-                  const AssetImage("assets/images/defult_img.png"),
-                  imageErrorBuilder: (context, error, stackTrace) {
-                    return Image.asset("assets/images/defult_img.png");
-                  },
-                ),
+                : profile.isNotEmpty
+                ? CachedNetworkImage(
+              // ✅ ValueKey — URL change hone par widget rebuild hoga
+              key: ValueKey(profile),
+              imageUrl: profile,
+              imageBuilder: (context, imageProvider) => CircleAvatar(
+                radius: 60,
+                backgroundImage: imageProvider,
               ),
+              placeholder: (context, url) => CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.grey.shade200,
+                child: const CircularProgressIndicator(
+                    strokeWidth: 2),
+              ),
+              errorWidget: (context, url, error) => CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.grey.shade200,
+                child: const Icon(Icons.person,
+                    size: 50, color: Colors.grey),
+              ),
+            )
+                : CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.grey.shade200,
+              child: const Icon(Icons.person,
+                  size: 50, color: Colors.grey),
             ),
 
-            // Agar edit icon chahiye ho
+            // ✅ Camera edit icon
             Positioned(
               bottom: 0,
               right: 0,
               child: GestureDetector(
-                onTap: (){
+                onTap: () {
                   _showPicker(context);
                 },
                 child: CircleAvatar(
                   radius: 25,
                   backgroundColor: Colors.white,
-                  child: Icon(
+                  child: const Icon(
                     Icons.camera_alt,
                     size: 25,
                     color: Colors.black,
-
                   ),
                 ),
               ),
@@ -431,17 +504,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         fillColor: AppTheme.whiteColor,
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-
-        /// 🔲 Border
         border: appBorder(AppTheme.backBtnBgColor, 15),
-
-        /// 🔲 Enabled Border
         enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
-
-        /// 🔲 Focus Border
         focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
       ),
-
       items: ["Male", "Female", "Other"]
           .map(
             (e) => DropdownMenuItem<String>(
@@ -450,36 +516,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
       )
           .toList(),
-
       onChanged: (value) {
         setState(() => gender = value!);
       },
     );
   }
+
   OutlineInputBorder appBorder(Color color, double radius) {
     return OutlineInputBorder(
       borderSide: BorderSide(color: color),
       borderRadius: BorderRadius.circular(radius),
     );
   }
+
   // ---------------- DOB ----------------
   Widget _dobPicker() {
+    final hasDate = dob != null && dob!.isNotEmpty;
     return InkWell(
       onTap: () async {
+        DateTime? initial;
+        if (hasDate) {
+          try {
+            initial = DateFormat('dd-MM-yyyy').parse(dob!);
+          } catch (_) {}
+        }
         final selected = await showDatePicker(
           context: context,
-          initialDate: DateTime(2000),
+          initialDate: initial ?? DateTime(2000),
           firstDate: DateTime(1950),
           lastDate: DateTime.now(),
         );
-
         if (selected != null) {
-          String formattedDate = DateFormat('dd-MM-yyyy').format(selected);
-
-          setState(() {
-            dob = formattedDate; // agar DateTime bhi rakhna hai
-
-          });
+          setState(() => dob = DateFormat('dd-MM-yyyy').format(selected));
         }
       },
       child: InputDecorator(
@@ -488,19 +556,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
           fillColor: AppTheme.whiteColor,
           contentPadding:
           const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-
-          /// 🔲 Border
           border: appBorder(AppTheme.backBtnBgColor, 15),
-
-          /// 🔲 Enabled Border
           enabledBorder: appBorder(AppTheme.backBtnBgColor, 15),
-
-          /// 🔲 Focus Border
           focusedBorder: appBorder(AppTheme.backBtnBgColor, 15),
+          suffixIcon: Icon(Icons.calendar_today_outlined,
+              size: 18, color: AppTheme.graySubTitleColor),
         ),
         child: Text(
-          dob ?? "Select date",
-          style:  TextStyle(fontSize: 14,color: AppTheme.black_Color,),
+          hasDate ? dob! : 'DD-MM-YYYY',
+          style: TextStyle(
+            fontSize: 14,
+            color:
+            hasDate ? AppTheme.black_Color : AppTheme.graySubTitleColor,
+          ),
         ),
       ),
     );
@@ -523,10 +591,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               "gender": gender,
               "dob": dob ?? '',
             };
+            // ✅ Cropped image file pass karo
             final imageFile = croppedProfileFile != null
                 ? File(croppedProfileFile!.path)
                 : null;
-            context.read<ManageProfileCubit>().updateProfile(payload, imageFile);
+            context
+                .read<ManageProfileCubit>()
+                .updateProfile(payload, imageFile);
           }
         },
         isLoading: false,

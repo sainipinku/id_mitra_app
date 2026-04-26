@@ -31,27 +31,21 @@ class AddStaffCubit extends Cubit<AddStaffState> {
   }) async {
     emit(const AddStaffState(loading: true));
     try {
-      print('ADD STAFF CUBIT: schoolId = $schoolId');
-
       final token = await UserSecureStorage.fetchToken();
       final role = await UserSecureStorage.fetchRole();
       final isPartner = role == 'partner';
 
-      print('ADD STAFF CUBIT: role = $role, isPartner = $isPartner');
-
-      final url =
-          '${Config.baseUrl}${Routes.addStaff(schoolId, isPartner: isPartner)}';
-
-      print('ADD STAFF CUBIT: Full URL = $url');
+      // ✅ Config.url() use karo — double slash safe
+      final url = Config.url(Routes.addStaff(schoolId, isPartner: isPartner));
+      print('ADD STAFF URL: $url');
 
       final request = http.MultipartRequest('POST', Uri.parse(url));
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
 
-      print('REQUEST URL: ${request.url}');
-
       final body = _buildBody(schoolId, fields);
       print('SUBMIT BODY: $body');
+
       body.forEach((k, v) {
         if (v != null && v.toString().isNotEmpty) {
           request.fields[k] = v.toString();
@@ -66,21 +60,16 @@ class AddStaffCubit extends Cubit<AddStaffState> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
-
-      print('ADD STAFF RESPONSE BODY: ${response.body}');
+      print('ADD STAFF RESPONSE: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
-        emit(
-          AddStaffState(
-            success: true,
-            message: json['message'] ?? 'Staff added successfully',
-          ),
-        );
+        emit(AddStaffState(
+          success: true,
+          message: json['message'] ?? 'Staff added successfully',
+        ));
       } else {
-        final errorMsg = _parseError(response);
-        print('ADD STAFF ERROR: $errorMsg');
-        emit(AddStaffState(error: errorMsg));
+        emit(AddStaffState(error: _parseError(response)));
       }
     } catch (e) {
       print('ADD STAFF EXCEPTION: $e');
@@ -99,59 +88,67 @@ class AddStaffCubit extends Cubit<AddStaffState> {
     try {
       final token = await UserSecureStorage.fetchToken();
 
-      final url = '${Config.baseUrl}/api/auth/school/$schoolId/staff/$uuid';
+      final url = Config.url(Routes.updateStaff(schoolId, uuid));
       print('UPDATE STAFF URL: $url');
 
       final body = <String, dynamic>{};
 
-      _addIfNotEmpty(body, 'designation', fields['designation']);
-      _addIfNotEmpty(body, 'department', fields['department']);
       _addIfNotEmpty(body, 'name', fields['name']);
       _addIfNotEmpty(body, 'email', fields['email']);
       _addIfNotEmpty(body, 'phone', fields['phone']);
+      _addIfNotEmpty(body, 'designation', fields['designation']);
+      _addIfNotEmpty(body, 'department', fields['department']);
+      _addIfNotEmpty(body, 'login_id', fields['login_id']);
+      _addIfNotEmpty(body, 'whatsapp_phone',
+          fields['whatsapp'] ?? fields['whatsapp_phone']);
+      _addIfNotEmpty(body, 'father_name', fields['father_name']);
+      _addIfNotEmpty(body, 'mother_name', fields['mother_name']);
+      _addIfNotEmpty(body, 'husband_name', fields['husband_name']);
+      _addIfNotEmpty(body, 'dob', _convertDate(fields['date_of_birth']));
+      _addIfNotEmpty(body, 'date_of_joining',
+          _convertDate(fields['date_of_joining']));
+      _addIfNotEmpty(body, 'address', fields['address']);
+      _addIfNotEmpty(body, 'pincode', fields['pincode']);
+      _addIfNotEmpty(body, 'employee_id', fields['employee_id']);
+      _addIfNotEmpty(body, 'national_code', fields['national_code']);
 
-      _addIfNotEmpty(
-        body,
-        'whatsapp_phone',
-        fields['whatsapp'] ?? fields['whatsapp_phone'],
-      );
-
+      // Role — int parse karke bhejo
       final roleRaw = roleId ?? fields['role'];
       if (roleRaw != null && roleRaw.toString().isNotEmpty) {
         final roleInt = int.tryParse(roleRaw.toString());
         if (roleInt != null) body['role'] = roleInt;
       }
 
-      _addIfNotEmpty(body, 'father_name', fields['father_name']);
-      _addIfNotEmpty(body, 'mother_name', fields['mother_name']);
-      _addIfNotEmpty(body, 'husband_name', fields['husband_name']);
-      _addIfNotEmpty(body, 'dob', _convertDate(fields['date_of_birth']));
-      _addIfNotEmpty(
-        body,
-        'date_of_joining',
-        _convertDate(fields['date_of_joining']),
-      );
-      _addIfNotEmpty(body, 'address', fields['address']);
-      _addIfNotEmpty(body, 'pincode', fields['pincode']);
-      _addIfNotEmpty(body, 'employee_id', fields['employee_id']);
-      _addIfNotEmpty(body, 'national_code', fields['national_code']);
-
-      final gender = fields['gender']?.toString() ?? '';
-      if (gender.isNotEmpty && gender.toLowerCase() != '-select gender-') {
+      // Gender — placeholder skip karo
+      final gender = fields['gender']?.toString().trim() ?? '';
+      if (gender.isNotEmpty &&
+          gender.toLowerCase() != '-select gender-') {
         body['gender'] = gender.toLowerCase();
       }
 
-      final bg = fields['blood_group']?.toString() ?? '';
+      // Blood group
+      final bg = fields['blood_group']?.toString().trim() ?? '';
       if (bg.isNotEmpty && bg != 'Select Blood Group') {
         body['blood_group'] = bg;
       }
 
+      // ✅ FIX START (no removal, only improvement)
       final validContacts = emergencyContacts
-          .where((e) => e['name']!.isNotEmpty || e['phone']!.isNotEmpty)
+          .where((e) =>
+      (e['name'] ?? '').isNotEmpty ||
+          (e['phone'] ?? '').isNotEmpty)
+          .map((e) => {
+        'name': e['name'] ?? '',
+        'phone': e['phone'] ?? '',
+        'relation': e['relation'] ?? '',
+      })
           .toList();
-      if (validContacts.isNotEmpty) {
-        body['emergency_contacts'] = validContacts;
-      }
+
+      // 🔥 ALWAYS send array (important fix)
+      body['emergency_contacts'] = validContacts;
+
+      print('CONTACTS: $validContacts'); // debug
+      // ✅ FIX END
 
       print('UPDATE BODY: $body');
 
@@ -165,23 +162,20 @@ class AddStaffCubit extends Cubit<AddStaffState> {
         body: jsonEncode(body),
       );
 
-      print('UPDATE RESPONSE STATUS: ${response.statusCode}');
-      print('UPDATE RESPONSE BODY: ${response.body}');
+      print('UPDATE RESPONSE: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final staffData = json['data'] as Map<String, dynamic>?;
 
-        emit(
-          AddStaffState(
-            success: json['success'] == true,
-            message:
-                json['message']?.toString() ?? 'Staff updated successfully',
-            updatedStaff: staffData != null
-                ? StaffDetailModel.fromJson(staffData)
-                : null,
-          ),
-        );
+        emit(AddStaffState(
+          success: true,
+          message:
+          json['message']?.toString() ?? 'Staff updated successfully',
+          updatedStaff: staffData != null
+              ? StaffDetailModel.fromJson(staffData)
+              : null,
+        ));
       } else {
         emit(AddStaffState(error: _parseError(response)));
       }
@@ -191,7 +185,8 @@ class AddStaffCubit extends Cubit<AddStaffState> {
     }
   }
 
-  void _addIfNotEmpty(Map<String, dynamic> body, String key, dynamic value) {
+  void _addIfNotEmpty(
+      Map<String, dynamic> body, String key, dynamic value) {
     if (value != null && value.toString().isNotEmpty) {
       body[key] = value;
     }
@@ -219,8 +214,8 @@ class AddStaffCubit extends Cubit<AddStaffState> {
           : 'Request failed with status ${response.statusCode}';
     }
 
-    String msg =
-        json['message'] ?? 'Request failed with status ${response.statusCode}';
+    String msg = json['message'] ??
+        'Request failed with status ${response.statusCode}';
 
     final errors = json['errors'] as Map<String, dynamic>?;
     if (errors != null && errors.isNotEmpty) {
@@ -228,7 +223,7 @@ class AddStaffCubit extends Cubit<AddStaffState> {
           .expand((v) => v is List ? v : [v])
           .take(3)
           .join('\n');
-      msg = errorMessages.isNotEmpty ? errorMessages : msg;
+      if (errorMessages.isNotEmpty) msg = errorMessages;
     }
 
     if (response.statusCode == 404) {
@@ -249,9 +244,7 @@ class AddStaffCubit extends Cubit<AddStaffState> {
   }
 
   Map<String, dynamic> _buildBody(
-    String schoolId,
-    Map<String, dynamic> fields,
-  ) {
+      String schoolId, Map<String, dynamic> fields) {
     String? convertDate(String? raw) {
       if (raw == null || raw.isEmpty) return null;
       final parts = raw.split(RegExp(r'[./\-]'));
@@ -289,9 +282,7 @@ class AddStaffCubit extends Cubit<AddStaffState> {
           break;
         case 'role':
         case 'role_id':
-          if (int.tryParse(str) != null) {
-            body['role'] = str;
-          }
+          if (int.tryParse(str) != null) body['role'] = str;
           break;
         default:
           body[key] = str;

@@ -24,9 +24,9 @@ class UserDetailsPage extends StatefulWidget {
 class _UserDetailsPageState extends State<UserDetailsPage> {
   List<String> tabs = [
     "Overview",
-   // "Documents",
+    // "Documents",
     "Admin",
-   // "Activity"
+    // "Activity"
   ];
   int selectedIndex = 0;
 
@@ -68,9 +68,13 @@ class _UserDetailsContent extends StatelessWidget {
             elevation: 8,
             onSelected: (value) {
               if (value == 'image_settings') {
+                // ✅ Fix: schoolId ab sahi se pass ho raha hai
+                final schoolId = schoolDetailsModel?.id?.toString() ?? '';
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ImageSettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => ImageSettingsScreen(schoolId: schoolId),
+                  ),
                 );
               } else if (value == 'student_form') {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';

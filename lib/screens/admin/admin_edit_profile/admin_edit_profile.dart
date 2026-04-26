@@ -368,11 +368,18 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
   }
 
   Widget _dobPicker() {
+    final hasDate = dob != null && dob!.isNotEmpty;
     return InkWell(
       onTap: () async {
+        DateTime? initial;
+        if (hasDate) {
+          try {
+            initial = DateFormat('dd-MM-yyyy').parse(dob!);
+          } catch (_) {}
+        }
         final selected = await showDatePicker(
           context: context,
-          initialDate: DateTime(2000),
+          initialDate: initial ?? DateTime(2000),
           firstDate: DateTime(1950),
           lastDate: DateTime.now(),
         );
@@ -389,10 +396,15 @@ class _AdminEditProfilePageState extends State<AdminEditProfilePage> {
           border: _appBorder(AppTheme.backBtnBgColor, 15),
           enabledBorder: _appBorder(AppTheme.backBtnBgColor, 15),
           focusedBorder: _appBorder(AppTheme.backBtnBgColor, 15),
+          suffixIcon: Icon(Icons.calendar_today_outlined,
+              size: 18, color: AppTheme.graySubTitleColor),
         ),
         child: Text(
-          dob ?? "Select date",
-          style: TextStyle(fontSize: 14, color: AppTheme.black_Color),
+          hasDate ? dob! : 'DD-MM-YYYY',
+          style: TextStyle(
+            fontSize: 14,
+            color: hasDate ? AppTheme.black_Color : AppTheme.graySubTitleColor,
+          ),
         ),
       ),
     );
