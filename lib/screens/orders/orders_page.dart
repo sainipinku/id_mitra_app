@@ -400,7 +400,7 @@ class _OrdersViewState extends State<_OrdersView> {
           const DropdownMenuItem(value: '', child: Text('All Classes')),
           ...state.availableClasses.map(
             (c) => DropdownMenuItem(
-              value: c.id.toString(),
+              value: c.classId.toString(),
               child: Text(
                 c.nameWithprefix ?? c.name,
                 overflow: TextOverflow.ellipsis,

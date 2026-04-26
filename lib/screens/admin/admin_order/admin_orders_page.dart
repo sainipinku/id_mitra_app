@@ -362,7 +362,7 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
             items: [
               const DropdownMenuItem(value: '', child: Text('All Classes')),
               ...state.availableClasses.map((c) => DropdownMenuItem(
-                    value: c.id.toString(),
+                    value: c.classId.toString(),
                     child: Text(c.nameWithprefix ?? c.name, overflow: TextOverflow.ellipsis),
                   )),
             ],

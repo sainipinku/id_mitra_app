@@ -58,21 +58,64 @@ class OrdersCubit extends Cubit<OrdersState> {
 
   Future<void> fetchSchoolClasses(String schoolId) async {
     if (schoolId.isEmpty) return;
+
     emit(state.copyWith(classesLoading: true));
+
     try {
       final url = '${Config.baseUrl}auth/school/$schoolId/students/form-data';
       final response = await _api.getRequest(url);
+
       if (response == null) {
         emit(state.copyWith(classesLoading: false));
         return;
       }
+
       final json = jsonDecode(response.body);
       final data = json['data'] ?? json;
       final List rawClasses = data['classes'] ?? [];
-      final classes = rawClasses
-          .map((e) => OrderClass(e['id'] as int, e['name'] ?? '', e['name_withprefix']))
-          .toList();
-      emit(state.copyWith(availableClasses: _sortClasses(classes), classesLoading: false));
+
+      List<OrderClass> classes = [];
+
+      for (var item in rawClasses) {
+        final int classId = item['id'] ?? 0;
+
+        final String className = item['name_withprefix']?.toString() ?? item['name']?.toString() ?? '';
+
+        final List sections = item['sections'] ?? [];
+
+        List<int> ids = [];
+        String firstSectionName = '';
+
+        if (sections.isNotEmpty) {
+          ids = sections.map<int>((e) => e['id'] ?? 0).toList();
+
+          firstSectionName = sections.first['name']
+              ?.toString()
+              .replaceAll('.', '')
+              .trim() ??
+              '';
+        }
+
+        final fullName = sections.isNotEmpty
+            ? '$className (Section $firstSectionName)'
+            : className;
+
+        classes.add(
+          OrderClass(
+            classId: classId,
+            sectionIds: ids,
+            name: fullName,
+            nameWithprefix: fullName,
+          ),
+        );
+      }
+
+      emit(
+        state.copyWith(
+          availableClasses: classes,
+          classesLoading: false,
+        ),
+      );
     } catch (e) {
       print('fetchSchoolClasses error: $e');
       emit(state.copyWith(classesLoading: false));
