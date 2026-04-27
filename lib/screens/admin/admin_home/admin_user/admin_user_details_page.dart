@@ -63,7 +63,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
             icon: const Icon(Icons.settings, color: Colors.black),
             offset: const Offset(0, 45),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             elevation: 8,
             onSelected: (value) {
               if (value == 'image_settings') {
@@ -89,7 +89,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                       ..loadFromSchoolId(
                           schoolId: schoolId, schoolName: schoolName),
                     child:
-                        AdminStudentForm(schoolDetailsModel: schoolDetailsModel!),
+                    AdminStudentForm(schoolDetailsModel: schoolDetailsModel!),
                   ),
                 );
               }
@@ -148,7 +148,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppTheme.whiteColor,
                             border:
-                                Border.all(color: AppTheme.backBtnBgColor),
+                            Border.all(color: AppTheme.backBtnBgColor),
                             borderRadius: BorderRadius.circular(25),
                           ),
                         ),
@@ -176,12 +176,12 @@ class _AdminUserDetailsContent extends StatelessWidget {
                             children: [
                               Row(
                                 mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Row(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      CrossAxisAlignment.start,
                                       children: [
                                         Icon(Icons.location_on,
                                             size: 14,
@@ -205,7 +205,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                                     decoration: BoxDecoration(
                                       color: AppTheme.greenColor,
                                       borderRadius:
-                                          BorderRadius.circular(20),
+                                      BorderRadius.circular(20),
                                     ),
                                     child: Text(
                                       "ACTIVE",
@@ -250,7 +250,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                           width: 80,
                           height: 80,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.image, size: 40),
+                          const Icon(Icons.image, size: 40),
                         ),
                       ),
                     ),
@@ -301,6 +301,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                         schoolId: schoolDetailsModel?.id.toString() ?? '',
                         schoolName: schoolDetailsModel?.name ?? '',
                         totalOrderCount: schoolDetailsModel?.orderCount,
+                        isSchool: true,
                       ),
                     ),
                   ),
@@ -357,7 +358,7 @@ class _AdminUserDetailsContent extends StatelessWidget {
                     divider(),
                     const Text("Address",
                         style:
-                            TextStyle(fontSize: 12, color: Colors.grey)),
+                        TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 4),
                     Text(
                       schoolDetailsModel?.address ?? '',
@@ -405,8 +406,8 @@ class _AdminUserDetailsContent extends StatelessWidget {
 
   Widget statCard(
       {required String title,
-      required String value,
-      required VoidCallback callBtn}) {
+        required String value,
+        required VoidCallback callBtn}) {
     return Expanded(
       child: GestureDetector(
         onTap: callBtn,

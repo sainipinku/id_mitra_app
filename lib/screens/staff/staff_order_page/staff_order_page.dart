@@ -14,13 +14,13 @@ import 'package:idmitra/providers/orders/orders_state.dart';
 import 'package:idmitra/screens/admin/admin_order/admin_order_detail_page.dart';
 import 'package:idmitra/screens/admin/admin_order/admin_staff_orders_page.dart';
 
-class AdminOrdersPage extends StatelessWidget {
+class StaffOrderPage extends StatelessWidget {
   final String schoolId;
   final String schoolName;
   final int? totalOrderCount;
   final bool isSchool;
 
-  const AdminOrdersPage({
+  const StaffOrderPage({
     super.key,
     required this.schoolId,
     this.schoolName = '',
@@ -34,7 +34,7 @@ class AdminOrdersPage extends StatelessWidget {
       create: (_) => OrdersCubit()
         ..fetchOrders(schoolId: schoolId, isSchool: isSchool)
         ..fetchSchoolClasses(schoolId),
-      child: _AdminOrdersView(
+      child: _StaffOrderView(
         schoolId: schoolId,
         schoolName: schoolName,
         totalOrderCount: totalOrderCount,
@@ -44,13 +44,13 @@ class AdminOrdersPage extends StatelessWidget {
   }
 }
 
-class _AdminOrdersView extends StatefulWidget {
+class _StaffOrderView extends StatefulWidget {
   final String schoolId;
   final String schoolName;
   final int? totalOrderCount;
   final bool isSchool;
 
-  const _AdminOrdersView({
+  const _StaffOrderView({
     required this.schoolId,
     this.schoolName = '',
     this.totalOrderCount,
@@ -58,10 +58,10 @@ class _AdminOrdersView extends StatefulWidget {
   });
 
   @override
-  State<_AdminOrdersView> createState() => _AdminOrdersViewState();
+  State<_StaffOrderView> createState() => _StaffOrderViewState();
 }
 
-class _AdminOrdersViewState extends State<_AdminOrdersView> {
+class _StaffOrderViewState extends State<_StaffOrderView> {
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _dateFromCtrl = TextEditingController();
   final TextEditingController _dateToCtrl = TextEditingController();
@@ -220,34 +220,7 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
             buildWhen: (p, c) => p.total != c.total || p.loading != c.loading,
             builder: (_, state) {
               if (state.loading || state.total == 0) return const SizedBox.shrink();
-              return Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.btnColor.withOpacity(0.07),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.receipt_long_outlined, size: 14, color: AppTheme.btnColor),
-                      const SizedBox(width: 6),
-                      Text('Total Orders: ${state.total}',
-                          style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
-                      if (_hasActiveFilters) ...[
-                        const Spacer(),
-                        Text('Filtered', style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // List
-          Expanded(
+              return Expanded(
             child: BlocBuilder<OrdersCubit, OrdersState>(
               builder: (_, state) {
                 if (state.loading) {
@@ -321,7 +294,8 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                   ),
                 );
               },
-            ),
+            ));
+            }
           ),
         ],
       ),
@@ -464,10 +438,12 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
   }
 }
 
+
 class _AdminOrderCard extends StatefulWidget {
   final OrderModel order;
   final String schoolId;
   final bool isSchool;
+
   const _AdminOrderCard({required this.order, this.schoolId = '', this.isSchool = false});
 
   @override
@@ -538,11 +514,11 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   Widget build(BuildContext context) {
     final student = widget.order.student;
     final school = widget.order.school;
-
+    final isSchool = widget.order.school;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => AdminOrderDetailPage(uuid: widget.order.uuid, schoolId: widget.schoolId)),
+        MaterialPageRoute(builder: (_) => AdminOrderDetailPage(uuid: widget.order.uuid, schoolId: widget.schoolId, )),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),

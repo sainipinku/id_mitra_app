@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
@@ -165,7 +166,7 @@ class _StudentListBodyState extends State<_StudentListBody> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: widget.showAppBar
-          ? AppBar(title: const Text('Students'), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0)
+          ? CommonAppBar(title: "Student Listing")
           : null,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.btnColor,

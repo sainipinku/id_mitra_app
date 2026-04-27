@@ -18,24 +18,27 @@ class OrdersPage extends StatelessWidget {
   final String schoolId;
   final String schoolName;
   final int? totalOrderCount;
+  final bool isSchool;
   const OrdersPage({
     super.key,
     required this.schoolId,
     this.schoolName = '',
     this.totalOrderCount,
+    this.isSchool = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => OrdersCubit()
-        ..fetchOrders(schoolId: schoolId)
+        ..fetchOrders(schoolId: schoolId, isSchool: isSchool)
         ..fetchSchoolClasses(schoolId),
       child: Builder(
         builder: (_) => _OrdersView(
           schoolId: schoolId,
           schoolName: schoolName,
           totalOrderCount: totalOrderCount,
+          isSchool: isSchool,
         ),
       ),
     );
@@ -46,10 +49,12 @@ class _OrdersView extends StatefulWidget {
   final String schoolId;
   final String schoolName;
   final int? totalOrderCount;
+  final bool isSchool;
   const _OrdersView({
     required this.schoolId,
     this.schoolName = '',
     this.totalOrderCount,
+    this.isSchool = false,
   });
 
   @override
@@ -78,6 +83,7 @@ class _OrdersViewState extends State<_OrdersView> {
           status: _selectedStatus,
           classId: _selectedClass,
           schoolId: widget.schoolId,
+          isSchool: widget.isSchool,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -101,6 +107,7 @@ class _OrdersViewState extends State<_OrdersView> {
       status: _selectedStatus,
       classId: _selectedClass,
       schoolId: widget.schoolId,
+      isSchool: widget.isSchool,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -108,9 +115,9 @@ class _OrdersViewState extends State<_OrdersView> {
 
   bool get _hasActiveFilters =>
       _selectedStatus.isNotEmpty ||
-      _selectedClass.isNotEmpty ||
-      _dateFromCtrl.text.isNotEmpty ||
-      _dateToCtrl.text.isNotEmpty;
+          _selectedClass.isNotEmpty ||
+          _dateFromCtrl.text.isNotEmpty ||
+          _dateToCtrl.text.isNotEmpty;
 
   void _clearFilters() {
     setState(() {
@@ -139,7 +146,10 @@ class _OrdersViewState extends State<_OrdersView> {
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StaffOrdersPage(schoolId: widget.schoolId),
+                  builder: (_) => BlocProvider(
+                    create: (_) => OrdersCubit(),
+                    child: StaffOrdersPage(schoolId: widget.schoolId),
+                  ),
                 ),
               ),
               icon: const Icon(Icons.badge_outlined, size: 15),
@@ -316,10 +326,14 @@ class _OrdersViewState extends State<_OrdersView> {
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                     itemCount:
-                        state.ordersList.length + (state.hasMore ? 1 : 0),
+                    state.ordersList.length + (state.hasMore ? 1 : 0),
                     itemBuilder: (_, i) {
                       if (i < state.ordersList.length) {
-                        return _OrderCard(order: state.ordersList[i]);
+                        return _OrderCard(
+                          order: state.ordersList[i],
+                          schoolId: widget.schoolId,
+                          isSchool: widget.isSchool,
+                        );
                       }
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
@@ -360,17 +374,17 @@ class _OrdersViewState extends State<_OrdersView> {
       ),
       suffixIcon: _searchCtrl.text.isNotEmpty
           ? GestureDetector(
-              onTap: () {
-                _searchCtrl.clear();
-                setState(() {});
-                _resetAndFetch();
-              },
-              child: const Icon(
-                Icons.close,
-                size: 16,
-                color: AppTheme.graySubTitleColor,
-              ),
-            )
+        onTap: () {
+          _searchCtrl.clear();
+          setState(() {});
+          _resetAndFetch();
+        },
+        child: const Icon(
+          Icons.close,
+          size: 16,
+          color: AppTheme.graySubTitleColor,
+        ),
+      )
           : null,
       enabledBorder: OutlineInputBorder(
         borderSide: BorderSide(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
@@ -389,7 +403,7 @@ class _OrdersViewState extends State<_OrdersView> {
 
   Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
     buildWhen: (p, c) =>
-        p.availableClasses != c.availableClasses ||
+    p.availableClasses != c.availableClasses ||
         p.classesLoading != c.classesLoading,
     builder: (_, state) {
       return _dropdown(
@@ -399,7 +413,7 @@ class _OrdersViewState extends State<_OrdersView> {
         items: [
           const DropdownMenuItem(value: '', child: Text('All Classes')),
           ...state.availableClasses.map(
-            (c) => DropdownMenuItem(
+                (c) => DropdownMenuItem(
               value: c.classId.toString(),
               child: Text(
                 c.nameWithprefix ?? c.name,
@@ -422,10 +436,10 @@ class _OrdersViewState extends State<_OrdersView> {
     items: kOrderFilterStatuses
         .map(
           (s) => DropdownMenuItem<String>(
-            value: s.value,
-            child: Text(s.label, overflow: TextOverflow.ellipsis),
-          ),
-        )
+        value: s.value,
+        child: Text(s.label, overflow: TextOverflow.ellipsis),
+      ),
+    )
         .toList(),
     onChanged: (v) {
       setState(() => _selectedStatus = v ?? '');
@@ -454,18 +468,18 @@ class _OrdersViewState extends State<_OrdersView> {
         menuMaxHeight: 300,
         icon: loading
             ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppTheme.btnColor,
-                ),
-              )
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppTheme.btnColor,
+          ),
+        )
             : const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
-                color: AppTheme.graySubTitleColor,
-              ),
+          Icons.keyboard_arrow_down_rounded,
+          size: 18,
+          color: AppTheme.graySubTitleColor,
+        ),
         style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
         items: items,
         onChanged: onChanged,
@@ -486,17 +500,17 @@ class _OrdersViewState extends State<_OrdersView> {
         ],
         suffixIcon: ctrl.text.isNotEmpty
             ? GestureDetector(
-                onTap: () {
-                  ctrl.clear();
-                  setLocal(() {});
-                  if (_debounce?.isActive ?? false) _debounce!.cancel();
-                  _debounce = Timer(
-                    const Duration(milliseconds: 200),
-                    _resetAndFetch,
-                  );
-                },
-                child: const Icon(Icons.close, size: 16),
-              )
+          onTap: () {
+            ctrl.clear();
+            setLocal(() {});
+            if (_debounce?.isActive ?? false) _debounce!.cancel();
+            _debounce = Timer(
+              const Duration(milliseconds: 200),
+              _resetAndFetch,
+            );
+          },
+          child: const Icon(Icons.close, size: 16),
+        )
             : null,
         onChanged: (_) {
           setLocal(() {});
@@ -515,7 +529,13 @@ class _OrdersViewState extends State<_OrdersView> {
 
 class _OrderCard extends StatefulWidget {
   final OrderModel order;
-  const _OrderCard({required this.order});
+  final String schoolId;
+  final bool isSchool;
+  const _OrderCard({
+    required this.order,
+    this.schoolId = '',
+    this.isSchool = false,
+  });
 
   @override
   State<_OrderCard> createState() => _OrderCardState();
@@ -565,11 +585,11 @@ class _OrderCardState extends State<_OrderCard> {
     return kOrderStatuses
         .firstWhere(
           (s) => s.value == _currentStatus,
-          orElse: () => OrderStatusOption(
-            _currentStatus,
-            _currentStatus.replaceAll('_', ' '),
-          ),
-        )
+      orElse: () => OrderStatusOption(
+        _currentStatus,
+        _currentStatus.replaceAll('_', ' '),
+      ),
+    )
         .label;
   }
 
@@ -626,15 +646,15 @@ class _OrderCardState extends State<_OrderCard> {
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child:
-                  (student?.profilePhotoUrl != null &&
-                      student!.profilePhotoUrl!.isNotEmpty)
+              (student?.profilePhotoUrl != null &&
+                  student!.profilePhotoUrl!.isNotEmpty)
                   ? Image.network(
-                      student.profilePhotoUrl!,
-                      height: 60,
-                      width: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
-                    )
+                student.profilePhotoUrl!,
+                height: 60,
+                width: 60,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _placeholder(),
+              )
                   : _placeholder(),
             ),
 
@@ -750,43 +770,43 @@ class _OrderCardState extends State<_OrderCard> {
             ),
             _updating
                 ? const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.btnColor,
-                      ),
-                    ),
-                  )
+              padding: EdgeInsets.all(4),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.btnColor,
+                ),
+              ),
+            )
                 : _currentStatus == 'completed'
                 ? const SizedBox.shrink()
                 : PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.grey),
-                    offset: const Offset(0, 32),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 8,
-                    onSelected: _updateStatus,
-                    itemBuilder: (_) => [
-                      const PopupMenuItem<String>(
-                        value: 'completed',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline,
-                              size: 16,
-                              color: AppTheme.graySubTitleColor,
-                            ),
-                            SizedBox(width: 10),
-                            Text('Mark as Completed'),
-                          ],
-                        ),
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              offset: const Offset(0, 32),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 8,
+              onSelected: _updateStatus,
+              itemBuilder: (_) => [
+                const PopupMenuItem<String>(
+                  value: 'completed',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 16,
+                        color: AppTheme.graySubTitleColor,
                       ),
+                      SizedBox(width: 10),
+                      Text('Mark as Completed'),
                     ],
                   ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -804,9 +824,9 @@ class _OrderCardState extends State<_OrderCard> {
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
     final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
     return newValue.copyWith(
       text: text,

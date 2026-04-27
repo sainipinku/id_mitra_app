@@ -80,8 +80,12 @@ class Routes {
     if (search != null && search.isNotEmpty) url += "&search=$search";
     return url;
   }
-  static String getOrderDetail(String uuid) => "auth/partner/orders/$uuid";
-  static String updateOrderStatus(String uuid) => "auth/partner/orders/$uuid/status";
+  static String getOrderDetail(String uuid, {String schoolId = ''}) =>
+      "auth/partner/orders/$uuid";
+  static String getStaffOrderDetail(String uuid, {required String schoolId}) =>
+      "auth/school/$schoolId/staff/orders/$uuid";
+  static String updateOrderStatus(String uuid, {String schoolId = ''}) =>
+      schoolId.isNotEmpty ? "auth/school/$schoolId/orders/$uuid/status" : "auth/partner/orders/$uuid/status";
   static String getOrderStatistics() => "auth/partner/orders/statistics/summary";
   static String getSchoolDashboard() => "auth/school/dashboard/stats";
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";

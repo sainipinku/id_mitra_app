@@ -130,6 +130,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     String dateFrom = '',
     String dateTo = '',
     String schoolId = '',
+    bool isSchool = false,
   }) async {
     if (isLoadMore && (state.isPaginationLoading || !state.hasMore)) return;
 
@@ -149,8 +150,14 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
 
     try {
-      var url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20';
-      if (schoolId.isNotEmpty) url += '&school_id=$schoolId';
+      String url;
+      if (isSchool && schoolId.isNotEmpty) {
+        url = '${Config.baseUrl}auth/school/$schoolId/orders?page=$currentPage&per_page=20';
+      } else {
+        url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20';
+        if (schoolId.isNotEmpty) url += '&school_id=$schoolId';
+      }
+
       if (status.isNotEmpty) url += '&status=$status';
       if (search.isNotEmpty) url += '&search=$search';
       if (dateFrom.isNotEmpty) url += '&date_from=$dateFrom';
@@ -214,11 +221,11 @@ class OrdersCubit extends Cubit<OrdersState> {
           dateFrom: dateFrom,
           dateTo: dateTo,
           schoolId: schoolId,
+          isSchool: isSchool,
         );
         return;
       }
 
-      // Extract unique classes from orders (only on first page load)
       List<OrderClass> classes = state.availableClasses;
 
       emit(state.copyWith(
@@ -251,7 +258,6 @@ class OrdersCubit extends Cubit<OrdersState> {
       return false;
     }
   }
-
 
 
   Future<void> fetchStaffOrdersTotal() async {

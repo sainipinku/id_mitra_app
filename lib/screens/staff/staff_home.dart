@@ -12,7 +12,7 @@ import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/providers/add_staff/add_staff_cubit.dart';
 import 'package:idmitra/screens/staff/add_staff_form.dart';
 import 'package:idmitra/screens/dashboard/StatCard.dart';
-import 'package:idmitra/screens/admin/admin_order/admin_orders_page.dart';
+import 'package:idmitra/screens/staff/staff_order_page/staff_order_page.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 
 class StaffHome extends StatelessWidget {
@@ -116,17 +116,14 @@ class _StaffHomeView extends StatelessWidget {
                       icon: Icons.receipt_long,
                       color: Colors.indigo,
                       button: () {
-                        // final sid = effectiveSchoolId;
-                        // if (sid.isEmpty) return;
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (_) => AdminOrdersPage(
-                        //       schoolId: sid,
-                        //       totalOrderCount: data?.summary.orders.total,
-                        //     ),
-                        //   ),
-                        // );
+                        final sid = effectiveSchoolId;
+                        if (sid.isEmpty) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StaffOrderPage(schoolId: sid, isSchool: true,),
+                          ),
+                        );
                       },
                     ),
                     StatCard(

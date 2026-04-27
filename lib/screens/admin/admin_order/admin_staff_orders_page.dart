@@ -157,7 +157,7 @@ class _AdminStaffOrdersPageState extends State<AdminStaffOrdersPage> {
     });
     try {
       final currentPage = reset ? 1 : _page;
-      var url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&school_id=${widget.schoolId}';
+      var url = '${Config.baseUrl}auth/school/${widget.schoolId}/staff/orders?page=$currentPage';
       if (_selectedStatus.isNotEmpty) url += '&status=$_selectedStatus';
       if (_searchCtrl.text.trim().isNotEmpty) url += '&search=${_searchCtrl.text.trim()}';
       if (_dateFromCtrl.text.isNotEmpty) url += '&date_from=${_dateFromCtrl.text}';
@@ -276,7 +276,6 @@ class _AdminStaffOrdersPageState extends State<AdminStaffOrdersPage> {
             ),
           ),
 
-          // Total count bar
           if (!_loading && _total > 0)
             Container(
               color: Colors.white,

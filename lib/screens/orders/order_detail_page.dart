@@ -11,7 +11,8 @@ import 'package:idmitra/models/orders/OrderModel.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String uuid;
-  const OrderDetailPage({super.key, required this.uuid});
+  final String schoolId;
+  const OrderDetailPage({super.key, required this.uuid, this.schoolId = ''});
 
   @override
   State<OrderDetailPage> createState() => _OrderDetailPageState();
@@ -31,16 +32,26 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Future<void> _fetch() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final url = Config.baseUrl + Routes.getOrderDetail(widget.uuid);
+      final url = Config.baseUrl + Routes.getOrderDetail(widget.uuid, schoolId: widget.schoolId);
       final response = await ApiManager().getRequest(url);
       if (response == null) {
         setState(() { _loading = false; _error = 'Failed to load order'; });
         return;
       }
       final json = jsonDecode(response.body);
+      final raw = json['data'];
+      Map<String, dynamic>? orderMap;
+      if (raw is Map<String, dynamic>) {
+        // data is directly the order object
+        orderMap = raw.containsKey('id') ? raw : (raw['order'] as Map<String, dynamic>?);
+      }
+      if (orderMap == null) {
+        setState(() { _loading = false; _error = 'Invalid response format'; });
+        return;
+      }
       setState(() {
         _loading = false;
-        _order = OrderModel.fromJson(json['data'] as Map<String, dynamic>);
+        _order = OrderModel.fromJson(orderMap!);
       });
     } catch (e) {
       setState(() { _loading = false; _error = e.toString(); });
