@@ -201,12 +201,13 @@ class _StudentListBodyState extends State<_StudentListBody> {
                       if (result != null) {
                         _debounce?.cancel();
                         _debounce = Timer(const Duration(milliseconds: 300), () {
-                          context.read<StudentsCubit>().fetchStudents(
-                            search: '',
+                          context.read<StudentsCubit>().applyFilters(
                             schoolId: widget.schoolId,
-                            classId: result['class'] ?? '',
-                            gender: result['gender']?.toString().toLowerCase() ?? '',
+                            classId: result["class"] ?? "",
+                            sectionIds: List<int>.from(result["section"] ?? []),
+                            gender: result["gender"] ?? "",
                           );
+
                         });
                       }
                     },
