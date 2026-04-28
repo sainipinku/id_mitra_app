@@ -15,7 +15,7 @@ import 'package:idmitra/models/orders/OrderModel.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 
-class StaffOrderItem {
+class OrderStaffItem {
   final int id;
   final String uuid;
   final String status;
@@ -25,7 +25,7 @@ class StaffOrderItem {
   final String? staffPhoto;
   final String? schoolName;
 
-  const StaffOrderItem({
+  const OrderStaffItem({
     required this.id,
     required this.uuid,
     required this.status,
@@ -36,10 +36,10 @@ class StaffOrderItem {
     this.schoolName,
   });
 
-  factory StaffOrderItem.fromJson(Map<String, dynamic> json) {
+  factory OrderStaffItem.fromJson(Map<String, dynamic> json) {
     final staff = json['staff'] as Map<String, dynamic>?;
     final school = json['school'] as Map<String, dynamic>?;
-    return StaffOrderItem(
+    return OrderStaffItem(
       id: json['id'] ?? 0,
       uuid: json['uuid'] ?? '',
       status: json['status'] ?? '',
@@ -86,22 +86,22 @@ class StaffOrderItem {
   }
 }
 
-class StaffOrdersPage extends StatefulWidget {
+class OrderStaffPage extends StatefulWidget {
   final String schoolId;
-  const StaffOrdersPage({super.key, required this.schoolId});
+  const OrderStaffPage({super.key, required this.schoolId});
 
   @override
-  State<StaffOrdersPage> createState() => _StaffOrdersPageState();
+  State<OrderStaffPage> createState() => _OrderStaffPageState();
 }
 
-class _StaffOrdersPageState extends State<StaffOrdersPage> {
+class _OrderStaffPageState extends State<OrderStaffPage> {
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _dateFromCtrl = TextEditingController();
   final TextEditingController _dateToCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   Timer? _debounce;
 
-  List<StaffOrderItem> _orders = [];
+  List<OrderStaffItem> _orders = [];
   bool _loading = false;
   bool _hasMore = true;
   int _page = 1;
@@ -181,7 +181,6 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       
       final json = jsonDecode(response.body);
       
-      // Check if response has success status (handle both 'status' and 'success' keys)
       final isSuccess = (json['status'] == true || json['status'] == 'success' || json['success'] == true);
       
       if (!isSuccess) {
@@ -198,13 +197,11 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
         return;
       }
 
-      // Try different response structures
       List rawList = [];
       int total = 0;
       int lastPage = 1;
       int respCurrentPage = 1;
       
-      // Structure 1: data.list.data[]
       if (data.containsKey('list') && data['list'] is Map) {
         final listData = data['list'] as Map<String, dynamic>;
         rawList = listData['data'] ?? [];
@@ -212,14 +209,12 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
         lastPage = listData['last_page'] ?? 1;
         respCurrentPage = listData['current_page'] ?? 1;
       } 
-      // Structure 2: data.data[]
       else if (data.containsKey('data') && data['data'] is List) {
         rawList = data['data'] as List;
         total = data['total'] ?? rawList.length;
         lastPage = data['last_page'] ?? 1;
         respCurrentPage = data['current_page'] ?? 1;
       }
-      // Structure 3: Direct array in data
       else if (data.containsKey('orders')) {
         final ordersData = data['orders'];
         if (ordersData is List) {
@@ -236,7 +231,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       print('Parsed rawList length: ${rawList.length}');
       print('Total: $total, Current Page: $respCurrentPage, Last Page: $lastPage');
 
-      final newOrders = rawList.map((e) => StaffOrderItem.fromJson(e as Map<String, dynamic>)).toList();
+      final newOrders = rawList.map((e) => OrderStaffItem.fromJson(e as Map<String, dynamic>)).toList();
 
       setState(() {
         _loading = false;
@@ -269,14 +264,12 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       ),
       body: Column(
         children: [
-          // Search always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: _searchBar(),
           ),
 
-          // Filters always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -321,7 +314,6 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
             ),
           ),
 
-          // Total count bar
           if (!_loading && _total > 0)
             Container(
               color: Colors.white,
@@ -507,10 +499,9 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
   }
 }
 
-// ─── Staff Order Card ─────────────────────────────────────────────────────────
 
 class _StaffOrderCard extends StatefulWidget {
-  final StaffOrderItem order;
+  final OrderStaffItem order;
   final String schoolId;
   const _StaffOrderCard({required this.order, required this.schoolId});
 
@@ -610,7 +601,6 @@ class _StaffOrderCardState extends State<_StaffOrderCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Avatar ──
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: (widget.order.staffPhoto != null && widget.order.staffPhoto!.isNotEmpty)
@@ -624,7 +614,6 @@ class _StaffOrderCardState extends State<_StaffOrderCard> {
 
           const SizedBox(width: 12),
 
-          // ── Info ──
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,7 +681,6 @@ class _StaffOrderCardState extends State<_StaffOrderCard> {
             ),
           ),
 
-          // ── 3-dot menu ──
           _updating
               ? const Padding(
                   padding: EdgeInsets.all(4),

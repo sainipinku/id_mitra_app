@@ -67,13 +67,13 @@ class OrdersState {
 
 class OrderClass {
   final int classId;
-  final int sectionId;
+  final List<int> sectionIds;
   final String name;
   final String? nameWithprefix;
 
   const OrderClass({
     required this.classId,
-    required this.sectionId,
+    required this.sectionIds,
     required this.name,
     this.nameWithprefix,
   });

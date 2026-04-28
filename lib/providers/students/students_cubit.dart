@@ -25,36 +25,14 @@ class StudentsCubit extends Cubit<StudentsState> {
   StudentsCubit() : super(StudentsState());
 
   ApiManager apiManager = ApiManager();
-  void applyFilters({
-    String classId = "",
-    List<int> sectionIds = const [],
-    String gender = "",
-    required String schoolId,
-  }) {
-    emit(state.copyWith(
-      selectedClassId: classId,
-      selectedSectionIds: sectionIds,
-      selectedGender: gender,
-      page: 1,
-      hasMore: true,
-    ));
 
-    fetchStudents(
-      schoolId: schoolId,
-      classId: classId,
-      sectionIds: sectionIds,
-      gender: gender,
-    );
-  }
   Future<void> fetchStudents({
     bool isLoadMore = false,
     String search = "",
     String schoolId = "",
     String gender = "",
     String classId = "",
-    List<int> sectionIds = const [],
   }) async {
-    print('setionids-------------$sectionIds');
     if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
 
     int currentPage = isLoadMore ? state.page : 1;
@@ -64,45 +42,17 @@ class StudentsCubit extends Cubit<StudentsState> {
         loading: true,
         page: 1,
         hasMore: true,
+        // studentsList empty mat karo
       ));
     } else {
       emit(state.copyWith(isPaginationLoading: true));
     }
 
     try {
-      /// ✅ fallback from state (important)
-      final usedClassId =
-      classId.isEmpty ? state.selectedClassId : classId;
-
-      final usedSectionIds =
-      sectionIds.isEmpty ? state.selectedSectionIds : sectionIds;
-
-      final usedGender =
-      gender.isEmpty ? state.selectedGender : gender;
-
-      /// 🔥 Base URL
-      String url =
-          "${Config.baseUrl}auth/school/$schoolId"
-          "?perPage=10"
-          "&search=$search"
-          "&page=$currentPage"
-          "&gender=$usedGender"
-          "&class_filters=$usedClassId";
-      String sectionQuery = "";
-
-      if (usedSectionIds.isNotEmpty) {
-        sectionQuery = usedSectionIds
-            .asMap()
-            .entries
-            .map((entry) => "sectionsIds[${entry.key}]=${entry.value}")
-            .join("&");
-      }
-
-      if (sectionQuery.isNotEmpty) {
-        url += "&$sectionQuery";
-      }
-
-      final response = await apiManager.getRequest(url);
+      final response = await apiManager
+          .getRequest(
+        "${Config.baseUrl}auth/school/$schoolId?perPage=10&search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
+      );
 
       final jsonData = jsonDecode(response.body);
 
@@ -153,6 +103,36 @@ class StudentsCubit extends Cubit<StudentsState> {
       }
     } catch (e) {
       debugPrint("Delete error: $e");
+    }
+    return false;
+  }
+
+  Future<void> fetchExtraStudents({String schoolId = ''}) async {
+    emit(state.copyWith(extraLoading: true));
+    try {
+      final response = await apiManager.getRequest(
+        "${Config.baseUrl}auth/school/$schoolId?is_moved=1",
+      );
+      final jsonData = jsonDecode(response.body);
+      List list = jsonData["data"]?["data"] ?? [];
+      final newList = list.map((e) => StudentDetailsData.fromJson(e)).toList();
+      emit(state.copyWith(extraLoading: false, extraStudentsList: newList));
+    } catch (e) {
+      emit(state.copyWith(extraLoading: false));
+      debugPrint("Fetch extra students error: $e");
+    }
+  }
+
+  Future<bool> moveStudentToExtra(String studentUuid, String schoolId) async {
+    try {
+      final response = await apiManager.postWithoutRequest(
+        "${Config.baseUrl}${Routes.moveStudentToExtra(schoolId, studentUuid)}",
+      );
+      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Move to extra error: $e");
     }
     return false;
   }

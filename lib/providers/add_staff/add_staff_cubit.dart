@@ -35,10 +35,7 @@ class AddStaffCubit extends Cubit<AddStaffState> {
       final role = await UserSecureStorage.fetchRole();
       final isPartner = role == 'partner';
 
-      // ✅ Config.url() use karo — double slash safe
       final url = Config.url(Routes.addStaff(schoolId, isPartner: isPartner));
-      print('ADD STAFF URL: $url');
-
       final request = http.MultipartRequest('POST', Uri.parse(url));
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
@@ -85,70 +82,78 @@ class AddStaffCubit extends Cubit<AddStaffState> {
     String? roleId,
   }) async {
     emit(const AddStaffState(loading: true));
+
     try {
       final token = await UserSecureStorage.fetchToken();
+      if (token == null) {
+        emit(const AddStaffState(error: 'Authentication token not found'));
+        return;
+      }
 
       final url = Config.url(Routes.updateStaff(schoolId, uuid));
-      print('UPDATE STAFF URL: $url');
+      print('Update staff URL: $url');
 
       final body = <String, dynamic>{};
-
       _addIfNotEmpty(body, 'name', fields['name']);
       _addIfNotEmpty(body, 'email', fields['email']);
       _addIfNotEmpty(body, 'phone', fields['phone']);
       _addIfNotEmpty(body, 'designation', fields['designation']);
       _addIfNotEmpty(body, 'department', fields['department']);
       _addIfNotEmpty(body, 'login_id', fields['login_id']);
-      _addIfNotEmpty(body, 'whatsapp_phone',
-          fields['whatsapp'] ?? fields['whatsapp_phone']);
+      _addIfNotEmpty(body, 'whatsapp_phone', fields['whatsapp'] ?? fields['whatsapp_phone']);
       _addIfNotEmpty(body, 'father_name', fields['father_name']);
       _addIfNotEmpty(body, 'mother_name', fields['mother_name']);
       _addIfNotEmpty(body, 'husband_name', fields['husband_name']);
       _addIfNotEmpty(body, 'dob', _convertDate(fields['date_of_birth']));
-      _addIfNotEmpty(body, 'date_of_joining',
-          _convertDate(fields['date_of_joining']));
+      _addIfNotEmpty(body, 'date_of_joining', _convertDate(fields['date_of_joining']));
       _addIfNotEmpty(body, 'address', fields['address']);
       _addIfNotEmpty(body, 'pincode', fields['pincode']);
       _addIfNotEmpty(body, 'employee_id', fields['employee_id']);
       _addIfNotEmpty(body, 'national_code', fields['national_code']);
 
-      // Role — int parse karke bhejo
       final roleRaw = roleId ?? fields['role'];
-      if (roleRaw != null && roleRaw.toString().isNotEmpty) {
-        final roleInt = int.tryParse(roleRaw.toString());
-        if (roleInt != null) body['role'] = roleInt;
+
+      if (roleRaw != null) {
+        String roleStr = roleRaw.toString().trim();
+
+        if (roleStr.startsWith('[') && roleStr.endsWith(']')) {
+          roleStr = roleStr.replaceAll('[', '').replaceAll(']', '').trim();
+        }
+
+        final roleInt = int.tryParse(roleStr);
+        if (roleInt != null) {
+          body['role'] = roleInt;
+          print('Role successfully set as integer: $roleInt');
+        } else {
+          print('Warning: Could not convert role to int → $roleRaw');
+        }
       }
 
-      // Gender — placeholder skip karo
+
       final gender = fields['gender']?.toString().trim() ?? '';
-      if (gender.isNotEmpty &&
-          gender.toLowerCase() != '-select gender-') {
+      if (gender.isNotEmpty && gender.toLowerCase() != '-select gender-') {
         body['gender'] = gender.toLowerCase();
       }
 
-      // Blood group
       final bg = fields['blood_group']?.toString().trim() ?? '';
       if (bg.isNotEmpty && bg != 'Select Blood Group') {
         body['blood_group'] = bg;
       }
 
-      // ✅ FIX START (no removal, only improvement)
       final validContacts = emergencyContacts
           .where((e) =>
-      (e['name'] ?? '').isNotEmpty ||
-          (e['phone'] ?? '').isNotEmpty)
+      (e['name'] ?? '').trim().isNotEmpty ||
+          (e['phone'] ?? '').trim().isNotEmpty)
           .map((e) => {
-        'name': e['name'] ?? '',
-        'phone': e['phone'] ?? '',
-        'relation': e['relation'] ?? '',
+        'name': (e['name'] ?? '').trim(),
+        'phone': (e['phone'] ?? '').trim(),
+        'relation': (e['relation'] ?? '').trim(),
       })
           .toList();
 
-      // 🔥 ALWAYS send array (important fix)
-      body['emergency_contacts'] = validContacts;
-
-      print('CONTACTS: $validContacts'); // debug
-      // ✅ FIX END
+      if (validContacts.isNotEmpty) {
+        body['emergency_contacts'] = validContacts;
+      }
 
       print('UPDATE BODY: $body');
 
@@ -162,7 +167,8 @@ class AddStaffCubit extends Cubit<AddStaffState> {
         body: jsonEncode(body),
       );
 
-      print('UPDATE RESPONSE: ${response.statusCode} ${response.body}');
+      print('UPDATE RESPONSE: ${response.statusCode}');
+      print('Response Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -170,20 +176,124 @@ class AddStaffCubit extends Cubit<AddStaffState> {
 
         emit(AddStaffState(
           success: true,
-          message:
-          json['message']?.toString() ?? 'Staff updated successfully',
-          updatedStaff: staffData != null
-              ? StaffDetailModel.fromJson(staffData)
-              : null,
+          message: json['message']?.toString() ?? 'Staff updated successfully',
+          updatedStaff: staffData != null ? StaffDetailModel.fromJson(staffData) : null,
         ));
       } else {
         emit(AddStaffState(error: _parseError(response)));
       }
-    } catch (e) {
-      print('UPDATE STAFF EXCEPTION: $e');
+    } catch (e, stack) {
+      print('Update Staff Exception: $e');
+      print('Stack: $stack');
       emit(AddStaffState(error: e.toString()));
     }
   }
+
+  // Future<void> update({
+  //   required String schoolId,
+  //   required String uuid,
+  //   required Map<String, dynamic> fields,
+  //   required List<Map<String, String>> emergencyContacts,
+  //   String? roleId,
+  // }) async {
+  //   emit(const AddStaffState(loading: true));
+  //   try {
+  //     final token = await UserSecureStorage.fetchToken();
+  //
+  //     final url = Config.url(Routes.updateStaff(schoolId, uuid));
+  //     print('UPDATE STAFF URL: $url');
+  //
+  //     final body = <String, dynamic>{};
+  //
+  //     _addIfNotEmpty(body, 'name', fields['name']);
+  //     _addIfNotEmpty(body, 'email', fields['email']);
+  //     _addIfNotEmpty(body, 'phone', fields['phone']);
+  //     _addIfNotEmpty(body, 'designation', fields['designation']);
+  //     _addIfNotEmpty(body, 'department', fields['department']);
+  //     _addIfNotEmpty(body, 'login_id', fields['login_id']);
+  //     _addIfNotEmpty(body, 'whatsapp_phone',
+  //         fields['whatsapp'] ?? fields['whatsapp_phone']);
+  //     _addIfNotEmpty(body, 'father_name', fields['father_name']);
+  //     _addIfNotEmpty(body, 'mother_name', fields['mother_name']);
+  //     _addIfNotEmpty(body, 'husband_name', fields['husband_name']);
+  //     _addIfNotEmpty(body, 'dob', _convertDate(fields['date_of_birth']));
+  //     _addIfNotEmpty(body, 'date_of_joining',
+  //         _convertDate(fields['date_of_joining']));
+  //     _addIfNotEmpty(body, 'address', fields['address']);
+  //     _addIfNotEmpty(body, 'pincode', fields['pincode']);
+  //     _addIfNotEmpty(body, 'employee_id', fields['employee_id']);
+  //     _addIfNotEmpty(body, 'national_code', fields['national_code']);
+  //
+  //     ///  MOST IMPORTANT FIX (ROLE MUST BE ARRAY)
+  //     final roleRaw = roleId ?? fields['role'];
+  //     if (roleRaw != null && roleRaw.toString().isNotEmpty) {
+  //       final roleInt = int.tryParse(roleRaw.toString());
+  //       if (roleInt != null) {
+  //         body['role'] = [roleInt];
+  //       }
+  //     }
+  //
+  //     /// gender
+  //     final gender = fields['gender']?.toString().trim() ?? '';
+  //     if (gender.isNotEmpty &&
+  //         gender.toLowerCase() != '-select gender-') {
+  //       body['gender'] = gender.toLowerCase();
+  //     }
+  //
+  //     /// blood group
+  //     final bg = fields['blood_group']?.toString().trim() ?? '';
+  //     if (bg.isNotEmpty && bg != 'Select Blood Group') {
+  //       body['blood_group'] = bg;
+  //     }
+  //
+  //     /// emergency contacts
+  //     final validContacts = emergencyContacts
+  //         .where((e) =>
+  //     (e['name'] ?? '').isNotEmpty ||
+  //         (e['phone'] ?? '').isNotEmpty)
+  //         .map((e) => {
+  //       'name': e['name'] ?? '',
+  //       'phone': e['phone'] ?? '',
+  //       'relation': e['relation'] ?? '',
+  //     })
+  //         .toList();
+  //
+  //     body['emergency_contacts'] = validContacts;
+  //
+  //     print('FINAL UPDATE BODY: $body');
+  //
+  //     final response = await http.put(
+  //       Uri.parse(url),
+  //       headers: {
+  //         'Authorization': 'Bearer $token',
+  //         'Accept': 'application/json',
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: jsonEncode(body),
+  //     );
+  //
+  //     print('UPDATE RESPONSE: ${response.statusCode} ${response.body}');
+  //
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+  //       final json = jsonDecode(response.body) as Map<String, dynamic>;
+  //       final staffData = json['data'] as Map<String, dynamic>?;
+  //
+  //       emit(AddStaffState(
+  //         success: true,
+  //         message:
+  //         json['message']?.toString() ?? 'Staff updated successfully',
+  //         updatedStaff: staffData != null
+  //             ? StaffDetailModel.fromJson(staffData)
+  //             : null,
+  //       ));
+  //     } else {
+  //       emit(AddStaffState(error: _parseError(response)));
+  //     }
+  //   } catch (e) {
+  //     print('UPDATE STAFF EXCEPTION: $e');
+  //     emit(AddStaffState(error: e.toString()));
+  //   }
+  // }
 
   void _addIfNotEmpty(
       Map<String, dynamic> body, String key, dynamic value) {

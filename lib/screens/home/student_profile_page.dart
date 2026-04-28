@@ -278,7 +278,6 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
           children: [
             _headerCard(context),
             const SizedBox(height: 10),
-           // _markStudentCard(),
             const SizedBox(height: 10),
             _sectionCard(
               icon: Icons.person_outline_rounded,
@@ -310,46 +309,28 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   Widget _headerCard(BuildContext context) {
     final isActive = (_student.status ?? 0) == 1;
     final hasPhoto = _student.profilePhotoUrl?.isNotEmpty ?? false;
+    final admNo = _student.admissionNo?.toString() ?? '';
+    final phone = _student.phone?.toString() ?? '';
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.btnColor.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.btnColor.withOpacity(0.15),
-                    AppTheme.mainColor.withOpacity(0.08),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
-            child: Center(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        child: Column(
                 children: [
-                  Stack(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       GestureDetector(
                         onTap: () {
@@ -360,124 +341,247 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                             _showPicker(context);
                           }
                         },
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppTheme.btnColor.withOpacity(0.3), width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 40,
+                                backgroundColor: AppTheme.btnColor.withOpacity(0.1),
+                                backgroundImage: hasPhoto
+                                    ? NetworkImage(_student.profilePhotoUrl!)
+                                    : null,
+                                child: _isUploading
+                                    ? shimmerBox(width: 80, height: 80, radius: 40)
+                                    : !hasPhoto
+                                        ? Icon(Icons.person_rounded,
+                                            size: 40, color: AppTheme.btnColor)
+                                        : null,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 2, right: 2,
+                              child: Container(
+                                width: 24, height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  hasPhoto ? Icons.visibility : Icons.camera_alt,
+                                  size: 13,
+                                  color: AppTheme.btnColor,
+                                ),
+                              ),
+                            ),
+                            // Online dot
+                            Positioned(
+                              top: 2, right: 2,
+                              child: Container(
+                                width: 14, height: 14,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isActive ? const Color(0xFF4CAF50) : Colors.grey,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _student.name ?? '-',
+                              style: MyStyles.boldText(size: 18, color: AppTheme.black_Color),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.school_outlined, size: 13, color: AppTheme.btnColor),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    _classSection(),
+                                    style: MyStyles.mediumText(size: 12, color: AppTheme.graySubTitleColor),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (admNo.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(Icons.badge_outlined, size: 13, color: AppTheme.btnColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Adm: $admNo',
+                                    style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (phone.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(Icons.phone_outlined, size: 13, color: AppTheme.btnColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    phone,
+                                    style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _chipWhite(
+                        label: isActive ? 'Active' : 'Inactive',
+                        bgColor: isActive
+                            ? const Color(0xFF4CAF50).withOpacity(0.12)
+                            : Colors.red.withOpacity(0.12),
+                        textColor: isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                        icon: isActive ? Icons.check_circle_outline : Icons.cancel_outlined,
+                      ),
+                      if (_sessionName().isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _chipWhite(
+                          label: _sessionName(),
+                          bgColor: AppTheme.btnColor.withOpacity(0.08),
+                          textColor: AppTheme.btnColor,
+                          icon: Icons.calendar_today_outlined,
+                        ),
+                      ],
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => _openEdit(context),
                         child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
+                            color: AppTheme.btnColor,
+                            borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.btnColor.withOpacity(0.2),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
+                                color: AppTheme.btnColor.withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: CircleAvatar(
-                            radius: 36,
-                            backgroundColor: AppTheme.appBackgroundColor,
-                            backgroundImage: hasPhoto
-                                ? NetworkImage(_student.profilePhotoUrl!)
-                                : null,
-                            child: _isUploading
-                                ? shimmerBox(width: 72, height: 72, radius: 36)
-                                : !hasPhoto
-                                    ? Icon(Icons.person_rounded,
-                                        size: 36, color: AppTheme.graySubTitleColor)
-                                    : null,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 2, right: 2,
-                        child: GestureDetector(
-                          onTap: () {
-                            final url = _student.profilePhotoUrl;
-                            if (url != null && url.isNotEmpty) {
-                              _showImagePreview(context, url);
-                            } else {
-                              _showPicker(context);
-                            }
-                          },
-                          child: Container(
-                            width: 22, height: 22,
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: Icon(
-                              hasPhoto ? Icons.preview : Icons.camera_alt,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Active/Inactive status dot
-                      Positioned(
-                        top: 0, right: 0,
-                        child: Container(
-                          width: 13, height: 13,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isActive
-                                ? AppTheme.mainColor
-                                : AppTheme.backBtnBgColor,
-                            border: Border.all(color: Colors.white, width: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.edit_outlined, size: 14, color: Colors.white),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Edit',
+                                style: MyStyles.mediumText(size: 12, color: Colors.white),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(_student.name ?? '-',
-                      style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
-                  const SizedBox(height: 3),
-                  Text(_classSection(),
-                      style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6, runSpacing: 4,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      _chip(
-                        label: isActive ? 'Active' : 'Inactive',
-                        bgColor: isActive
-                            ? AppTheme.mainColor.withOpacity(0.1)
-                            : AppTheme.redBtnBgColor.withOpacity(0.1),
-                        textColor: isActive
-                            ? AppTheme.mainColor
-                            : AppTheme.redBtnBgColor,
-                      ),
-                      if (_sessionName().isNotEmpty)
-                        _chip(
-                          label: _sessionName(),
-                          bgColor: AppTheme.btnColor.withOpacity(0.1),
-                          textColor: AppTheme.btnColor,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _openEdit(context),
-                      icon: Icon(Icons.edit_outlined, size: 16, color: AppTheme.btnColor),
-                      label: Text(
-                        'Edit Profile',
-                        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppTheme.btnColor, width: 1.2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
                   ),
                 ],
               ),
+        ),
+    );
+  }
+
+  Widget _chipWhite({
+    required String label,
+    required Color bgColor,
+    required Color textColor,
+    required IconData icon,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: textColor),
+            const SizedBox(width: 4),
+            Text(label, style: MyStyles.mediumText(size: 11, color: textColor)),
+          ],
+        ),
+      );
+
+  Widget _markStudentCard(context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.btnColor.withOpacity(0.04),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              border: Border(
+                left: BorderSide(color: AppTheme.btnColor, width: 4),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.btnColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.flag_outlined, size: 15, color: AppTheme.btnColor),
+                ),
+                const SizedBox(width: 10),
+                Text('Mark Student',
+                    style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
+              ],
             ),
           ),
         ],
@@ -485,132 +589,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     );
   }
 
-  Widget _markStudentCard(context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: AppTheme.btnColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Icon(Icons.flag_outlined, size: 14, color: AppTheme.btnColor),
-              ),
-              const SizedBox(width: 8),
-              Text('Mark Student',
-                  style: MyStyles.boldText(size: 13, color: AppTheme.black_Color)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: AppButton(
-          //         title: 'TC',
-          //         height: 44,
-          //         color: AppTheme.redBtnBgColor,
-          //         onTap: () => _showComingSoon(context, 'TC'),
-          //       ),
-          //     ),
-          //     const SizedBox(width: 12),
-          //     Expanded(
-          //       child: AppButton(
-          //         title: 'Not in my class',
-          //         height: 44,
-          //         color: AppTheme.graySubTitleColor,
-          //         onTap: () {
-          //           Navigator.push(
-          //             context,
-          //             MaterialPageRoute(
-          //               builder: (_) => MultiBlocProvider(
-          //                 providers: [
-          //                   BlocProvider(
-          //                     create: (_) => StudentFormCubit()
-          //                       ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
-          //                   ),
-          //                   BlocProvider(
-          //                     create: (_) => StudentFormDataCubit()..load(schoolId),
-          //                   ),
-          //                   BlocProvider(create: (_) => AddStudentCubit()),
-          //                 ],
-          //                 child: AddStudentFormPage(
-          //                   schoolId: schoolId,
-          //                   editStudent: _student,
-          //                   initialTab: 1,
-          //                 ),
-          //               ),
-          //             ),
-          //           );
-          //         },
-          //       ),
-          //     ),
-          //   ],
-          // ),
-        ],
-      ),
-    );
-  }
 
-  void _showComingSoon(BuildContext context, String feature) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.btnColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.rocket_launch_outlined, size: 36, color: AppTheme.btnColor),
-              ),
-              const SizedBox(height: 16),
-              Text('Coming Soon',
-                  style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
-              const SizedBox(height: 8),
-              Text(
-                '"$feature" feature is coming soon.\nStay tuned for updates!',
-                textAlign: TextAlign.center,
-                style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: AppButton(
-                  title: 'OK',
-                  height: 44,
-                  color: AppTheme.btnColor,
-                  onTap: () => Navigator.pop(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _chip({
     required String label,
@@ -633,14 +612,14 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
+              blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
       ),
@@ -648,32 +627,34 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.btnColor.withOpacity(0.05),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              color: AppTheme.btnColor.withOpacity(0.04),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              border: Border(
+                left: BorderSide(color: AppTheme.btnColor, width: 3),
+              ),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(5),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppTheme.btnColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(7),
+                    color: AppTheme.btnColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(icon, size: 14, color: AppTheme.btnColor),
+                  child: Icon(icon, size: 13, color: AppTheme.btnColor),
                 ),
                 const SizedBox(width: 8),
                 Text(title,
-                    style: MyStyles.boldText(
-                        size: 13, color: AppTheme.black_Color)),
+                    style: MyStyles.boldText(size: 12, color: AppTheme.black_Color)),
               ],
             ),
           ),
           Divider(height: 1, color: AppTheme.LineColor),
           Padding(
-              padding: const EdgeInsets.all(12), child: _buildGrid(rows)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              child: _buildGrid(rows)),
         ],
       ),
     );
@@ -689,14 +670,18 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         children: [
           Expanded(child: _cell(left.label, left.value)),
           if (right != null) ...[
+            Container(width: 1, height: 32, color: AppTheme.LineColor),
             const SizedBox(width: 10),
             Expanded(child: _cell(right.label, right.value)),
           ] else
             const Expanded(child: SizedBox()),
         ],
       ));
-      if (i + 2 < rows.length)
-        widgets.add(Divider(height: 16, color: AppTheme.LineColor));
+      if (i + 2 < rows.length) {
+        widgets.add(const SizedBox(height: 7));
+        widgets.add(Divider(height: 1, color: AppTheme.LineColor));
+        widgets.add(const SizedBox(height: 7));
+      }
     }
     return Column(children: widgets);
   }
@@ -704,20 +689,21 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   Widget _cell(String label, String value) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: MyStyles.regularText(
-                  size: 10, color: AppTheme.graySubTitleColor)),
-          const SizedBox(height: 3),
-          Text(value.isEmpty ? '-' : value,
-              style: MyStyles.mediumText(size: 12, color: AppTheme.black_Color)),
+          Text(
+            label,
+            style: MyStyles.regularText(size: 9, color: AppTheme.graySubTitleColor),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value.isEmpty ? '-' : value,
+            style: MyStyles.boldText(size: 11, color: AppTheme.black_Color),
+          ),
         ],
       );
 
   List<_InfoRow> _personalRows() => [
-        _InfoRow('Student Name', _student.name ?? ''),
-        _InfoRow('Login ID', _student.loginId ?? ''),
+       // _InfoRow('Login ID', _student.loginId ?? ''),
         _InfoRow('Email', _student.email?.toString() ?? ''),
-        _InfoRow('Phone', _student.phone?.toString() ?? ''),
         _InfoRow('WhatsApp', _student.whatsappPhone?.toString() ?? ''),
         _InfoRow('Gender', _cap(_student.gender?.toString() ?? '')),
         _InfoRow('Date of Birth', _student.dob ?? ''),
@@ -728,11 +714,10 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         _InfoRow('Caste', _student.caste?.toString() ?? ''),
         _InfoRow('Religion', _student.religion?.toString() ?? ''),
         _InfoRow('RTE Student', _student.isRteStudent?.toString() ?? ''),
+        _InfoRow('PEN Number', _student.panNo?.toString() ?? ''),
       ].where((r) => r.value.isNotEmpty).toList();
 
   List<_InfoRow> _academicRows() => [
-        _InfoRow('Class', _student.datumClass?.nameWithprefix ?? ''),
-        _InfoRow('Section', _student.section?.name ?? ''),
         _InfoRow('Roll No', _student.rollNo?.toString() ?? ''),
         _InfoRow('Reg No', _student.regNo?.toString() ?? ''),
         _InfoRow('Admission No', _student.admissionNo?.toString() ?? ''),

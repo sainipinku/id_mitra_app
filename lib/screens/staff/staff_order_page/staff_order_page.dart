@@ -13,6 +13,7 @@ import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/orders/orders_state.dart';
 import 'package:idmitra/screens/admin/admin_order/admin_order_detail_page.dart';
 import 'package:idmitra/screens/admin/admin_order/admin_staff_orders_page.dart';
+import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 
 class StaffOrderPage extends StatelessWidget {
   final String schoolId;
@@ -157,14 +158,12 @@ class _StaffOrderViewState extends State<_StaffOrderView> {
       ),
       body: Column(
         children: [
-          // Search always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: _searchBar(),
           ),
 
-          // Filters always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -215,17 +214,13 @@ class _StaffOrderViewState extends State<_StaffOrderView> {
             ),
           ),
 
-          // Summary bar
-          BlocBuilder<OrdersCubit, OrdersState>(
-            buildWhen: (p, c) => p.total != c.total || p.loading != c.loading,
-            builder: (_, state) {
-              if (state.loading || state.total == 0) return const SizedBox.shrink();
-              return Expanded(
+          // List area
+          Expanded(
             child: BlocBuilder<OrdersCubit, OrdersState>(
               builder: (_, state) {
-                if (state.loading) {
+                if (state.loading && state.ordersList.isEmpty) {
                   return const Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 20),
                     child: OrderListShimmer(),
                   );
                 }
@@ -286,6 +281,7 @@ class _StaffOrderViewState extends State<_StaffOrderView> {
                           isSchool: widget.isSchool,
                         );
                       }
+                      // Pagination loader
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
@@ -294,8 +290,7 @@ class _StaffOrderViewState extends State<_StaffOrderView> {
                   ),
                 );
               },
-            ));
-            }
+            ),
           ),
         ],
       ),
@@ -462,27 +457,39 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Color get _statusColor {
     switch (_currentStatus) {
-      case 'completed': return const Color(0xFF2DC24E);
-      case 'cancelled': return AppTheme.cancelTextColor;
-      case 'work_in_process': return AppTheme.btnColor;
-      case 're_order': return AppTheme.PendingDotColor;
-      default: return AppTheme.graySubTitleColor;
+      case 'completed':
+        return const Color(0xFF2DC24E);
+      case 'cancelled':
+        return AppTheme.cancelTextColor;
+      case 'work_in_process':
+        return AppTheme.btnColor;
+      case 're_order':
+        return AppTheme.PendingDotColor;
+      default:
+        return AppTheme.graySubTitleColor;
     }
   }
 
   Color get _statusBg {
     switch (_currentStatus) {
-      case 'completed': return const Color(0xFFE8F9ED);
-      case 'cancelled': return AppTheme.lightRedColor;
-      case 'work_in_process': return AppTheme.lightBlueColor;
-      case 're_order': return AppTheme.PendingLightColor;
-      default: return AppTheme.appBackgroundColor;
+      case 'completed':
+        return const Color(0xFFE8F9ED);
+      case 'cancelled':
+        return AppTheme.lightRedColor;
+      case 'work_in_process':
+        return AppTheme.lightBlueColor;
+      case 're_order':
+        return AppTheme.PendingLightColor;
+      default:
+        return AppTheme.appBackgroundColor;
     }
   }
 
   String get _statusLabel => kOrderStatuses
-      .firstWhere((s) => s.value == _currentStatus,
-      orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')))
+      .firstWhere(
+        (s) => s.value == _currentStatus,
+    orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')),
+  )
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
@@ -502,9 +509,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success
-            ? 'Status updated successfully'
-            : 'Failed to update status'),
+        content: Text(success ? 'Status updated successfully' : 'Failed to update status'),
         backgroundColor: success ? AppTheme.btnColor : Colors.red,
       ),
     );
@@ -514,12 +519,31 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   Widget build(BuildContext context) {
     final student = widget.order.student;
     final school = widget.order.school;
-    final isSchool = widget.order.school;
+
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => AdminOrderDetailPage(uuid: widget.order.uuid, schoolId: widget.schoolId, )),
-      ),
+      onTap: () {
+        if (widget.isSchool) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StaffOrderDetailPage(
+                uuid: widget.order.uuid,
+                schoolId: widget.schoolId,
+              ),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminOrderDetailPage(
+                uuid: widget.order.uuid,
+                schoolId: widget.schoolId,
+              ),
+            ),
+          );
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
@@ -536,7 +560,9 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
               child: (student?.profilePhotoUrl != null && student!.profilePhotoUrl!.isNotEmpty)
                   ? Image.network(
                 student.profilePhotoUrl!,
-                height: 60, width: 60, fit: BoxFit.cover,
+                height: 60,
+                width: 60,
+                fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _placeholder(),
               )
                   : _placeholder(),
@@ -591,7 +617,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 5, height: 5,
+                              width: 5,
+                              height: 5,
                               decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle),
                             ),
                             const SizedBox(width: 4),
@@ -614,7 +641,10 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
             _updating
                 ? const Padding(
               padding: EdgeInsets.all(4),
-              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor)),
+              child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor)),
             )
                 : _currentStatus == 'completed'
                 ? const SizedBox.shrink()
@@ -644,7 +674,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   }
 
   Widget _placeholder() => Container(
-    height: 60, width: 60,
+    height: 60,
+    width: 60,
     color: Colors.grey.shade300,
     child: const Icon(Icons.person, color: Colors.grey),
   );

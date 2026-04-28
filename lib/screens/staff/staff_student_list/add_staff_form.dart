@@ -102,17 +102,14 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
 
   Future<void> _initSchoolAndLoad() async {
     String id = widget.schoolId;
-    print('=== INIT: widget.schoolId = $id');
 
     if (id.isEmpty) {
       final school = await UserLocal.getSchool();
       id = school['schoolId'] ?? '';
-      print('=== INIT: UserLocal schoolId = $id');
     }
 
     if (id.isNotEmpty) {
       _schoolId = id;
-      print('=== INIT: Final _schoolId = $_schoolId');
 
       _formFieldsSub = _staffFormCubit.stream.listen((state) {
         if (!state.loading && state.fields.isNotEmpty) {
@@ -137,7 +134,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
         _formFieldsSub?.cancel();
       }
     } else {
-      print('=== ERROR: schoolId is empty! Cannot load staff form fields.');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -429,8 +425,9 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
             suffixIcon: _visibilityToggle(field.name),
             validator: field.required
                 ? (v) {
-                    if (v == null || v.trim().isEmpty)
+                    if (v == null || v.trim().isEmpty) {
                       return '${field.label} is required';
+                    }
                     if (isConfirm) {
                       final pwCtrl = _controllers.entries
                           .firstWhere(
@@ -1170,7 +1167,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
 
   void _submitForm(BuildContext context) {
     if (_schoolId.isEmpty) {
-      print('=== SUBMIT ERROR: _schoolId is empty!');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('School ID not found. Cannot add staff.'),
@@ -1180,7 +1176,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       return;
     }
 
-    print('=== SUBMIT: _schoolId = $_schoolId');
 
     String? roleId = _selectValues['role'];
 
@@ -1208,9 +1203,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       }
     }
 
-    print(
-      '=== SUBMIT roleId: $roleId | _selectValues[role]: ${_selectValues['role']} | editStaff.roleId: ${widget.editStaff?.roleId} | editStaff.roleName: ${widget.editStaff?.roleName} | roles count: ${_staffFormCubit.state.roles.length}',
-    );
 
     final hasStaffDetailsFields = _staffFormCubit.state.fields.isNotEmpty;
 
@@ -1247,18 +1239,21 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
     fields['date_of_joining'] = _doj.text;
     fields['pincode'] = _pincode.text;
     fields['national_code'] = _nationalCode.text;
-    if (!apiFieldNames.contains('father_name'))
+    if (!apiFieldNames.contains('father_name')) {
       fields['father_name'] = _fatherName.text;
-    if (!apiFieldNames.contains('date_of_birth'))
+    }
+    if (!apiFieldNames.contains('date_of_birth')) {
       fields['date_of_birth'] = _dob.text;
+    }
     if (!apiFieldNames.contains('address')) fields['address'] = _address.text;
-    if (!apiFieldNames.contains('employee_id'))
+    if (!apiFieldNames.contains('employee_id')) {
       fields['employee_id'] = _employeeId.text;
+    }
     if (_selectedGender != null) fields['gender'] = _selectedGender;
-    if (_selectedBloodGroup != null)
+    if (_selectedBloodGroup != null) {
       fields['blood_group'] = _selectedBloodGroup;
+    }
 
-    // Validate emergency contacts — at least one required with name & phone
     for (int i = 0; i < _emergencyContacts.length; i++) {
       final ec = _emergencyContacts[i];
       if (ec.name.trim().isEmpty) {

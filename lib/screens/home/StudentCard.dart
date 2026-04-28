@@ -84,6 +84,24 @@ class _StudentCardState extends State<StudentCard> {
     }
   }
 
+  /// 🔀 Move to extra
+  Future<bool> _moveToExtra() async {
+    try {
+      final response = await ApiManager().postWithoutRequest(
+        Config.baseUrl +
+            Routes.moveStudentToExtra(
+              studentDetailsData.schoolId?.toString() ?? '',
+              studentDetailsData.uuid ?? '',
+            ),
+      );
+      return response != null &&
+          (response.statusCode == 200 || response.statusCode == 201);
+    } catch (e) {
+      debugPrint("Move to extra error: $e");
+      return false;
+    }
+  }
+
   /// ⬆️ Upload image
   Future<void> _uploadImage(String path) async {
     setState(() => isUploading = true);
@@ -362,6 +380,21 @@ class _StudentCardState extends State<StudentCard> {
             onSelected: (value) async {
               if (value == 'delete') {
                 _confirmDelete(context);
+              } else if (value == 'extra') {
+                final success = await _moveToExtra();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success
+                            ? 'Student moved to extra list'
+                            : 'Failed to move student to extra',
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               } else if (value == 'toggle') {
                 final success = await context
                     .read<StudentsCubit>()
@@ -395,6 +428,16 @@ class _StudentCardState extends State<StudentCard> {
               }
             },
             itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'extra',
+                child: Row(
+                  children: [
+                    Icon(Icons.move_to_inbox, size: 18, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Extra'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'delete',
                 child: Row(

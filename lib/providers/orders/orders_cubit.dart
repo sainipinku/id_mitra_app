@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -62,8 +61,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     emit(state.copyWith(classesLoading: true));
 
     try {
-      final url =
-          '${Config.baseUrl}auth/school/$schoolId/students/form-data';
+      final url = '${Config.baseUrl}auth/school/$schoolId/students/form-data';
       final response = await _api.getRequest(url);
 
       if (response == null) {
@@ -80,51 +78,40 @@ class OrdersCubit extends Cubit<OrdersState> {
       for (var item in rawClasses) {
         final int classId = item['id'] ?? 0;
 
-        final String className =
-            item['name_withprefix']?.toString() ??
-                item['name']?.toString() ??
-                '';
+        final String className = item['name_withprefix']?.toString() ?? item['name']?.toString() ?? '';
 
         final List sections = item['sections'] ?? [];
 
-        // ✅ If sections exist → create multiple entries
+        List<int> ids = [];
+        String firstSectionName = '';
+
         if (sections.isNotEmpty) {
-          for (var sec in sections) {
-            final int sectionId = sec['id'] ?? 0;
+          ids = sections.map<int>((e) => e['id'] ?? 0).toList();
 
-            final String sectionName = sec['name']
-                ?.toString()
-                .replaceAll('.', '')
-                .trim() ??
-                '';
-
-            final fullName = '$className - $sectionName';
-
-            classes.add(
-              OrderClass(
-                classId: classId,
-                sectionId: sectionId,
-                name: fullName,
-                nameWithprefix: fullName,
-              ),
-            );
-          }
-        } else {
-          // ✅ If no section
-          classes.add(
-            OrderClass(
-              classId: classId,
-              sectionId: 0,
-              name: className,
-              nameWithprefix: className,
-            ),
-          );
+          firstSectionName = sections.first['name']
+              ?.toString()
+              .replaceAll('.', '')
+              .trim() ??
+              '';
         }
+
+        final fullName = sections.isNotEmpty
+            ? '$className (Section $firstSectionName)'
+            : className;
+
+        classes.add(
+          OrderClass(
+            classId: classId,
+            sectionIds: ids,
+            name: fullName,
+            nameWithprefix: fullName,
+          ),
+        );
       }
 
       emit(
         state.copyWith(
-          availableClasses: classes,
+          availableClasses: _sortClasses(classes),
           classesLoading: false,
         ),
       );
@@ -133,7 +120,6 @@ class OrdersCubit extends Cubit<OrdersState> {
       emit(state.copyWith(classesLoading: false));
     }
   }
-
   Future<void> fetchOrders({
     bool isLoadMore = false,
     String search = '',
@@ -174,15 +160,18 @@ class OrdersCubit extends Cubit<OrdersState> {
       if (search.isNotEmpty) url += '&search=$search';
       if (dateFrom.isNotEmpty) url += '&date_from=$dateFrom';
       if (dateTo.isNotEmpty) url += '&date_to=$dateTo';
-      // class_id filtered on frontend
+
       print('fetchOrders URL: $url');
 
       final response = await _api.getRequest(url);
       if (response == null) {
-        emit(state.copyWith(loading: false, isPaginationLoading: false, error: 'Failed to load orders'));
+        emit(state.copyWith(
+          loading: false,
+          isPaginationLoading: false,
+          error: 'Failed to load orders',
+        ));
         return;
       }
-      print('fetchOrders status: ${response.statusCode}, body length: ${response.body.length}');
 
       final json = jsonDecode(response.body);
       final data = json['data'] as Map<String, dynamic>;
@@ -238,19 +227,22 @@ class OrdersCubit extends Cubit<OrdersState> {
         return;
       }
 
-      List<OrderClass> classes = state.availableClasses;
-
       emit(state.copyWith(
         loading: false,
         isPaginationLoading: false,
         ordersList: updatedList,
         page: respPage + 1,
-        hasMore: respPage < lastPage,
+        hasMore: hasMore,
         total: total,
-        availableClasses: classes,
+        availableClasses: state.availableClasses,
       ));
     } catch (e) {
-      emit(state.copyWith(loading: false, isPaginationLoading: false, error: e.toString()));
+      print('fetchOrders error: $e');
+      emit(state.copyWith(
+        loading: false,
+        isPaginationLoading: false,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -258,9 +250,12 @@ class OrdersCubit extends Cubit<OrdersState> {
     try {
       final url = Config.baseUrl + Routes.updateOrderStatus(uuid);
       final response = await _api.patchRequestWithBody(url, {'status': newStatus});
+
       if (response == null) return false;
+
       final json = jsonDecode(response.body);
       print('updateOrderStatus response: ${response.body}');
+
       if (json['success'] == true) return true;
       final errors = json['errors'];
       if (errors != null) print('Validation errors: $errors');
@@ -271,19 +266,21 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
-
   Future<void> fetchStaffOrdersTotal() async {
     emit(state.copyWith(staffTotalLoading: true));
     try {
       final url = '${Config.baseUrl}auth/partner/orders?page=1&per_page=1';
       final response = await _api.getRequest(url);
+
       if (response == null) {
         emit(state.copyWith(staffTotalLoading: false));
         return;
       }
+
       final json = jsonDecode(response.body);
       final data = json['data'] as Map<String, dynamic>?;
       int total = 0;
+
       if (data != null) {
         if (data['orders'] is List) {
           final pagination = data['pagination'] as Map<String, dynamic>?;
@@ -293,6 +290,7 @@ class OrdersCubit extends Cubit<OrdersState> {
           total = ordersData['total'] ?? 0;
         }
       }
+
       emit(state.copyWith(staffTotalLoading: false, staffTotal: total));
     } catch (_) {
       emit(state.copyWith(staffTotalLoading: false));

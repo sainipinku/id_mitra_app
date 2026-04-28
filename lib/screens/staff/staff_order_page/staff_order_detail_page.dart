@@ -35,9 +35,9 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
       _error = null;
     });
     try {
-      final url = widget.schoolId.isNotEmpty
-          ? Config.baseUrl + Routes.getStaffOrderDetail(widget.uuid, schoolId: widget.schoolId)
-          : Config.baseUrl + Routes.getOrderDetail(widget.uuid);
+      final url =
+          Config.baseUrl +
+              Routes.getOrderDetail(widget.uuid, schoolId: widget.schoolId);
       final response = await ApiManager().getRequest(url);
       if (response == null) {
         setState(() {
@@ -46,32 +46,13 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
         });
         return;
       }
-      if (response.statusCode == 404) {
-        setState(() {
-          _loading = false;
-          _error = 'Order not found';
-        });
-        return;
-      }
       final json = jsonDecode(response.body);
-      print('StaffOrderDetail response: ${response.statusCode} | ${response.body}');
-
-      // Check success flag
-      final isSuccess = json['success'] == true || json['status'] == true || json['status'] == 'success';
-      if (!isSuccess) {
-        setState(() {
-          _loading = false;
-          _error = json['message'] ?? 'Failed to load order details';
-        });
-        return;
-      }
-
       final raw = json['data'];
       Map<String, dynamic>? orderMap;
-      if (raw is Map) {
-        final m = Map<String, dynamic>.from(raw);
-        // data is directly the order object (has 'id' key)
-        orderMap = m.containsKey('id') ? m : (m['order'] != null ? Map<String, dynamic>.from(m['order']) : null);
+      if (raw is Map<String, dynamic>) {
+        orderMap = raw.containsKey('id')
+            ? raw
+            : (raw['order'] as Map<String, dynamic>?);
       }
       if (orderMap == null) {
         setState(() {
@@ -84,14 +65,14 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
         _loading = false;
         _order = OrderModel.fromJson(orderMap!);
       });
-    } catch (e, st) {
-      print('StaffOrderDetail ERROR: $e\n$st');
+    } catch (e) {
       setState(() {
         _loading = false;
         _error = e.toString();
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -105,51 +86,80 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
       body: _loading
           ? const OrderDetailShimmer()
           : _error != null
-              ? Center(
-                  child: Text(_error!,
-                      style: MyStyles.regularText(size: 14, color: Colors.red)))
-              : _order == null
-                  ? Center(
-                      child: Image.asset('assets/images/no_data.png', height: 200))
-                  : RefreshIndicator(
-                      onRefresh: _fetch,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _headerCard(),
-                            const SizedBox(height: 12),
-                            _sectionCard(
-                              icon: Icons.receipt_long_outlined,
-                              title: 'Order Information',
-                              rows: _orderRows(),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_order!.student != null)
-                              _sectionCard(
-                                icon: Icons.person_outline_rounded,
-                                title: 'Student Information',
-                                rows: _studentRows(),
-                              ),
-                            if (_order!.student != null) const SizedBox(height: 12),
-                            if (_order!.school != null)
-                              _sectionCard(
-                                icon: Icons.school_outlined,
-                                title: 'School Information',
-                                rows: _schoolRows(),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
+          ? Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+            const SizedBox(height: 12),
+            Text(_error!,
+                style: MyStyles.regularText(size: 14, color: Colors.red),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetch,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.btnColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+      )
+          : _order == null
+          ? Center(
+          child: Image.asset('assets/images/no_data.png', height: 200))
+          : RefreshIndicator(
+        onRefresh: _fetch,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              _headerCard(),
+              const SizedBox(height: 12),
+              _sectionCard(
+                icon: Icons.receipt_long_outlined,
+                title: 'Order Information',
+                rows: _orderRows(),
+              ),
+              const SizedBox(height: 12),
+              if (_order!.staff != null)
+                _sectionCard(
+                  icon: Icons.badge_outlined,
+                  title: 'Staff Information',
+                  rows: _staffRows(),
+                ),
+              if (_order!.staff != null) const SizedBox(height: 12),
+              if (_order!.student != null)
+                _sectionCard(
+                  icon: Icons.person_outline_rounded,
+                  title: 'Student Information',
+                  rows: _studentRows(),
+                ),
+              if (_order!.student != null) const SizedBox(height: 12),
+              if (_order!.school != null)
+                _sectionCard(
+                  icon: Icons.school_outlined,
+                  title: 'School Information',
+                  rows: _schoolRows(),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _headerCard() {
     final o = _order!;
-    final student = o.student;
-    final hasPhoto = student?.profilePhotoUrl?.isNotEmpty ?? false;
+    final displayName = o.staff?.name ?? o.student?.name;
+    final displayPhoto = o.staff?.profilePhotoUrl ?? o.student?.profilePhotoUrl;
+    final displaySubtitle = o.staff?.designation ?? o.student?.className;
+    final hasPhoto = displayPhoto?.isNotEmpty ?? false;
 
     return Container(
       width: double.infinity,
@@ -199,23 +209,23 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
                       radius: 36,
                       backgroundColor: AppTheme.appBackgroundColor,
                       backgroundImage:
-                          hasPhoto ? NetworkImage(student!.profilePhotoUrl!) : null,
+                      hasPhoto ? NetworkImage(displayPhoto!) : null,
                       child: !hasPhoto
                           ? Icon(Icons.person_rounded,
-                              size: 36, color: AppTheme.graySubTitleColor)
+                          size: 36, color: AppTheme.graySubTitleColor)
                           : null,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text('#${o.id}',
                       style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
-                  if (student != null) ...[
+                  if (displayName != null) ...[
                     const SizedBox(height: 2),
-                    Text(student.name,
+                    Text(displayName,
                         style: MyStyles.mediumText(size: 14, color: AppTheme.black_Color)),
-                    if (student.className != null) ...[
+                    if (displaySubtitle != null) ...[
                       const SizedBox(height: 2),
-                      Text(student.className!,
+                      Text(displaySubtitle,
                           style: MyStyles.regularText(size: 12, color: AppTheme.btnColor)),
                     ],
                   ],
@@ -291,7 +301,7 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
             child: Column(
               children: List.generate(
                 rows.length,
-                (i) => Column(
+                    (i) => Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -334,6 +344,17 @@ class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
       if (o.printingIssue != null) _StaffRow('Printing Issue', o.printingIssue!),
       if (o.deliveredAt != null) _StaffRow('Delivered At', o.deliveredAt!),
       if (o.cancelledAt != null) _StaffRow('Cancelled At', o.cancelledAt!),
+    ].where((r) => r.value.isNotEmpty).toList();
+  }
+
+  List<_StaffRow> _staffRows() {
+    final s = _order!.staff!;
+    return [
+      _StaffRow('Name', s.name),
+      if (s.designation != null) _StaffRow('Designation', s.designation!),
+      if (s.employeeId != null) _StaffRow('Employee ID', s.employeeId!),
+      if (s.phone != null) _StaffRow('Phone', s.phone!),
+      if (s.email != null) _StaffRow('Email', s.email!),
     ].where((r) => r.value.isNotEmpty).toList();
   }
 

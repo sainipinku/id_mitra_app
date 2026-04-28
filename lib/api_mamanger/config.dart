@@ -83,7 +83,7 @@ class Routes {
   static String getOrderDetail(String uuid, {String schoolId = ''}) =>
       "auth/partner/orders/$uuid";
   static String getStaffOrderDetail(String uuid, {required String schoolId}) =>
-      "auth/school/$schoolId/staff/orders/$uuid";
+      "auth/partner/orders/$uuid";
   static String updateOrderStatus(String uuid, {String schoolId = ''}) =>
       schoolId.isNotEmpty ? "auth/school/$schoolId/orders/$uuid/status" : "auth/partner/orders/$uuid/status";
   static String getOrderStatistics() => "auth/partner/orders/statistics/summary";
@@ -91,5 +91,9 @@ class Routes {
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";
   static String getSubCategoryProductById(String subCatId) => "product/subcategory/$subCatId";
   static String updateImageSettings(String schoolId) => "auth/school/image-settings/$schoolId";
+  static String moveStudentToExtra(String schoolId, String studentUuid) =>
+      "auth/school/$schoolId/students/$studentUuid/move-to-extra";
+  static String assignStudent(String schoolId, String studentUuid) =>
+      "auth/school/$schoolId/students/$studentUuid/assign";
 }
 

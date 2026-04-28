@@ -9,12 +9,12 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/screens/admin/admin_home/admin_students_list.dart';
-import 'package:idmitra/screens/admin/admin_order/admin_orders_page.dart'; // ✅ Sahi import
+import 'package:idmitra/screens/admin/admin_order/admin_orders_page.dart';
 import 'package:idmitra/providers/staff/staff_cubit.dart';
-import 'package:idmitra/screens/staff/staff_list.dart';
 import 'package:idmitra/providers/add_staff/add_staff_cubit.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import '../../edit_profile/image_setting.dart';
+import '../staff_student_list/staff_list.dart';
 
 class StaffUserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;

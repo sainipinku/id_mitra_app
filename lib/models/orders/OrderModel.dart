@@ -1,9 +1,11 @@
+// ==================== ORDER MODEL ====================
+
 class OrderModel {
   final int id;
   final String uuid;
   final String status;
   final String type;
-  final String orderedAt;
+  final String orderedAt;        // API mein "orderd_at"
   final String receivedAtShort;
   final int studentCard;
   final int studentCardQty;
@@ -12,8 +14,10 @@ class OrderModel {
   final String? printingIssue;
   final String? deliveredAt;
   final String? cancelledAt;
+
   final OrderSchool? school;
   final OrderStudent? student;
+  final OrderStaff? staff;
 
   const OrderModel({
     required this.id,
@@ -31,6 +35,7 @@ class OrderModel {
     this.cancelledAt,
     this.school,
     this.student,
+    this.staff,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -39,44 +44,45 @@ class OrderModel {
       uuid: json['uuid'] ?? '',
       status: json['status'] ?? '',
       type: json['type'] ?? '',
-      orderedAt: json['orderd_at'] ?? '',
+      orderedAt: json['orderd_at'] ?? json['ordered_at'] ?? '',
       receivedAtShort: json['received_at_short'] ?? '',
       studentCard: json['student_card'] ?? 0,
       studentCardQty: json['student_card_qty'] ?? 1,
       parentCard: json['parent_card'] ?? 0,
       admitCard: json['admit_card'] ?? 0,
       printingIssue: json['printing_issue'],
-      deliveredAt: json['deliverd_at'],
+      deliveredAt: json['deliverd_at'],      // API spelling
       cancelledAt: json['cancelled_at'],
       school: json['school'] != null ? OrderSchool.fromJson(json['school']) : null,
       student: json['student'] != null ? OrderStudent.fromJson(json['student']) : null,
+      staff: json['staff'] != null ? OrderStaff.fromJson(json['staff']) : null,
     );
   }
 
   String get statusLabel {
     return kOrderStatuses
-        .firstWhere((s) => s.value == status,
-            orElse: () => OrderStatusOption(status, status.replaceAll('_', ' ')))
+        .firstWhere(
+          (s) => s.value == status,
+      orElse: () => OrderStatusOption(status, status.replaceAll('_', ' ')),
+    )
         .label;
   }
 
   String get typeLabel {
-    switch (type) {
-      case 'pvc_card': return 'PVC Card';
-      case 'rfid_card': return 'RFID Card';
-      case 'pasting_card': return 'Pasting Card';
-      default: return type.replaceAll('_', ' ');
+    switch (type.toLowerCase()) {
+      case 'rfid_card':
+        return 'RFID Card';
+      case 'pvc_card':
+        return 'PVC Card';
+      case 'pasting_card':
+        return 'Pasting Card';
+      default:
+        return type.replaceAll('_', ' ').toUpperCase();
     }
   }
-
-  String get orderCardsLabel {
-    final parts = <String>[];
-    if (studentCard == 1) parts.add('Student');
-    if (parentCard == 1) parts.add('Parent');
-    if (admitCard == 1) parts.add('Admit');
-    return parts.isEmpty ? '-' : parts.join(', ');
-  }
 }
+
+// ==================== SUB MODELS ====================
 
 class OrderSchool {
   final int id;
@@ -96,13 +102,13 @@ class OrderSchool {
   });
 
   factory OrderSchool.fromJson(Map<String, dynamic> json) => OrderSchool(
-        id: json['id'] ?? 0,
-        name: json['name'] ?? '',
-        logoUrl: json['logo_url'],
-        address: json['address'],
-        pincode: json['pincode']?.toString(),
-        prefix: json['school_prefix'],
-      );
+    id: json['id'] ?? 0,
+    name: json['name'] ?? '',
+    logoUrl: json['logo_url'],
+    address: json['address'],
+    pincode: json['pincode']?.toString(),
+    prefix: json['school_prefix'] ?? json['prefix'],
+  );
 }
 
 class OrderStudent {
@@ -139,15 +145,16 @@ class OrderStudent {
   });
 
   factory OrderStudent.fromJson(Map<String, dynamic> json) {
-    final cls = json['class'] as Map<String, dynamic>?;
-    final section = json['section'] as Map<String, dynamic>?;
+    final classData = json['class'] as Map<String, dynamic>?;
+    final sectionData = json['section'] as Map<String, dynamic>?;
+
     return OrderStudent(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       profilePhotoUrl: json['profile_photo_url'],
-      className: cls?['name_withprefix'],
-      classId: cls?['id'],
-      sectionName: section?['name'],
+      className: classData?['name_withprefix'] ?? classData?['name'],
+      classId: classData?['id'],
+      sectionName: sectionData?['name'],
       gender: json['gender'],
       dob: json['dob'],
       fatherName: json['father_name'],
@@ -159,6 +166,38 @@ class OrderStudent {
     );
   }
 }
+
+class OrderStaff {
+  final int id;
+  final String name;
+  final String? profilePhotoUrl;
+  final String? designation;
+  final String? phone;
+  final String? email;
+  final String? employeeId;
+
+  const OrderStaff({
+    required this.id,
+    required this.name,
+    this.profilePhotoUrl,
+    this.designation,
+    this.phone,
+    this.email,
+    this.employeeId,
+  });
+
+  factory OrderStaff.fromJson(Map<String, dynamic> json) => OrderStaff(
+    id: json['id'] ?? 0,
+    name: json['name'] ?? '',
+    profilePhotoUrl: json['profile_photo_url'],
+    designation: json['designation'],
+    phone: json['phone'],
+    email: json['email'],
+    employeeId: json['employee_id']?.toString(),
+  );
+}
+
+// ==================== STATUS ====================
 
 class OrderStatusOption {
   final String value;
@@ -175,34 +214,10 @@ const kOrderStatuses = [
 ];
 
 const kOrderFilterStatuses = [
-  OrderStatusOption('', 'Filter By Status'),
+  OrderStatusOption('', 'All Status'),
   OrderStatusOption('order_created', 'Order Created'),
   OrderStatusOption('re_order', 'Re-Order'),
   OrderStatusOption('work_in_process', 'Work In Process'),
   OrderStatusOption('completed', 'Completed'),
   OrderStatusOption('cancelled', 'Cancelled'),
 ];
-
-class OrderStatistics {
-  final int totalOrders;
-  final int pendingOrders;
-  final int completedOrders;
-  final int cancelledOrders;
-  final double completionRate;
-
-  const OrderStatistics({
-    this.totalOrders = 0,
-    this.pendingOrders = 0,
-    this.completedOrders = 0,
-    this.cancelledOrders = 0,
-    this.completionRate = 0,
-  });
-
-  factory OrderStatistics.fromJson(Map<String, dynamic> json) => OrderStatistics(
-        totalOrders: json['total_orders'] ?? 0,
-        pendingOrders: json['pending_orders'] ?? 0,
-        completedOrders: json['completed_orders'] ?? 0,
-        cancelledOrders: json['cancelled_orders'] ?? 0,
-        completionRate: (json['completion_rate'] ?? 0).toDouble(),
-      );
-}

@@ -10,11 +10,12 @@ import 'package:idmitra/screens/admin/admin_edit_profile/admin_student_form.dart
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/screens/admin/admin_home/admin_students_list.dart';
 import 'package:idmitra/screens/admin/admin_order/admin_orders_page.dart';
-import 'package:idmitra/screens/staff/staff_list.dart';
 import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:idmitra/screens/admin/admin_edit_profile/admin_image_setting.dart';
 import 'package:idmitra/screens/admin/admin_edit_profile/admin_edit_profile.dart';
+
+import '../../../staff/staff_student_list/staff_list.dart';
 
 class AdminUserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;

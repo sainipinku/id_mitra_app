@@ -12,7 +12,7 @@ import 'package:idmitra/models/orders/OrderModel.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/orders/orders_state.dart';
 import 'package:idmitra/screens/orders/order_detail_page.dart';
-import 'package:idmitra/screens/orders/staff_orders_page.dart';
+import 'package:idmitra/screens/orders/order_staff_page.dart';
 
 class OrdersPage extends StatelessWidget {
   final String schoolId;
@@ -148,7 +148,7 @@ class _OrdersViewState extends State<_OrdersView> {
                 MaterialPageRoute(
                   builder: (_) => BlocProvider(
                     create: (_) => OrdersCubit(),
-                    child: StaffOrdersPage(schoolId: widget.schoolId),
+                    child: OrderStaffPage(schoolId: widget.schoolId),
                   ),
                 ),
               ),

@@ -156,22 +156,20 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       final cls = classes[index];
                       final clsId = cls.classId.toString();
                       final clsName = cls.nameWithprefix ?? cls.name;
-                      final clsKey = "${cls.classId}_${cls.sectionId}";
-                      final isSelected = _selectedClassIds.contains(clsKey);
+                      final isSelected = _selectedClassIds.contains(clsId);
+
                       return InkWell(
-
-
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedClassIds.remove(clsKey);
-                            _selectedClassNames.remove(clsKey);
-                          } else {
-                            _selectedClassIds.add(clsKey);
-                            _selectedClassNames[clsKey] = cls.nameWithprefix ?? cls.name;
-                          }
-                        });
-                      },
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedClassIds.remove(clsId);
+                              _selectedClassNames.remove(clsId);
+                            } else {
+                              _selectedClassIds.add(clsId);
+                              _selectedClassNames[clsId] = clsName;
+                            }
+                          });
+                        },
                         borderRadius: BorderRadius.circular(8),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -242,24 +240,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       ),
                     ),
                     onPressed: () {
-                      final List<String> classIds = []; // keep string flow
-                      final List<int> sectionIds = [];  // array
-
-                      for (var key in _selectedClassIds) {
-                        final parts = key.split('_');
-
-                        if (parts.length == 2) {
-                          classIds.add(parts[0]); // class as string
-                          sectionIds.add(int.tryParse(parts[1]) ?? 0);
-                        }
-                      }
-
+                      final classIds = _selectedClassIds.join(',');
                       Navigator.pop(context, {
-                        "class": classIds.isEmpty ? null : classIds.join(','), // ✅ same as before
-                        "section": sectionIds.isEmpty ? null : sectionIds,     // ✅ array
+                        "class": classIds.isEmpty ? null : classIds,
                         "gender": selectedGender,
                       });
-                      print("section list---------$sectionIds");
                     },
                     child: const Text(
                       "Apply Filter",
