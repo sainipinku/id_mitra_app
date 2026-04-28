@@ -147,7 +147,6 @@ class _StudentListingPageState extends State<StudentListingPage> {
                       if (result != null) {
                         print("Class: ${result['class']}");
                         print("Gender: ${result['gender']}");
-                        print("section: ${result['section']}");
 
                         final String? classId = result['class'];
                         final String? gender = result['gender']
@@ -165,8 +164,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                               search: '',
                               schoolId: widget.schoolId,
                               classId: classId ?? '', // null bhi ja sakta hai
-                              gender: gender ?? '',
-                              sectionIds: result['section'] ?? []// male / female / null
+                              gender: gender ?? '', // male / female / null
                             );
                           },
                         );

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -18,10 +19,12 @@ import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/common_widgets/drop_down/drop_down.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../../../models/add_student/StudentFormDataModel.dart';
 import '../../../providers/add_student/add_student_cubit.dart';
 import '../../../providers/student_form/student_form_data_cubit.dart';
+import '../../../api_mamanger/api_manager.dart';
+import '../../../api_mamanger/config.dart';
+import '../../add_student/student_assign_class_sheet.dart';
 
 const List<String> _kGenderOptions = [
   '-Select Gender-',
@@ -73,6 +76,9 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
   final Map<String, dynamic> _selectVal = {};
   final Map<String, File?> _files = {};
 
+  bool _extraLoading = false;
+  List<StudentDetailsData> _extraStudents = [];
+
   @override
   void initState() {
     super.initState();
@@ -81,12 +87,37 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
       vsync: this,
       initialIndex: widget.initialTab,
     );
+    _tabController.addListener(() {
+      if (_tabController.index == 1 && !_tabController.indexIsChanging) {
+        _fetchExtraStudents();
+      }
+    });
     if (widget.editStudent != null) {
       _additionalExpanded = _hasAdditionalData(widget.editStudent!);
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _prefillStudent(widget.editStudent!),
       );
     }
+  }
+
+  Future<void> _fetchExtraStudents() async {
+    if (_extraLoading) return;
+    setState(() => _extraLoading = true);
+    try {
+      final response = await ApiManager().getRequest(
+        "${Config.baseUrl}auth/school/${widget.schoolId}?is_moved=1",
+      );
+      if (response != null && response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        final List list = jsonData["data"]?["data"] ?? [];
+        setState(() {
+          _extraStudents = list.map((e) => StudentDetailsData.fromJson(e)).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint("Fetch extra students error: $e");
+    }
+    setState(() => _extraLoading = false);
   }
 
   bool _hasAdditionalData(StudentDetailsData s) {
@@ -124,13 +155,13 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     super.dispose();
   }
 
-  void _clearForm() {
-    for (final c in _ctrl.values) c.clear();
-    setState(() {
-      _selectVal.clear();
-      _files.clear();
-    });
-  }
+  // void _clearForm() {
+  //   for (final c in _ctrl.values) c.clear();
+  //   setState(() {
+  //     _selectVal.clear();
+  //     _files.clear();
+  //   });
+  // }
 
   String? _validateForm(
     List<StudentFormField> allFields,
@@ -177,7 +208,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
       case 'house':
         return (data?.houses ?? []).isEmpty;
       case 'class_section':
-        final selectedClassId = (_selectVal['class'] as int?);
+        final selectedClassId = _toInt(_selectVal['class']);
         if (selectedClassId == null) return true;
         final selectedClass = data?.classes.firstWhere(
           (c) => c.id == selectedClassId,
@@ -274,6 +305,13 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     if (value == null || value.isEmpty) return;
     _ctrl.putIfAbsent(key, () => TextEditingController());
     _ctrl[key]!.text = value;
+  }
+
+  // Safe cast: handles both int and String values stored in _selectVal
+  int? _toInt(dynamic val) {
+    if (val == null) return null;
+    if (val is int) return val;
+    return int.tryParse(val.toString());
   }
 
   String _capitalizeFirst(String s) {
@@ -432,7 +470,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
   Widget _sessionDropdown(List<SessionOption> sessions) {
     if (sessions.isEmpty) return _loadingTile('Loading sessions...');
 
-    final val = (_selectVal['session'] as int?);
+    final val = _toInt(_selectVal['session']);
     if (val == null && sessions.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -474,7 +512,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     if (classes.isEmpty) return _loadingTile('Loading classes...');
     final seen = <String>{};
     final unique = classes.where((c) => seen.add(c.nameWithPrefix)).toList();
-    final val = (_selectVal['class'] as int?);
+    final val = _toInt(_selectVal['class']);
     final selected = (val != null && unique.any((c) => c.id == val))
         ? unique.firstWhere((c) => c.id == val)
         : null;
@@ -497,7 +535,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     if (houses.isEmpty) return _loadingTile('Loading houses...');
     final seen = <String>{};
     final unique = houses.where((h) => seen.add(h.name)).toList();
-    final val = (_selectVal['house'] as int?);
+    final val = _toInt(_selectVal['house']);
     final selected = (val != null && unique.any((h) => h.id == val))
         ? unique.firstWhere((h) => h.id == val)
         : null;
@@ -512,7 +550,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
   }
 
   Widget _sectionDropdown(List<SectionOption> sections) {
-    final val = (_selectVal['class_section'] as int?);
+    final val = _toInt(_selectVal['class_section']);
     SectionOption? selected;
     if (val != null) {
       if (sections.any((s) => s.id == val)) {
@@ -967,6 +1005,109 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
         ),
       );
 
+  Widget _otherStudentTab() {
+    if (_extraLoading) {
+      return const ShimmerList(expanded: false);
+    }
+    if (_extraStudents.isEmpty) {
+      return Center(
+        child: Image.asset('assets/images/no_data.png', height: 200),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _extraStudents.length,
+      itemBuilder: (context, index) {
+        final student = _extraStudents[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: (student.profilePhotoUrl != null &&
+                        student.profilePhotoUrl!.isNotEmpty)
+                    ? Image.network(
+                        student.profilePhotoUrl!,
+                        height: 55,
+                        width: 55,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _extraPlaceholder(),
+                      )
+                    : _extraPlaceholder(),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      student.name ?? '',
+                      style: MyStyles.boldText(size: 15, color: AppTheme.black_Color),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      "${student.datumClass?.nameWithprefix ?? ''} - ${student.section?.name ?? ''}",
+                      style: MyStyles.regularText(size: 12, color: AppTheme.btnColor),
+                    ),
+                    if (student.fatherName != null && student.fatherName!.isNotEmpty)
+                      Text(
+                        "Father: ${student.fatherName}",
+                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                      ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                onSelected: (value) {
+                  if (value == 'assign') {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => StudentAssignClassSheet(
+                        schoolId: widget.schoolId,
+                        studentUuid: student.uuid ?? '',
+                        studentName: student.name ?? '',
+                        onAssigned: _fetchExtraStudents,
+                      ),
+                    );
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'assign',
+                    child: Row(
+                      children: [
+                        Icon(Icons.class_, size: 18, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Assign Class'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _extraPlaceholder() => Container(
+        height: 55,
+        width: 55,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.person, color: Colors.grey),
+      );
+
   Widget _mainInfoTab(
     List<StudentFormField> currentFields,
     List<StudentFormField> additionalFields,
@@ -1166,16 +1307,15 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                                 additionalFields,
                                 data,
                               ),
-                              Center(
-                                child: Image.asset(
-                                  'assets/images/no_data.png',
-                                  height: 200,
-                                ),
-                              ),
+                              _otherStudentTab(),
                             ],
                           ),
                   ),
-                  Container(
+                  AnimatedBuilder(
+                    animation: _tabController,
+                    builder: (context, _) {
+                      if (_tabController.index == 1) return const SizedBox.shrink();
+                      return Container(
                     padding: const EdgeInsets.all(16),
                     color: Colors.white,
                     child: Row(
@@ -1372,6 +1512,8 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                         ),
                       ],
                     ),
+                  );
+                    },
                   ),
                 ],
               ),

@@ -8,13 +8,13 @@ import 'package:idmitra/screens/admin/admin_home/admin_dashboard.dart';
 
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
-import 'package:idmitra/screens/staff/staff_dashboard.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 
 import 'package:page_transition/page_transition.dart';
 
 import '../add_school/add_newschool.dart';
+import '../staff/staff_home/staff_dashboard.dart';
 
 
 class Splash extends StatefulWidget {

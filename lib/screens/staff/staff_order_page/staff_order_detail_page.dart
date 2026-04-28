@@ -9,16 +9,16 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/orders/OrderModel.dart';
 
-class AdminOrderDetailPage extends StatefulWidget {
+class StaffOrderDetailPage extends StatefulWidget {
   final String uuid;
   final String schoolId;
-  const AdminOrderDetailPage({super.key, required this.uuid, this.schoolId = ''});
+  const StaffOrderDetailPage({super.key, required this.uuid, this.schoolId = ''});
 
   @override
-  State<AdminOrderDetailPage> createState() => _AdminOrderDetailPageState();
+  State<StaffOrderDetailPage> createState() => _StaffOrderDetailPageState();
 }
 
-class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
+class _StaffOrderDetailPageState extends State<StaffOrderDetailPage> {
   OrderModel? _order;
   bool _loading = true;
   String? _error;
@@ -35,7 +35,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
       _error = null;
     });
     try {
-      final url = Config.baseUrl + Routes.getOrderDetail(widget.uuid, schoolId: widget.schoolId);
+      final url =
+          Config.baseUrl +
+              Routes.getOrderDetail(widget.uuid, schoolId: widget.schoolId);
       final response = await ApiManager().getRequest(url);
       if (response == null) {
         setState(() {
@@ -48,10 +50,15 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
       final raw = json['data'];
       Map<String, dynamic>? orderMap;
       if (raw is Map<String, dynamic>) {
-        orderMap = raw.containsKey('id') ? raw : (raw['order'] as Map<String, dynamic>?);
+        orderMap = raw.containsKey('id')
+            ? raw
+            : (raw['order'] as Map<String, dynamic>?);
       }
       if (orderMap == null) {
-        setState(() { _loading = false; _error = 'Invalid response format'; });
+        setState(() {
+          _loading = false;
+          _error = 'Invalid response format';
+        });
         return;
       }
       setState(() {
@@ -66,6 +73,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,54 +86,80 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
       body: _loading
           ? const OrderDetailShimmer()
           : _error != null
-              ? Center(
-                  child: Text(_error!,
-                      style: MyStyles.regularText(
-                          size: 14, color: Colors.red)))
-              : _order == null
-                  ? Center(
-                      child: Image.asset('assets/images/no_data.png',
-                          height: 200))
-                  : RefreshIndicator(
-                      onRefresh: _fetch,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _headerCard(),
-                            const SizedBox(height: 12),
-                            _sectionCard(
-                              icon: Icons.receipt_long_outlined,
-                              title: 'Order Information',
-                              rows: _orderRows(),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_order!.student != null)
-                              _sectionCard(
-                                icon: Icons.person_outline_rounded,
-                                title: 'Student Information',
-                                rows: _studentRows(),
-                              ),
-                            if (_order!.student != null)
-                              const SizedBox(height: 12),
-                            if (_order!.school != null)
-                              _sectionCard(
-                                icon: Icons.school_outlined,
-                                title: 'School Information',
-                                rows: _schoolRows(),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
+          ? Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+            const SizedBox(height: 12),
+            Text(_error!,
+                style: MyStyles.regularText(size: 14, color: Colors.red),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetch,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.btnColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+      )
+          : _order == null
+          ? Center(
+          child: Image.asset('assets/images/no_data.png', height: 200))
+          : RefreshIndicator(
+        onRefresh: _fetch,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              _headerCard(),
+              const SizedBox(height: 12),
+              _sectionCard(
+                icon: Icons.receipt_long_outlined,
+                title: 'Order Information',
+                rows: _orderRows(),
+              ),
+              const SizedBox(height: 12),
+              if (_order!.staff != null)
+                _sectionCard(
+                  icon: Icons.badge_outlined,
+                  title: 'Staff Information',
+                  rows: _staffRows(),
+                ),
+              if (_order!.staff != null) const SizedBox(height: 12),
+              if (_order!.student != null)
+                _sectionCard(
+                  icon: Icons.person_outline_rounded,
+                  title: 'Student Information',
+                  rows: _studentRows(),
+                ),
+              if (_order!.student != null) const SizedBox(height: 12),
+              if (_order!.school != null)
+                _sectionCard(
+                  icon: Icons.school_outlined,
+                  title: 'School Information',
+                  rows: _schoolRows(),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _headerCard() {
     final o = _order!;
-    final student = o.student;
-    final hasPhoto = student?.profilePhotoUrl?.isNotEmpty ?? false;
+    final displayName = o.staff?.name ?? o.student?.name;
+    final displayPhoto = o.staff?.profilePhotoUrl ?? o.student?.profilePhotoUrl;
+    final displaySubtitle = o.staff?.designation ?? o.student?.className;
+    final hasPhoto = displayPhoto?.isNotEmpty ?? false;
 
     return Container(
       width: double.infinity,
@@ -152,8 +186,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
           ),
           Padding(
@@ -175,50 +208,41 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                     child: CircleAvatar(
                       radius: 36,
                       backgroundColor: AppTheme.appBackgroundColor,
-                      backgroundImage: hasPhoto
-                          ? NetworkImage(student!.profilePhotoUrl!)
-                          : null,
+                      backgroundImage:
+                      hasPhoto ? NetworkImage(displayPhoto!) : null,
                       child: !hasPhoto
                           ? Icon(Icons.person_rounded,
-                              size: 36,
-                              color: AppTheme.graySubTitleColor)
+                          size: 36, color: AppTheme.graySubTitleColor)
                           : null,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text('#${o.id}',
-                      style: MyStyles.boldText(
-                          size: 16, color: AppTheme.black_Color)),
-                  if (student != null) ...[
+                      style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
+                  if (displayName != null) ...[
                     const SizedBox(height: 2),
-                    Text(student.name,
-                        style: MyStyles.mediumText(
-                            size: 14, color: AppTheme.black_Color)),
-                    if (student.className != null) ...[
+                    Text(displayName,
+                        style: MyStyles.mediumText(size: 14, color: AppTheme.black_Color)),
+                    if (displaySubtitle != null) ...[
                       const SizedBox(height: 2),
-                      Text(student.className!,
-                          style: MyStyles.regularText(
-                              size: 12, color: AppTheme.btnColor)),
+                      Text(displaySubtitle,
+                          style: MyStyles.regularText(size: 12, color: AppTheme.btnColor)),
                     ],
                   ],
                   const SizedBox(height: 4),
                   Text(o.typeLabel,
-                      style: MyStyles.regularText(
-                          size: 13, color: AppTheme.graySubTitleColor)),
+                      style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor)),
                   const SizedBox(height: 4),
                   Text(o.orderedAt,
-                      style: MyStyles.regularText(
-                          size: 12, color: AppTheme.graySubTitleColor)),
+                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                     decoration: BoxDecoration(
                         color: AppTheme.btnColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20)),
                     child: Text(o.statusLabel,
-                        style: MyStyles.mediumText(
-                            size: 12, color: AppTheme.btnColor)),
+                        style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
                   ),
                 ],
               ),
@@ -232,7 +256,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   Widget _sectionCard({
     required IconData icon,
     required String title,
-    required List<_AdminRow> rows,
+    required List<_StaffRow> rows,
   }) {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Container(
@@ -251,12 +275,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: AppTheme.btnColor.withOpacity(0.05),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
@@ -269,8 +291,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(title,
-                    style: MyStyles.boldText(
-                        size: 13, color: AppTheme.black_Color)),
+                    style: MyStyles.boldText(size: 13, color: AppTheme.black_Color)),
               ],
             ),
           ),
@@ -280,15 +301,14 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             child: Column(
               children: List.generate(
                 rows.length,
-                (i) => Column(
+                    (i) => Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(rows[i].label,
                             style: MyStyles.regularText(
-                                size: 12,
-                                color: AppTheme.graySubTitleColor)),
+                                size: 12, color: AppTheme.graySubTitleColor)),
                         Flexible(
                           child: Text(rows[i].value,
                               style: MyStyles.mediumText(
@@ -309,51 +329,59 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     );
   }
 
-  List<_AdminRow> _orderRows() {
+  List<_StaffRow> _orderRows() {
     final o = _order!;
     return [
-      _AdminRow('Order ID', '#${o.id}'),
-      _AdminRow('Type', o.typeLabel),
-      _AdminRow('Status', o.statusLabel),
-      _AdminRow('Order Date', o.orderedAt),
-      _AdminRow('Received At', o.receivedAtShort),
+      _StaffRow('Order ID', '#${o.id}'),
+      _StaffRow('Type', o.typeLabel),
+      _StaffRow('Status', o.statusLabel),
+      _StaffRow('Order Date', o.orderedAt),
+      _StaffRow('Received At', o.receivedAtShort),
       if (o.studentCard == 1)
-        _AdminRow('Student Card', 'Yes (Qty: ${o.studentCardQty})'),
-      if (o.parentCard == 1) _AdminRow('Parent Card', 'Yes'),
-      if (o.admitCard == 1) _AdminRow('Admit Card', 'Yes'),
-      if (o.printingIssue != null)
-        _AdminRow('Printing Issue', o.printingIssue!),
-      if (o.deliveredAt != null) _AdminRow('Delivered At', o.deliveredAt!),
-      if (o.cancelledAt != null)
-        _AdminRow('Cancelled At', o.cancelledAt!),
+        _StaffRow('Student Card', 'Yes (Qty: ${o.studentCardQty})'),
+      if (o.parentCard == 1) _StaffRow('Parent Card', 'Yes'),
+      if (o.admitCard == 1) _StaffRow('Admit Card', 'Yes'),
+      if (o.printingIssue != null) _StaffRow('Printing Issue', o.printingIssue!),
+      if (o.deliveredAt != null) _StaffRow('Delivered At', o.deliveredAt!),
+      if (o.cancelledAt != null) _StaffRow('Cancelled At', o.cancelledAt!),
     ].where((r) => r.value.isNotEmpty).toList();
   }
 
-  List<_AdminRow> _studentRows() {
+  List<_StaffRow> _staffRows() {
+    final s = _order!.staff!;
+    return [
+      _StaffRow('Name', s.name),
+      if (s.designation != null) _StaffRow('Designation', s.designation!),
+      if (s.employeeId != null) _StaffRow('Employee ID', s.employeeId!),
+      if (s.phone != null) _StaffRow('Phone', s.phone!),
+      if (s.email != null) _StaffRow('Email', s.email!),
+    ].where((r) => r.value.isNotEmpty).toList();
+  }
+
+  List<_StaffRow> _studentRows() {
     final s = _order!.student!;
     return [
-      _AdminRow('Name', s.name),
-      if (s.className != null) _AdminRow('Class', s.className!),
-      if (s.sectionName != null) _AdminRow('Section', s.sectionName!),
-      if (s.gender != null) _AdminRow('Gender', _cap(s.gender!)),
-      if (s.dob != null) _AdminRow('Date of Birth', s.dob!),
-      if (s.fatherName != null) _AdminRow('Father Name', s.fatherName!),
-      if (s.fatherPhone != null)
-        _AdminRow('Father Phone', s.fatherPhone!),
-      if (s.motherName != null) _AdminRow('Mother Name', s.motherName!),
-      if (s.address != null) _AdminRow('Address', s.address!),
-      if (s.pincode != null) _AdminRow('Pincode', s.pincode!),
-      if (s.loginId != null) _AdminRow('Login ID', s.loginId!),
+      _StaffRow('Name', s.name),
+      if (s.className != null) _StaffRow('Class', s.className!),
+      if (s.sectionName != null) _StaffRow('Section', s.sectionName!),
+      if (s.gender != null) _StaffRow('Gender', _cap(s.gender!)),
+      if (s.dob != null) _StaffRow('Date of Birth', s.dob!),
+      if (s.fatherName != null) _StaffRow('Father Name', s.fatherName!),
+      if (s.fatherPhone != null) _StaffRow('Father Phone', s.fatherPhone!),
+      if (s.motherName != null) _StaffRow('Mother Name', s.motherName!),
+      if (s.address != null) _StaffRow('Address', s.address!),
+      if (s.pincode != null) _StaffRow('Pincode', s.pincode!),
+      if (s.loginId != null) _StaffRow('Login ID', s.loginId!),
     ].where((r) => r.value.isNotEmpty).toList();
   }
 
-  List<_AdminRow> _schoolRows() {
+  List<_StaffRow> _schoolRows() {
     final sc = _order!.school!;
     return [
-      _AdminRow('School Name', sc.name),
-      if (sc.prefix != null) _AdminRow('Prefix', sc.prefix!),
-      if (sc.address != null) _AdminRow('Address', sc.address!),
-      if (sc.pincode != null) _AdminRow('Pincode', sc.pincode!),
+      _StaffRow('School Name', sc.name),
+      if (sc.prefix != null) _StaffRow('Prefix', sc.prefix!),
+      if (sc.address != null) _StaffRow('Address', sc.address!),
+      if (sc.pincode != null) _StaffRow('Pincode', sc.pincode!),
     ].where((r) => r.value.isNotEmpty).toList();
   }
 
@@ -361,8 +389,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 }
 
-class _AdminRow {
+class _StaffRow {
   final String label;
   final String value;
-  const _AdminRow(this.label, this.value);
+  const _StaffRow(this.label, this.value);
 }

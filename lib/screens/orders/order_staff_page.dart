@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
@@ -11,9 +12,12 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
 import 'package:idmitra/models/orders/OrderModel.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
+import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 
-class StaffOrderItem {
+class OrderStaffItem {
   final int id;
+  final String uuid;
   final String status;
   final String type;
   final String orderedAt;
@@ -21,8 +25,9 @@ class StaffOrderItem {
   final String? staffPhoto;
   final String? schoolName;
 
-  const StaffOrderItem({
+  const OrderStaffItem({
     required this.id,
+    required this.uuid,
     required this.status,
     required this.type,
     required this.orderedAt,
@@ -31,11 +36,12 @@ class StaffOrderItem {
     this.schoolName,
   });
 
-  factory StaffOrderItem.fromJson(Map<String, dynamic> json) {
+  factory OrderStaffItem.fromJson(Map<String, dynamic> json) {
     final staff = json['staff'] as Map<String, dynamic>?;
     final school = json['school'] as Map<String, dynamic>?;
-    return StaffOrderItem(
+    return OrderStaffItem(
       id: json['id'] ?? 0,
+      uuid: json['uuid'] ?? '',
       status: json['status'] ?? '',
       type: json['type'] ?? '',
       orderedAt: json['orderd_at'] ?? json['created_at'] ?? '',
@@ -80,22 +86,22 @@ class StaffOrderItem {
   }
 }
 
-class StaffOrdersPage extends StatefulWidget {
+class OrderStaffPage extends StatefulWidget {
   final String schoolId;
-  const StaffOrdersPage({super.key, required this.schoolId});
+  const OrderStaffPage({super.key, required this.schoolId});
 
   @override
-  State<StaffOrdersPage> createState() => _StaffOrdersPageState();
+  State<OrderStaffPage> createState() => _OrderStaffPageState();
 }
 
-class _StaffOrdersPageState extends State<StaffOrdersPage> {
+class _OrderStaffPageState extends State<OrderStaffPage> {
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _dateFromCtrl = TextEditingController();
   final TextEditingController _dateToCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   Timer? _debounce;
 
-  List<StaffOrderItem> _orders = [];
+  List<OrderStaffItem> _orders = [];
   bool _loading = false;
   bool _hasMore = true;
   int _page = 1;
@@ -175,7 +181,6 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       
       final json = jsonDecode(response.body);
       
-      // Check if response has success status (handle both 'status' and 'success' keys)
       final isSuccess = (json['status'] == true || json['status'] == 'success' || json['success'] == true);
       
       if (!isSuccess) {
@@ -192,13 +197,11 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
         return;
       }
 
-      // Try different response structures
       List rawList = [];
       int total = 0;
       int lastPage = 1;
       int respCurrentPage = 1;
       
-      // Structure 1: data.list.data[]
       if (data.containsKey('list') && data['list'] is Map) {
         final listData = data['list'] as Map<String, dynamic>;
         rawList = listData['data'] ?? [];
@@ -206,14 +209,12 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
         lastPage = listData['last_page'] ?? 1;
         respCurrentPage = listData['current_page'] ?? 1;
       } 
-      // Structure 2: data.data[]
       else if (data.containsKey('data') && data['data'] is List) {
         rawList = data['data'] as List;
         total = data['total'] ?? rawList.length;
         lastPage = data['last_page'] ?? 1;
         respCurrentPage = data['current_page'] ?? 1;
       }
-      // Structure 3: Direct array in data
       else if (data.containsKey('orders')) {
         final ordersData = data['orders'];
         if (ordersData is List) {
@@ -230,7 +231,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       print('Parsed rawList length: ${rawList.length}');
       print('Total: $total, Current Page: $respCurrentPage, Last Page: $lastPage');
 
-      final newOrders = rawList.map((e) => StaffOrderItem.fromJson(e as Map<String, dynamic>)).toList();
+      final newOrders = rawList.map((e) => OrderStaffItem.fromJson(e as Map<String, dynamic>)).toList();
 
       setState(() {
         _loading = false;
@@ -263,14 +264,12 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
       ),
       body: Column(
         children: [
-          // Search always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: _searchBar(),
           ),
 
-          // Filters always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -315,7 +314,6 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
             ),
           ),
 
-          // Total count bar
           if (!_loading && _total > 0)
             Container(
               color: Colors.white,
@@ -338,9 +336,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
 
           // List
           Expanded(
-            child: _loading && _orders.isEmpty
-                ? const OrderListShimmer()
-                : _error != null && _orders.isEmpty
+            child: _error != null && _orders.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -402,7 +398,7 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
                               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                               itemCount: _orders.length + (_hasMore ? 1 : 0),
                               itemBuilder: (_, i) {
-                                if (i < _orders.length) return _StaffOrderCard(order: _orders[i]);
+                                if (i < _orders.length) return _StaffOrderCard(order: _orders[i], schoolId: widget.schoolId);
                                 return const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 20),
                                   child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
@@ -503,15 +499,99 @@ class _StaffOrdersPageState extends State<StaffOrdersPage> {
   }
 }
 
-// ─── Staff Order Card ─────────────────────────────────────────────────────────
 
-class _StaffOrderCard extends StatelessWidget {
-  final StaffOrderItem order;
-  const _StaffOrderCard({required this.order});
+class _StaffOrderCard extends StatefulWidget {
+  final OrderStaffItem order;
+  final String schoolId;
+  const _StaffOrderCard({required this.order, required this.schoolId});
+
+  @override
+  State<_StaffOrderCard> createState() => _StaffOrderCardState();
+}
+
+class _StaffOrderCardState extends State<_StaffOrderCard> {
+  late String _currentStatus;
+  bool _updating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStatus = widget.order.status;
+  }
+
+  Color get _statusColor {
+    switch (_currentStatus) {
+      case 'completed': return const Color(0xFF2DC24E);
+      case 'cancelled': return AppTheme.cancelTextColor;
+      case 'work_in_process': return AppTheme.btnColor;
+      case 're_order': return AppTheme.PendingDotColor;
+      default: return AppTheme.graySubTitleColor;
+    }
+  }
+
+  Color get _statusBg {
+    switch (_currentStatus) {
+      case 'completed': return const Color(0xFFE8F9ED);
+      case 'cancelled': return AppTheme.lightRedColor;
+      case 'work_in_process': return AppTheme.lightBlueColor;
+      case 're_order': return AppTheme.PendingLightColor;
+      default: return AppTheme.appBackgroundColor;
+    }
+  }
+
+  String get _statusLabel => kOrderStatuses
+      .firstWhere((s) => s.value == _currentStatus,
+          orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')))
+      .label;
+
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() => _updating = true);
+    try {
+      final cubit = context.read<OrdersCubit>();
+      final success = await cubit.updateOrderStatus(widget.order.uuid, newStatus);
+      if (!mounted) return;
+      if (success) {
+        setState(() {
+          _updating = false;
+          _currentStatus = newStatus;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Order status updated successfully'),
+          backgroundColor: AppTheme.btnColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
+        ));
+      } else {
+        setState(() => _updating = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to update status'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      print('StaffOrder updateStatus error: $e');
+      if (mounted) {
+        setState(() => _updating = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to update status'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StaffOrderDetailPage(uuid: widget.order.uuid, schoolId: widget.schoolId),
+        ),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -521,12 +601,11 @@ class _StaffOrderCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Avatar ──
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: (order.staffPhoto != null && order.staffPhoto!.isNotEmpty)
+            child: (widget.order.staffPhoto != null && widget.order.staffPhoto!.isNotEmpty)
                 ? Image.network(
-                    order.staffPhoto!,
+                    widget.order.staffPhoto!,
                     height: 60, width: 60, fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _placeholder(),
                   )
@@ -535,17 +614,15 @@ class _StaffOrderCard extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // ── Info ──
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name row
                 Row(
                   children: [
                     Flexible(
                       child: Text(
-                        order.staffName ?? '-',
+                        widget.order.staffName ?? '-',
                         style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -553,7 +630,7 @@ class _StaffOrderCard extends StatelessWidget {
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
-                        '• ${order.typeLabel}',
+                        '• ${widget.order.typeLabel}',
                         style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -561,27 +638,24 @@ class _StaffOrderCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 3),
-                // School name
-                if (order.schoolName != null)
+                if (widget.order.schoolName != null)
                   Text(
-                    order.schoolName!,
+                    widget.order.schoolName!,
                     style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
                     overflow: TextOverflow.ellipsis,
                   ),
                 const SizedBox(height: 3),
-                // Order ID
                 Text(
-                  '#${order.id}',
+                  '#${widget.order.id}',
                   style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
                 ),
                 const SizedBox(height: 4),
-                // Status + date row
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: order.statusBg,
+                        color: _statusBg,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -589,24 +663,56 @@ class _StaffOrderCard extends StatelessWidget {
                         children: [
                           Container(
                             width: 5, height: 5,
-                            decoration: BoxDecoration(color: order.statusColor, shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle),
                           ),
                           const SizedBox(width: 4),
-                          Text(order.statusLabel, style: MyStyles.mediumText(size: 11, color: order.statusColor)),
+                          Text(_statusLabel, style: MyStyles.mediumText(size: 11, color: _statusColor)),
                         ],
                       ),
                     ),
                     const Spacer(),
                     Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
                     const SizedBox(width: 3),
-                    Text(order.orderedAt, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                    Text(widget.order.orderedAt,
+                        style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
                   ],
                 ),
               ],
             ),
           ),
+
+          _updating
+              ? const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor),
+                  ),
+                )
+              : _currentStatus == 'completed'
+                  ? const SizedBox.shrink()
+                  : PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.grey),
+                      offset: const Offset(0, 32),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 8,
+                      onSelected: _updateStatus,
+                      itemBuilder: (_) => [
+                        const PopupMenuItem<String>(
+                          value: 'completed',
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle_outline, size: 16, color: AppTheme.graySubTitleColor),
+                              SizedBox(width: 10),
+                              Text('Mark as Completed'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
         ],
       ),
+    ),
     );
   }
 

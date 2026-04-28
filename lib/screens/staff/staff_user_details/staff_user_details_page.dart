@@ -7,32 +7,30 @@ import 'package:idmitra/config/ScreenSize.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
-import 'package:idmitra/screens/home/student_list.dart';
-import 'package:idmitra/screens/orders/orders_page.dart';
+import 'package:idmitra/providers/students/students_cubit.dart';
+import 'package:idmitra/screens/admin/admin_home/admin_students_list.dart';
+import 'package:idmitra/screens/admin/admin_order/admin_orders_page.dart';
+import 'package:idmitra/providers/staff/staff_cubit.dart';
+import 'package:idmitra/providers/add_staff/add_staff_cubit.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import '../../edit_profile/image_setting.dart';
-import '../../staff/staff_student_list/staff_list.dart';
+import '../staff_student_list/staff_list.dart';
 
-class UserDetailsPage extends StatefulWidget {
+class StaffUserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
-  UserDetailsPage({super.key, this.schoolDetailsModel});
+  StaffUserDetailsPage({super.key, this.schoolDetailsModel});
 
   @override
-  State<UserDetailsPage> createState() => _UserDetailsPageState();
+  State<StaffUserDetailsPage> createState() => _StaffUserDetailsPageState();
 }
 
-class _UserDetailsPageState extends State<UserDetailsPage> {
-  List<String> tabs = [
-    "Overview",
-    // "Documents",
-    "Admin",
-    // "Activity"
-  ];
+class _StaffUserDetailsPageState extends State<StaffUserDetailsPage> {
+  List<String> tabs = ["Overview", "Admin"];
   int selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    return _UserDetailsContent(
+    return _StaffUserDetailsContent(
       schoolDetailsModel: widget.schoolDetailsModel,
       tabs: tabs,
       selectedIndex: selectedIndex,
@@ -41,13 +39,13 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   }
 }
 
-class _UserDetailsContent extends StatelessWidget {
+class _StaffUserDetailsContent extends StatefulWidget {
   final SchoolDetailsModel? schoolDetailsModel;
   final List<String> tabs;
   final int selectedIndex;
   final void Function(int) onTabChanged;
 
-  const _UserDetailsContent({
+  const _StaffUserDetailsContent({
     this.schoolDetailsModel,
     required this.tabs,
     required this.selectedIndex,
@@ -55,7 +53,21 @@ class _UserDetailsContent extends StatelessWidget {
   });
 
   @override
+  State<_StaffUserDetailsContent> createState() => _StaffUserDetailsContentState();
+}
+
+class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
+  Future<void> _onRefresh() async {
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final schoolDetailsModel = widget.schoolDetailsModel;
+    final tabs = widget.tabs;
+    final selectedIndex = widget.selectedIndex;
+    final onTabChanged = widget.onTabChanged;
+
     return Scaffold(
       appBar: CommonAppBar(
         title: 'School Details',
@@ -68,13 +80,10 @@ class _UserDetailsContent extends StatelessWidget {
             elevation: 8,
             onSelected: (value) {
               if (value == 'image_settings') {
-                // ✅ Fix: schoolId ab sahi se pass ho raha hai
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => ImageSettingsScreen(schoolId: schoolId),
-                  ),
+                  MaterialPageRoute(builder: (context) => ImageSettingsScreen(schoolId: schoolId)),
                 );
               } else if (value == 'student_form') {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
@@ -84,7 +93,7 @@ class _UserDetailsContent extends StatelessWidget {
                   page: BlocProvider(
                     create: (_) => StudentFormCubit()
                       ..loadFromSchoolId(schoolId: schoolId, schoolName: schoolName),
-                    child: StudentForm(schoolDetailsModel: schoolDetailsModel!),
+                    child: StudentForm(schoolDetailsModel: widget.schoolDetailsModel!),
                   ),
                 );
               }
@@ -94,10 +103,10 @@ class _UserDetailsContent extends StatelessWidget {
                 value: 'image_settings',
                 child: Row(children: [Icon(Icons.image), SizedBox(width: 10), Text('Image Settings')]),
               ),
-              // PopupMenuItem(
-              //   value: 'profile_settings',
-              //   child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
-              // ),
+              PopupMenuItem(
+                value: 'profile_settings',
+                child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
+              ),
               PopupMenuItem(
                 value: 'student_form',
                 child: Row(children: [Icon(Icons.assignment), SizedBox(width: 10), Text('Student Form')]),
@@ -106,15 +115,10 @@ class _UserDetailsContent extends StatelessWidget {
           ),
         ],
       ),
-
-      // ✅ RefreshIndicator wrap kiya — kuch bhi remove nahi kiya
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Yahan apna refresh logic lagao
-          // Example: await context.read<YourCubit>().loadSchoolDetails(schoolId);
-        },
+        onRefresh: _onRefresh,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(), // ← Zaroori hai RefreshIndicator ke liye
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
@@ -246,7 +250,13 @@ class _UserDetailsContent extends StatelessWidget {
                     value: "${schoolDetailsModel?.studentCount ?? ''}",
                     callBtn: () => navigateWithTransition(
                       context: context,
-                      page: StudentListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                      page: BlocProvider(
+                        create: (_) => StudentsCubit(),
+                        child: AdminStudentsScreen(
+                          schoolId: schoolDetailsModel?.id.toString() ?? '',
+                          showAppBar: true,
+                        ),
+                      ),
                     ),
                   ),
                   statCard(
@@ -254,7 +264,10 @@ class _UserDetailsContent extends StatelessWidget {
                     value: "${schoolDetailsModel?.staffCount ?? ''}",
                     callBtn: () => navigateWithTransition(
                       context: context,
-                      page: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                      page: BlocProvider(
+                        create: (_) => StaffCubit(),
+                        child: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                      ),
                     ),
                   ),
                   statCard(
@@ -263,10 +276,11 @@ class _UserDetailsContent extends StatelessWidget {
                     callBtn: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => OrdersPage(
+                        builder: (_) => AdminOrdersPage(
                           schoolId: schoolDetailsModel?.id.toString() ?? '',
                           schoolName: schoolDetailsModel?.name ?? '',
                           totalOrderCount: schoolDetailsModel?.orderCount,
+                          isSchool: true,
                         ),
                       ),
                     ),

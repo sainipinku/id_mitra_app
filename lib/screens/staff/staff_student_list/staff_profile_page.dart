@@ -13,10 +13,11 @@ import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/staff/StaffDetailModel.dart';
 import 'package:idmitra/models/staff/StaffListModel.dart';
 import 'package:idmitra/providers/staff_detail/staff_detail_cubit.dart';
-import 'package:idmitra/screens/staff/add_staff_form.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+
+import 'add_staff_form.dart';
 
 class StaffProfilePage extends StatelessWidget {
   final StaffListModel staff;

@@ -11,7 +11,8 @@ import 'package:idmitra/models/orders/OrderModel.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String uuid;
-  const OrderDetailPage({super.key, required this.uuid});
+  final String schoolId;
+  const OrderDetailPage({super.key, required this.uuid, this.schoolId = ''});
 
   @override
   State<OrderDetailPage> createState() => _OrderDetailPageState();
@@ -29,21 +30,46 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Future<void> _fetch() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final url = Config.baseUrl + Routes.getOrderDetail(widget.uuid);
+      final url =
+          Config.baseUrl +
+          Routes.getOrderDetail(widget.uuid, schoolId: widget.schoolId);
       final response = await ApiManager().getRequest(url);
       if (response == null) {
-        setState(() { _loading = false; _error = 'Failed to load order'; });
+        setState(() {
+          _loading = false;
+          _error = 'Failed to load order';
+        });
         return;
       }
       final json = jsonDecode(response.body);
+      final raw = json['data'];
+      Map<String, dynamic>? orderMap;
+      if (raw is Map<String, dynamic>) {
+        orderMap = raw.containsKey('id')
+            ? raw
+            : (raw['order'] as Map<String, dynamic>?);
+      }
+      if (orderMap == null) {
+        setState(() {
+          _loading = false;
+          _error = 'Invalid response format';
+        });
+        return;
+      }
       setState(() {
         _loading = false;
-        _order = OrderModel.fromJson(json['data'] as Map<String, dynamic>);
+        _order = OrderModel.fromJson(orderMap!);
       });
     } catch (e) {
-      setState(() { _loading = false; _error = e.toString(); });
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
     }
   }
 
@@ -51,33 +77,54 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.appBackgroundColor,
-      appBar: CommonAppBar(title: 'Order Details', backgroundColor: Colors.white, showText: true),
+      appBar: CommonAppBar(
+        title: 'Order Details',
+        backgroundColor: Colors.white,
+        showText: true,
+      ),
       body: _loading
           ? const OrderDetailShimmer()
           : _error != null
-              ? Center(child: Text(_error!, style: MyStyles.regularText(size: 14, color: Colors.red)))
-              : _order == null
-                  ? Center(child: Image.asset('assets/images/no_data.png', height: 200))
-                  : RefreshIndicator(
-                      onRefresh: _fetch,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _headerCard(),
-                            const SizedBox(height: 12),
-                            _sectionCard(icon: Icons.receipt_long_outlined, title: 'Order Information', rows: _orderRows()),
-                            const SizedBox(height: 12),
-                            if (_order!.student != null)
-                              _sectionCard(icon: Icons.person_outline_rounded, title: 'Student Information', rows: _studentRows()),
-                            if (_order!.student != null) const SizedBox(height: 12),
-                            if (_order!.school != null)
-                              _sectionCard(icon: Icons.school_outlined, title: 'School Information', rows: _schoolRows()),
-                          ],
-                        ),
-                      ),
+          ? Center(
+              child: Text(
+                _error!,
+                style: MyStyles.regularText(size: 14, color: Colors.red),
+              ),
+            )
+          : _order == null
+          ? Center(child: Image.asset('assets/images/no_data.png', height: 200))
+          : RefreshIndicator(
+              onRefresh: _fetch,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _headerCard(),
+                    const SizedBox(height: 12),
+                    _sectionCard(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Order Information',
+                      rows: _orderRows(),
                     ),
+                    const SizedBox(height: 12),
+                    if (_order!.student != null)
+                      _sectionCard(
+                        icon: Icons.person_outline_rounded,
+                        title: 'Student Information',
+                        rows: _studentRows(),
+                      ),
+                    if (_order!.student != null) const SizedBox(height: 12),
+                    if (_order!.school != null)
+                      _sectionCard(
+                        icon: Icons.school_outlined,
+                        title: 'School Information',
+                        rows: _schoolRows(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -91,7 +138,13 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: AppTheme.btnColor.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.btnColor.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Stack(
         children: [
@@ -99,11 +152,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             height: 52,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.btnColor.withOpacity(0.15), AppTheme.mainColor.withOpacity(0.08)],
+                colors: [
+                  AppTheme.btnColor.withOpacity(0.15),
+                  AppTheme.mainColor.withOpacity(0.08),
+                ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
           ),
           Padding(
@@ -116,36 +174,90 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [BoxShadow(color: AppTheme.btnColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 3))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.btnColor.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: CircleAvatar(
                       radius: 36,
                       backgroundColor: AppTheme.appBackgroundColor,
-                      backgroundImage: hasPhoto ? NetworkImage(student!.profilePhotoUrl!) : null,
+                      backgroundImage: hasPhoto
+                          ? NetworkImage(student!.profilePhotoUrl!)
+                          : null,
                       child: !hasPhoto
-                          ? Icon(Icons.person_rounded, size: 36, color: AppTheme.graySubTitleColor)
+                          ? Icon(
+                              Icons.person_rounded,
+                              size: 36,
+                              color: AppTheme.graySubTitleColor,
+                            )
                           : null,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text('#${o.id}', style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
+                  Text(
+                    '#${o.id}',
+                    style: MyStyles.boldText(
+                      size: 16,
+                      color: AppTheme.black_Color,
+                    ),
+                  ),
                   if (student != null) ...[
                     const SizedBox(height: 2),
-                    Text(student.name, style: MyStyles.mediumText(size: 14, color: AppTheme.black_Color)),
+                    Text(
+                      student.name,
+                      style: MyStyles.mediumText(
+                        size: 14,
+                        color: AppTheme.black_Color,
+                      ),
+                    ),
                     if (student.className != null) ...[
                       const SizedBox(height: 2),
-                      Text(student.className!, style: MyStyles.regularText(size: 12, color: AppTheme.btnColor)),
+                      Text(
+                        student.className!,
+                        style: MyStyles.regularText(
+                          size: 12,
+                          color: AppTheme.btnColor,
+                        ),
+                      ),
                     ],
                   ],
                   const SizedBox(height: 4),
-                  Text(o.typeLabel, style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor)),
+                  Text(
+                    o.typeLabel,
+                    style: MyStyles.regularText(
+                      size: 13,
+                      color: AppTheme.graySubTitleColor,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(o.orderedAt, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  Text(
+                    o.orderedAt,
+                    style: MyStyles.regularText(
+                      size: 12,
+                      color: AppTheme.graySubTitleColor,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                    decoration: BoxDecoration(color: AppTheme.btnColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                    child: Text(o.statusLabel, style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.btnColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      o.statusLabel,
+                      style: MyStyles.mediumText(
+                        size: 12,
+                        color: AppTheme.btnColor,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -156,14 +268,24 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
-  Widget _sectionCard({required IconData icon, required String title, required List<_Row> rows}) {
+  Widget _sectionCard({
+    required IconData icon,
+    required String title,
+    required List<_Row> rows,
+  }) {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,17 +294,28 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: AppTheme.btnColor.withOpacity(0.05),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(color: AppTheme.btnColor.withOpacity(0.12), borderRadius: BorderRadius.circular(7)),
+                  decoration: BoxDecoration(
+                    color: AppTheme.btnColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
                   child: Icon(icon, size: 14, color: AppTheme.btnColor),
                 ),
                 const SizedBox(width: 8),
-                Text(title, style: MyStyles.boldText(size: 13, color: AppTheme.black_Color)),
+                Text(
+                  title,
+                  style: MyStyles.boldText(
+                    size: 13,
+                    color: AppTheme.black_Color,
+                  ),
+                ),
               ],
             ),
           ),
@@ -190,18 +323,37 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
-              children: List.generate(rows.length, (i) => Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(rows[i].label, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                      Flexible(child: Text(rows[i].value, style: MyStyles.mediumText(size: 13, color: AppTheme.black_Color), textAlign: TextAlign.end)),
-                    ],
-                  ),
-                  if (i < rows.length - 1) Divider(height: 16, color: AppTheme.LineColor),
-                ],
-              )),
+              children: List.generate(
+                rows.length,
+                (i) => Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          rows[i].label,
+                          style: MyStyles.regularText(
+                            size: 12,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(
+                            rows[i].value,
+                            style: MyStyles.mediumText(
+                              size: 13,
+                              color: AppTheme.black_Color,
+                            ),
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (i < rows.length - 1)
+                      Divider(height: 16, color: AppTheme.LineColor),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -217,7 +369,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       _Row('Status', o.statusLabel),
       _Row('Order Date', o.orderedAt),
       _Row('Received At', o.receivedAtShort),
-      if (o.studentCard == 1) _Row('Student Card', 'Yes (Qty: ${o.studentCardQty})'),
+      if (o.studentCard == 1)
+        _Row('Student Card', 'Yes (Qty: ${o.studentCardQty})'),
       if (o.parentCard == 1) _Row('Parent Card', 'Yes'),
       if (o.admitCard == 1) _Row('Admit Card', 'Yes'),
       if (o.printingIssue != null) _Row('Printing Issue', o.printingIssue!),
@@ -253,7 +406,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     ].where((r) => r.value.isNotEmpty).toList();
   }
 
-  String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
+  String _cap(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 }
 
 class _Row {

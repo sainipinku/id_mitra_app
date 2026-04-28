@@ -14,20 +14,20 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
-import 'package:idmitra/screens/admin/admin_add_student_form/admin_add_student_form.dart';
+import 'package:idmitra/screens/staff/staff_add_student_form/staff_add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 
-class AdminStudentsScreen extends StatefulWidget {
+class StaffStudentsScreen extends StatefulWidget {
   final String? schoolId;
   final bool showAppBar;
-  const AdminStudentsScreen({super.key, this.schoolId, this.showAppBar = false});
+  const StaffStudentsScreen({super.key, this.schoolId, this.showAppBar = false});
 
   @override
-  State<AdminStudentsScreen> createState() => _AdminStudentsScreenState();
+  State<StaffStudentsScreen> createState() => _StaffStudentsScreenState();
 }
 
-class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
+class _StaffStudentsScreenState extends State<StaffStudentsScreen> {
   String _schoolId = '';
   bool _schoolLoaded = false;
 
@@ -47,7 +47,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
   }
 
   @override
-  void didUpdateWidget(covariant AdminStudentsScreen oldWidget) {
+  void didUpdateWidget(covariant StaffStudentsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     final newId = widget.schoolId ?? '';
     if (newId.isNotEmpty && newId != _schoolId) {
@@ -136,7 +136,7 @@ class _StudentListBodyState extends State<_StudentListBody> {
             ),
             BlocProvider(create: (_) => AddStudentCubit()),
           ],
-          child: AdminAddStudentFormPage(schoolId: widget.schoolId),
+          child: StaffAddStudentFormPage(schoolId: widget.schoolId),
         ),
       ),
     ).then((result) {

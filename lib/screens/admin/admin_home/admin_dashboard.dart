@@ -17,9 +17,9 @@ import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:page_transition/page_transition.dart';
 
-import 'package:idmitra/screens/staff/staff_list.dart';
 import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
+import '../../staff/staff_student_list/staff_list.dart';
 import '../admin_edit_profile/admin_profile_page.dart';
 import 'admin_home.dart';
 import 'admin_students_list.dart';

@@ -12,15 +12,16 @@ import 'package:idmitra/providers/admin_dashboard/admin_dashboard_cubit.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/admin/admin_home/admin_user/admin_user_details_page.dart';
+import 'package:idmitra/screens/staff/staff_user_details/staff_user_details_page.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import 'package:page_transition/page_transition.dart';
 
-import 'package:idmitra/screens/staff/staff_list.dart';
 import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/screens/admin/admin_edit_profile/admin_profile_page.dart';
-import 'package:idmitra/screens/admin/admin_home/admin_students_list.dart';
+import 'package:idmitra/screens/staff/staff_student_list/staff_student_list.dart';
+import '../staff_student_list/staff_list.dart';
 import 'staff_home.dart';
 
 class StaffDashboard extends StatefulWidget {
@@ -48,7 +49,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
       ),
       BlocProvider.value(
         value: _studentsCubit,
-        child: AdminStudentsScreen(schoolId: schoolId),
+        child: StaffStudentsScreen(schoolId: schoolId),
       ),
       BlocProvider.value(
         value: _staffCubit,
@@ -106,7 +107,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
     );
     navigateWithTransition(
       context: context,
-      page: AdminUserDetailsPage(schoolDetailsModel: schoolModel),
+      page: StaffUserDetailsPage(schoolDetailsModel: schoolModel),
     );
   }
 
