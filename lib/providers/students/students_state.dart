@@ -8,7 +8,10 @@ class StudentsState {
   final int page;
   final bool hasMore;
   final String? error;
-
+  /// 🔥 Filters
+  final String selectedClassId;
+  final List<int> selectedSectionIds;
+  final String selectedGender;
   StudentsState({
     this.loading = false,
     this.isPaginationLoading = false,
@@ -16,6 +19,9 @@ class StudentsState {
     this.page = 1,
     this.hasMore = true,
     this.error,
+    this.selectedClassId = "",
+    this.selectedSectionIds = const [],
+    this.selectedGender = "",
   });
 
   StudentsState copyWith({
@@ -25,6 +31,9 @@ class StudentsState {
     int? page,
     bool? hasMore,
     String? error,
+    String? selectedClassId,
+    List<int>? selectedSectionIds,
+    String? selectedGender,
   }) {
     return StudentsState(
       loading: loading ?? this.loading,
@@ -34,6 +43,9 @@ class StudentsState {
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       error: error ?? this.error,
+      selectedClassId: selectedClassId ?? this.selectedClassId,
+      selectedSectionIds: selectedSectionIds ?? this.selectedSectionIds,
+      selectedGender: selectedGender ?? this.selectedGender,
     );
   }
 }

@@ -62,7 +62,8 @@ class OrdersCubit extends Cubit<OrdersState> {
     emit(state.copyWith(classesLoading: true));
 
     try {
-      final url = '${Config.baseUrl}auth/school/$schoolId/students/form-data';
+      final url =
+          '${Config.baseUrl}auth/school/$schoolId/students/form-data';
       final response = await _api.getRequest(url);
 
       if (response == null) {
@@ -79,35 +80,46 @@ class OrdersCubit extends Cubit<OrdersState> {
       for (var item in rawClasses) {
         final int classId = item['id'] ?? 0;
 
-        final String className = item['name_withprefix']?.toString() ?? item['name']?.toString() ?? '';
+        final String className =
+            item['name_withprefix']?.toString() ??
+                item['name']?.toString() ??
+                '';
 
         final List sections = item['sections'] ?? [];
 
-        List<int> ids = [];
-        String firstSectionName = '';
-
+        // ✅ If sections exist → create multiple entries
         if (sections.isNotEmpty) {
-          ids = sections.map<int>((e) => e['id'] ?? 0).toList();
+          for (var sec in sections) {
+            final int sectionId = sec['id'] ?? 0;
 
-          firstSectionName = sections.first['name']
-              ?.toString()
-              .replaceAll('.', '')
-              .trim() ??
-              '';
+            final String sectionName = sec['name']
+                ?.toString()
+                .replaceAll('.', '')
+                .trim() ??
+                '';
+
+            final fullName = '$className - $sectionName';
+
+            classes.add(
+              OrderClass(
+                classId: classId,
+                sectionId: sectionId,
+                name: fullName,
+                nameWithprefix: fullName,
+              ),
+            );
+          }
+        } else {
+          // ✅ If no section
+          classes.add(
+            OrderClass(
+              classId: classId,
+              sectionId: 0,
+              name: className,
+              nameWithprefix: className,
+            ),
+          );
         }
-
-        final fullName = sections.isNotEmpty
-            ? '$className (Section $firstSectionName)'
-            : className;
-
-        classes.add(
-          OrderClass(
-            classId: classId,
-            sectionIds: ids,
-            name: fullName,
-            nameWithprefix: fullName,
-          ),
-        );
       }
 
       emit(

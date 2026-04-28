@@ -198,6 +198,7 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
                             schoolId: widget.schoolId,
                             classId: result['class'] ?? '',
                             gender: result['gender']?.toString().toLowerCase() ?? '',
+                              sectionIds: result['section'] ?? []// male / female / null
                           );
                         });
                       }
