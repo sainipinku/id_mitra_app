@@ -650,7 +650,6 @@ class _StudentCardState extends State<StudentCard> {
 
                   const SizedBox(height: 12),
 
-                  /// BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(

@@ -76,13 +76,13 @@ class _PasswordScreenState extends State<PasswordScreen> {
             if (userType == 'school_staff') {
               navigateAndRemoveUntil(
                 context: context,
-                page: const StaffDashboard(),
+                page:  StaffDashboard(),
                 transition: PageTransitionType.rightToLeft,
               );
             } else if (userType == 'school_admin' || userType == 'super_admin') {
               navigateAndRemoveUntil(
                 context: context,
-                page: const AdminDashboard(),
+                page:  AdminDashboard(),
                 transition: PageTransitionType.rightToLeft,
               );
             } else {

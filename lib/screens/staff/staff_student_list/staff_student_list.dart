@@ -7,6 +7,7 @@ import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
+import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
 import 'package:idmitra/providers/add_student/add_student_cubit.dart';
 import 'package:idmitra/providers/orders/orders_cubit.dart';
@@ -17,11 +18,13 @@ import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/screens/staff/staff_add_student_form/staff_add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
+import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
 
 class StaffStudentsScreen extends StatefulWidget {
   final String? schoolId;
   final bool showAppBar;
-  const StaffStudentsScreen({super.key, this.schoolId, this.showAppBar = false});
+  final SchoolDetailsModel? schoolDetailsModel;
+  const StaffStudentsScreen({super.key, this.schoolId, this.showAppBar = false, this.schoolDetailsModel});
 
   @override
   State<StaffStudentsScreen> createState() => _StaffStudentsScreenState();
@@ -79,14 +82,15 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen> {
         ),
       );
     }
-    return _StudentListBody(schoolId: _schoolId, showAppBar: widget.showAppBar);
+    return _StudentListBody(schoolId: _schoolId, showAppBar: widget.showAppBar, schoolDetailsModel: widget.schoolDetailsModel);
   }
 }
 
 class _StudentListBody extends StatefulWidget {
   final String schoolId;
   final bool showAppBar;
-  const _StudentListBody({required this.schoolId, this.showAppBar = false});
+  final SchoolDetailsModel? schoolDetailsModel;
+  const _StudentListBody({required this.schoolId, this.showAppBar = false, this.schoolDetailsModel});
 
   @override
   State<_StudentListBody> createState() => _StudentListBodyState();
@@ -95,7 +99,9 @@ class _StudentListBody extends StatefulWidget {
 class _StudentListBodyState extends State<_StudentListBody> {
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  ScrollController _scrollController = ScrollController();
   Timer? _debounce;
+  bool _isGridView = false;
 
   @override
   void initState() {
@@ -219,6 +225,25 @@ class _StudentListBodyState extends State<_StudentListBody> {
                       child: svgIcon(icon: 'assets/icons/filtter.svg', clr: AppTheme.black_Color),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _isGridView = !_isGridView),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: _isGridView ? AppTheme.btnColor : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _isGridView
+                            ? Icons.view_list_rounded
+                            : Icons.badge_outlined,
+                        size: 20,
+                        color:
+                        _isGridView ? Colors.white : AppTheme.black_Color,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 15),
@@ -228,24 +253,68 @@ class _StudentListBodyState extends State<_StudentListBody> {
                     if (state.loading) {
                       return const ShimmerList(expanded: false);
                     }
-                    return state.studentsList.isEmpty
-                        ? Center(child: Image.asset('assets/images/no_data.png', height: 200))
-                        : ListView.builder(
-                            controller: _scrollCtrl,
-                            itemCount: state.studentsList.length + (state.hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index < state.studentsList.length) {
-                                return StudentCard(
-                                  studentData: state.studentsList[index],
-                                  schoolId: widget.schoolId,
-                                );
-                              }
-                              return const Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(child: CircularProgressIndicator()),
-                              );
-                            },
+
+                    if (state.studentsList.isEmpty) {
+                      return Center(
+                        child: Image.asset(
+                          "assets/images/no_data.png",
+                          height: 200,
+                        ),
+                      );
+                    }
+
+                    final itemCount =
+                        state.studentsList.length + (state.hasMore ? 1 : 0);
+
+
+                    if (_isGridView) {
+                      return ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        controller: _scrollController,
+                        itemCount: itemCount,
+                        itemBuilder: (context, index) {
+                          if (index < state.studentsList.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 300,
+                                  child: StudentIdCardWidget(
+                                    student: state.studentsList[index],
+                                    schoolId: widget.schoolId,
+                                    schoolDetailsModel:
+                                    widget.schoolDetailsModel,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child:
+                            Center(child: CircularProgressIndicator()),
                           );
+                        },
+                      );
+                    }
+
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      controller: _scrollController,
+                      itemCount: itemCount,
+                      itemBuilder: (context, index) {
+                        if (index < state.studentsList.length) {
+                          return StudentCard(
+                            studentData: state.studentsList[index],
+                            schoolId: widget.schoolId,
+                          );
+                        }
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                    );
                   },
                 ),
               ),
@@ -288,3 +357,4 @@ class _StudentListBodyState extends State<_StudentListBody> {
     );
   }
 }
+

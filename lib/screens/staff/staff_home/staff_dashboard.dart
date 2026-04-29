@@ -25,7 +25,9 @@ import '../staff_student_list/staff_list.dart';
 import 'staff_home.dart';
 
 class StaffDashboard extends StatefulWidget {
-  const StaffDashboard({super.key});
+  SchoolDetailsModel? schoolDetailsModel;
+
+   StaffDashboard({super.key,this.schoolDetailsModel});
 
   @override
   State<StaffDashboard> createState() => _StaffDashboardState();
@@ -39,7 +41,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
   final StudentsCubit _studentsCubit = StudentsCubit();
   final StaffCubit _staffCubit = StaffCubit();
 
-  List<Widget> _getWidgets(String schoolId) {
+  List<Widget> _getWidgets(String schoolId,SchoolDetailsModel? schoolDetailsModel) {
     return [
       StaffHome(
         onStudentAdded: _onStudentAdded,
@@ -49,11 +51,12 @@ class _StaffDashboardState extends State<StaffDashboard> {
       ),
       BlocProvider.value(
         value: _studentsCubit,
-        child: StaffStudentsScreen(schoolId: schoolId),
+        child: StaffStudentsScreen(schoolId: schoolId,
+          schoolDetailsModel: schoolDetailsModel,),
       ),
       BlocProvider.value(
         value: _staffCubit,
-        child: StaffListingPage(schoolId: schoolId, showAppBar: false),
+        child: StaffListingPage(schoolId: schoolId, showAppBar: false,),
       ),
     ];
   }
@@ -146,9 +149,21 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 ? dashSchool.id.toString()
                 : '';
             final schoolId = dashSchoolId.isNotEmpty ? dashSchoolId : _schoolId;
+            final summary = dashState.dashboard?.data.summary;
+            final schoolDetailsModel = dashSchool != null
+                ? SchoolDetailsModel(
+              id: dashSchool.id,
+              name: dashSchool.name,
+              schoolPrefix: dashSchool.schoolPrefix,
+              logoUrl: dashSchool.logoUrl,
+              studentCount: summary?.students,
+              staffCount: summary?.staff,
+              orderCount: summary?.orders.total,
+            )
+                : null;
             return Scaffold(
               appBar: _appBar(context, dashSchool, dashState),
-              body: Center(child: _getWidgets(schoolId).elementAt(_selectedIndex)),
+              body: Center(child: _getWidgets(schoolId, schoolDetailsModel).elementAt(_selectedIndex)),
               bottomNavigationBar: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Container(

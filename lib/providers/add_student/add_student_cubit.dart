@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/config.dart';
@@ -23,6 +24,110 @@ class AddStudentState {
 
 class AddStudentCubit extends Cubit<AddStudentState> {
   AddStudentCubit() : super(const AddStudentState());
+
+  // ✅ FIX: fields map mein se pehli non-null/non-empty value return karo
+  static String? _firstField(Map<String, dynamic> fields, List<String> keys) {
+    for (final k in keys) {
+      final v = fields[k];
+      if (v != null && v.toString().isNotEmpty) return v.toString();
+    }
+    return null;
+  }
+
+  // ✅ FIX: API response ke mergedData mein form values se missing fields fill karo
+  Map<String, dynamic> _mergeResponseWithFields(
+      Map<String, dynamic> responseData,
+      Map<String, dynamic> fields,
+      ) {
+    final merged = Map<String, dynamic>.from(responseData);
+
+    // pan_no / pen_number — server null bhejta hai, form se lo
+    final penVal = _firstField(fields, ['pen_number', 'pan_number', 'pan_no']);
+    if (merged['pan_no'] == null || merged['pan_no'].toString().isEmpty) {
+      merged['pan_no'] = penVal;
+    }
+    // pen_number bhi set karo taaki fromJson ka fallback kaam kare
+    if (merged['pen_number'] == null || merged['pen_number'].toString().isEmpty) {
+      merged['pen_number'] = penVal;
+    }
+
+    // reg_no / registration_number
+    final regVal = _firstField(fields, ['registration_number', 'reg_no']);
+    if (merged['reg_no'] == null || merged['reg_no'].toString().isEmpty) {
+      merged['reg_no'] = regVal;
+    }
+    if (merged['registration_number'] == null || merged['registration_number'].toString().isEmpty) {
+      merged['registration_number'] = regVal;
+    }
+
+    // roll_no / roll_number
+    final rollVal = _firstField(fields, ['roll_number', 'roll_no']);
+    if (merged['roll_no'] == null || merged['roll_no'].toString().isEmpty) {
+      merged['roll_no'] = rollVal;
+    }
+
+    // sr_no / sr_number
+    final srVal = _firstField(fields, ['sr_number', 'sr_no']);
+    if (merged['sr_no'] == null || merged['sr_no'].toString().isEmpty) {
+      merged['sr_no'] = srVal;
+    }
+
+    // rfid_no / rfid_number
+    final rfidVal = _firstField(fields, ['rfid_number', 'rfid_no']);
+    if (merged['rfid_no'] == null || merged['rfid_no'].toString().isEmpty) {
+      merged['rfid_no'] = rfidVal;
+    }
+
+    // admission_no / admission_number
+    final admVal = _firstField(fields, ['admission_number', 'admission_no']);
+    if (merged['admission_no'] == null || merged['admission_no'].toString().isEmpty) {
+      merged['admission_no'] = admVal;
+    }
+
+    // aadhar_no / aadhar_card_number
+    final aadharVal = _firstField(fields, ['aadhar_card_number', 'aadhar_no']);
+    if (merged['aadhar_no'] == null || merged['aadhar_no'].toString().isEmpty) {
+      merged['aadhar_no'] = aadharVal;
+    }
+
+    // uid_no / uid_number
+    final uidVal = _firstField(fields, ['uid_number', 'uid_no']);
+    if (merged['uid_no'] == null || merged['uid_no'].toString().isEmpty) {
+      merged['uid_no'] = uidVal;
+    }
+
+    // whatsapp_phone
+    final wpVal = _firstField(fields, ['student_whatsapp_number', 'student_whatsapp', 'whatsapp_number']);
+    if (merged['whatsapp_phone'] == null || merged['whatsapp_phone'].toString().isEmpty) {
+      merged['whatsapp_phone'] = wpVal;
+    }
+
+    // land_line_no
+    final llVal = _firstField(fields, ['landline_contact_number', 'landline_number', 'land_line_no']);
+    if (merged['land_line_no'] == null || merged['land_line_no'].toString().isEmpty) {
+      merged['land_line_no'] = llVal;
+    }
+
+    // student_nic_id
+    final nicVal = _firstField(fields, ['student_nic_id', 'nic_id']);
+    if (merged['student_nic_id'] == null || merged['student_nic_id'].toString().isEmpty) {
+      merged['student_nic_id'] = nicVal;
+    }
+
+    // father_wphone
+    final fwpVal = _firstField(fields, ['father_whatsapp_number', 'father_whatsapp']);
+    if (merged['father_wphone'] == null || merged['father_wphone'].toString().isEmpty) {
+      merged['father_wphone'] = fwpVal;
+    }
+
+    // mother_wphone
+    final mwpVal = _firstField(fields, ['mother_whatsapp_number', 'mother_whatsapp']);
+    if (merged['mother_wphone'] == null || merged['mother_wphone'].toString().isEmpty) {
+      merged['mother_wphone'] = mwpVal;
+    }
+
+    return merged;
+  }
 
   Future<void> submit({
     required String schoolId,
@@ -60,16 +165,25 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         }
       }
 
+      print('URL: $url');
+      print('BODY: ${jsonEncode(request.fields)}');
+
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
 
+      print('=== ADD STUDENT RESPONSE ===');
+      print('STATUS: ${response.statusCode}');
+      print('BODY: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
-        final data = json['data'] ?? {};
+        final rawData = json['data'] ?? {};
         StudentDetailsData? newStudent;
         try {
-          if (data is Map<String, dynamic>) {
-            newStudent = StudentDetailsData.fromJson(data);
+          if (rawData is Map<String, dynamic>) {
+            // ✅ FIX: response data + form fields merge karo
+            final mergedData = _mergeResponseWithFields(rawData, fields);
+            newStudent = StudentDetailsData.fromJson(mergedData);
           }
         } catch (_) {}
         emit(AddStudentState(
@@ -143,8 +257,16 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         }
       }
 
+      print('=== UPDATE STUDENT REQUEST ===');
+      print('URL: $url');
+      print('BODY: ${jsonEncode(request.fields)}');
+
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+
+      print('=== UPDATE STUDENT RESPONSE ===');
+      print('STATUS: ${response.statusCode}');
+      print('BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (response.body.trim().startsWith('<')) {
@@ -155,9 +277,11 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         final json = jsonDecode(response.body);
         StudentDetailsData? updatedStudent;
         try {
-          final data = json['data'];
-          if (data is Map<String, dynamic>) {
-            updatedStudent = StudentDetailsData.fromJson(data);
+          final rawData = json['data'];
+          if (rawData is Map<String, dynamic>) {
+            // ✅ FIX: response data + form fields merge karo
+            final mergedData = _mergeResponseWithFields(rawData, fields);
+            updatedStudent = StudentDetailsData.fromJson(mergedData);
           }
         } catch (_) {}
         emit(AddStudentState(
@@ -269,7 +393,6 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       'school_class_section_id': fields['class_section']?.toString(),
       'school_house_id': fields['house']?.toString(),
       'house': fields['house']?.toString(),
-      // Academic numbers
       'reg_no': f(['registration_number', 'reg_no']),
       'registration_number': f(['registration_number', 'reg_no']),
       'roll_no': f(['roll_number', 'roll_no']),
@@ -280,19 +403,15 @@ class AddStudentCubit extends Cubit<AddStudentState> {
       'sr_number': f(['sr_number', 'sr_no']),
       'rfid_no': f(['rfid_number', 'rfid_no']),
       'rfid_number': f(['rfid_number', 'rfid_no']),
-      // Transport
       'transport_mode': f(['transport_mode']),
-      // Father
       'father_name': f(['father_name']),
       'father_email': f(['father_email']),
       'father_phone': f(['father_phone']),
       'father_wphone': f(['father_whatsapp_number', 'father_whatsapp']),
-      // Mother
       'mother_name': f(['mother_name']),
       'mother_email': f(['mother_email']),
       'mother_phone': f(['mother_phone']),
       'mother_wphone': f(['mother_whatsapp_number', 'mother_whatsapp']),
-      // Password
       'password': finalPassword,
       'password_confirmation': finalPasswordConfirmation,
     };

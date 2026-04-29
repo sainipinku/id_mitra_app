@@ -14,13 +14,15 @@ import 'package:idmitra/screens/dashboard/StatCard.dart';
 import 'package:idmitra/screens/admin/admin_order/admin_orders_page.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 
+import '../../../models/schools/SchoolListModel.dart';
 import '../../staff/staff_student_list/add_staff_form.dart';
 
 class AdminHome extends StatelessWidget {
   final VoidCallback? onStudentAdded;
   final VoidCallback? onStudentsTap;
   final VoidCallback? onStaffTap;
-  const AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap});
+  SchoolDetailsModel? schoolDetailsModel;
+   AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,9 @@ class _AdminHomeView extends StatelessWidget {
   final VoidCallback? onStudentAdded;
   final VoidCallback? onStudentsTap;
   final VoidCallback? onStaffTap;
-  const _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap});
+  SchoolDetailsModel? schoolDetailsModel;
+
+   _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
