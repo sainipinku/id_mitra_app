@@ -14,6 +14,12 @@ class UsersDetailsWidgets extends StatefulWidget {
 }
 
 class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
+  String _formatDate(DateTime dt) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -107,7 +113,9 @@ class _UsersDetailsWidgetsState extends State<UsersDetailsWidgets> {
                     children: [
                       Icon(Icons.calendar_month_outlined,size: 15,),
                       Text(
-                        "12 Feb 2026",
+                        widget.schoolDetailsModel?.createdAt != null
+                            ? _formatDate(widget.schoolDetailsModel!.createdAt!)
+                            : '',
                         style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
                       ),
                     ],

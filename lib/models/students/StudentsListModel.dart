@@ -260,7 +260,6 @@ class StudentDetailsData {
     this.section,
   });
 
-  // ✅ FULLY UPDATED copyWith — all fields included
   StudentDetailsData copyWith({
     String? profilePhotoUrl,
     String? name,
@@ -281,7 +280,6 @@ class StudentDetailsData {
     dynamic phone,
     dynamic religion,
     int? status,
-    // ✅ NEW FIELDS ADDED:
     dynamic aadharNo,
     dynamic rollNo,
     dynamic regNo,
@@ -319,7 +317,6 @@ class StudentDetailsData {
       phone: phone ?? this.phone,
       religion: religion ?? this.religion,
       status: status ?? this.status,
-      // ✅ NEW:
       aadharNo: aadharNo ?? this.aadharNo,
       rollNo: rollNo ?? this.rollNo,
       regNo: regNo ?? this.regNo,
@@ -378,19 +375,50 @@ class StudentDetailsData {
     );
   }
 
+  static dynamic _firstOf(Map<String, dynamic> json, List<String> keys) {
+    for (final k in keys) {
+      final v = json[k];
+      if (v != null && v.toString().isNotEmpty) return v;
+    }
+    return null;
+  }
+
   factory StudentDetailsData.fromJson(Map<String, dynamic> json) =>
       StudentDetailsData(
         id: json["id"],
         uuid: json["uuid"],
         schoolId: json["school_id"],
-        uidNo: json["uid_no"],
-        srNo: json["sr_no"],
-        panNo: json["pan_no"],
+
+        panNo: _firstOf(json, ['pan_no', 'pen_number', 'pan_number']),
+
+        regNo: _firstOf(json, ['reg_no', 'registration_number']),
+
+
+        rollNo: _firstOf(json, ['roll_no', 'roll_number']),
+
+        srNo: _firstOf(json, ['sr_no', 'sr_number'])?.toString(),
+
+        rfidNo: _firstOf(json, ['rfid_no', 'rfid_number']),
+
+        admissionNo: _firstOf(json, ['admission_no', 'admission_number']),
+
+        aadharNo: _firstOf(json, ['aadhar_no', 'aadhar_card_number']),
+
+        uidNo: _firstOf(json, ['uid_no', 'uid_number']),
+
+        landLineNo: _firstOf(json, ['land_line_no', 'landline_contact_number', 'landline_number']),
+
+        whatsappPhone: _firstOf(json, ['whatsapp_phone', 'student_whatsapp_number', 'student_whatsapp']),
+
+        studentNicId: _firstOf(json, ['student_nic_id', 'nic_id']),
+
+        fatherWphone: _firstOf(json, ['father_wphone', 'father_whatsapp_number', 'father_whatsapp']),
+
+        motherWphone: _firstOf(json, ['mother_wphone', 'mother_whatsapp_number', 'mother_whatsapp']),
+
         name: json["name"],
         email: json["email"],
         phone: json["phone"],
-        whatsappPhone: json["whatsapp_phone"],
-        landLineNo: json["land_line_no"],
         photo: json["photo"],
         signature: json["signature"],
         barcodePhoto: json["barcode_photo"],
@@ -398,16 +426,17 @@ class StudentDetailsData {
         dobTimestamp: json["dob_timestamp"],
         gender: json["gender"],
         bloodGroup: json["blood_group"],
-        schoolClassId: json["school_class_id"] is int ? json["school_class_id"] : int.tryParse(json["school_class_id"]?.toString() ?? ''),
+        schoolClassId: json["school_class_id"] is int
+            ? json["school_class_id"]
+            : int.tryParse(json["school_class_id"]?.toString() ?? ''),
         schoolHouseId: json["school_house_id"],
-        schoolSessionId: json["school_session_id"] is int ? json["school_session_id"] : int.tryParse(json["school_session_id"]?.toString() ?? ''),
-        schoolClassSectionId: json["school_class_section_id"] is int ? json["school_class_section_id"] : int.tryParse(json["school_class_section_id"]?.toString() ?? ''),
+        schoolSessionId: json["school_session_id"] is int
+            ? json["school_session_id"]
+            : int.tryParse(json["school_session_id"]?.toString() ?? ''),
+        schoolClassSectionId: json["school_class_section_id"] is int
+            ? json["school_class_section_id"]
+            : int.tryParse(json["school_class_section_id"]?.toString() ?? ''),
         transportMode: json["transport_mode"],
-        regNo: json["reg_no"],
-        rollNo: json["roll_no"],
-        aadharNo: json["aadhar_no"],
-        admissionNo: json["admission_no"],
-        rfidNo: json["rfid_no"],
         countryId: json["country_id"],
         stateId: json["state_id"],
         cityId: json["city_id"],
@@ -425,13 +454,11 @@ class StudentDetailsData {
         fatherName: json["father_name"],
         fatherEmail: json["father_email"],
         fatherPhone: json["father_phone"],
-        fatherWphone: json["father_wphone"],
         fatherPhoto: json["father_photo"],
         fatherSignature: json["father_signature"],
         motherName: json["mother_name"],
         motherEmail: json["mother_email"],
         motherPhone: json["mother_phone"],
-        motherWphone: json["mother_wphone"],
         motherPhoto: json["mother_photo"],
         motherSignature: json["mother_signature"],
         relation: json["relation"],
@@ -441,7 +468,6 @@ class StudentDetailsData {
         guardianWhatsappPhone: json["guardian_whatsapp_phone"],
         guardianPhoto: json["guardian_photo"],
         guardianSignature: json["guardian_signature"],
-        studentNicId: json["student_nic_id"],
         caste: json["caste"],
         isRteStudent: json["is_rte_student"],
         religion: json["religion"],
@@ -455,13 +481,10 @@ class StudentDetailsData {
         fatherSignatureUrl: json["father_signature_url"],
         motherPhotoUrl: json["mother_photo_url"],
         motherSignatureUrl: json["mother_signature_url"],
-        session:
-        json["session"] == null ? null : Session.fromJson(json["session"]),
-        datumClass:
-        json["class"] == null ? null : Class.fromJson(json["class"]),
+        session: json["session"] == null ? null : Session.fromJson(json["session"]),
+        datumClass: json["class"] == null ? null : Class.fromJson(json["class"]),
         house: json["house"],
-        section:
-        json["section"] == null ? null : Section.fromJson(json["section"]),
+        section: json["section"] == null ? null : Section.fromJson(json["section"]),
       );
 
   Map<String, dynamic> toJson() => {

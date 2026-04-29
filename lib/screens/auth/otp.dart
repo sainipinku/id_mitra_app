@@ -176,13 +176,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 // school staff - has school object but not admin/partner
                 navigateAndRemoveUntil(
                   context: context,
-                  page: const StaffDashboard(),
+                  page:  StaffDashboard(),
                   transition: PageTransitionType.rightToLeft,
                 );
               } else {
                 navigateAndRemoveUntil(
                   context: context,
-                  page: const AdminDashboard(),
+                  page:  AdminDashboard(),
                   transition: PageTransitionType.rightToLeft,
                 );
               }

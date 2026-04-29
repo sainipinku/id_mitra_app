@@ -276,6 +276,8 @@ class _AdminUserDetailsContent extends StatelessWidget {
                       child: AdminStudentsScreen(
                         schoolId: schoolDetailsModel?.id.toString() ?? '',
                         showAppBar: true,
+                        schoolDetailsModel: schoolDetailsModel,
+
                       ),
                     ),
                   ),

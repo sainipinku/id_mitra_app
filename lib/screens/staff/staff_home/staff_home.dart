@@ -14,6 +14,7 @@ import 'package:idmitra/screens/dashboard/StatCard.dart';
 import 'package:idmitra/screens/staff/staff_order_page/staff_order_page.dart';
 import 'package:idmitra/utils/MyStyles.dart';
 
+import '../../../models/schools/SchoolListModel.dart';
 import '../staff_student_list/add_staff_form.dart';
 
 class StaffHome extends StatelessWidget {
@@ -21,12 +22,15 @@ class StaffHome extends StatelessWidget {
   final VoidCallback? onStudentsTap;
   final VoidCallback? onStaffTap;
   final String schoolId;
-  const StaffHome({
+  SchoolDetailsModel? schoolDetailsModel;
+
+   StaffHome({
     super.key,
     this.onStudentAdded,
     this.onStudentsTap,
     this.onStaffTap,
     this.schoolId = '',
+    this.schoolDetailsModel
   });
 
   @override
@@ -45,7 +49,9 @@ class _StaffHomeView extends StatelessWidget {
   final VoidCallback? onStudentsTap;
   final VoidCallback? onStaffTap;
   final String schoolId;
-  const _StaffHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap, this.schoolId = ''});
+  SchoolDetailsModel? schoolDetailsModel;
+
+   _StaffHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap, this.schoolId = '',this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {

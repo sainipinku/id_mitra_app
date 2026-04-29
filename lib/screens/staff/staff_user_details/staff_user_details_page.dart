@@ -15,6 +15,7 @@ import 'package:idmitra/providers/add_staff/add_staff_cubit.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import '../../edit_profile/image_setting.dart';
 import '../staff_student_list/staff_list.dart';
+import '../staff_student_list/staff_student_list.dart';
 
 class StaffUserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
@@ -252,9 +253,10 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                       context: context,
                       page: BlocProvider(
                         create: (_) => StudentsCubit(),
-                        child: AdminStudentsScreen(
+                        child: StaffStudentsScreen(
                           schoolId: schoolDetailsModel?.id.toString() ?? '',
                           showAppBar: true,
+                          schoolDetailsModel: schoolDetailsModel,
                         ),
                       ),
                     ),

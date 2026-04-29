@@ -68,7 +68,6 @@ class _UserDetailsContent extends StatelessWidget {
             elevation: 8,
             onSelected: (value) {
               if (value == 'image_settings') {
-                // ✅ Fix: schoolId ab sahi se pass ho raha hai
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
                 Navigator.push(
                   context,
@@ -94,10 +93,6 @@ class _UserDetailsContent extends StatelessWidget {
                 value: 'image_settings',
                 child: Row(children: [Icon(Icons.image), SizedBox(width: 10), Text('Image Settings')]),
               ),
-              // PopupMenuItem(
-              //   value: 'profile_settings',
-              //   child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
-              // ),
               PopupMenuItem(
                 value: 'student_form',
                 child: Row(children: [Icon(Icons.assignment), SizedBox(width: 10), Text('Student Form')]),
@@ -107,14 +102,12 @@ class _UserDetailsContent extends StatelessWidget {
         ],
       ),
 
-      // ✅ RefreshIndicator wrap kiya — kuch bhi remove nahi kiya
       body: RefreshIndicator(
         onRefresh: () async {
           // TODO: Yahan apna refresh logic lagao
-          // Example: await context.read<YourCubit>().loadSchoolDetails(schoolId);
         },
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(), // ← Zaroori hai RefreshIndicator ke liye
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
@@ -246,7 +239,10 @@ class _UserDetailsContent extends StatelessWidget {
                     value: "${schoolDetailsModel?.studentCount ?? ''}",
                     callBtn: () => navigateWithTransition(
                       context: context,
-                      page: StudentListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                      page: StudentListingPage(
+                        schoolId: schoolDetailsModel?.id.toString() ?? '',
+                        schoolDetailsModel: schoolDetailsModel,
+                      ),
                     ),
                   ),
                   statCard(

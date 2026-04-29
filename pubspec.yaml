@@ -66,6 +66,7 @@ dependencies:
   webview_flutter: ^4.13.1
   flutter_colorpicker: ^1.0.3
   flutter_exif_rotation: ^0.5.2
+  qr_flutter: ^4.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

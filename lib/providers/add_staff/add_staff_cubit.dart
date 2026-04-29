@@ -123,9 +123,7 @@ class AddStaffCubit extends Cubit<AddStaffState> {
         final roleInt = int.tryParse(roleStr);
         if (roleInt != null) {
           body['role'] = roleInt;
-          print('Role successfully set as integer: $roleInt');
         } else {
-          print('Warning: Could not convert role to int → $roleRaw');
         }
       }
 
@@ -183,8 +181,6 @@ class AddStaffCubit extends Cubit<AddStaffState> {
         emit(AddStaffState(error: _parseError(response)));
       }
     } catch (e, stack) {
-      print('Update Staff Exception: $e');
-      print('Stack: $stack');
       emit(AddStaffState(error: e.toString()));
     }
   }

@@ -1528,13 +1528,25 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll('/', '.').replaceAll('-', '.');
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length > 8) digits = digits.substring(0, 8);
+
+    String formatted = '';
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) formatted += '.';
+      formatted += digits[i];
+    }
+
     return newValue.copyWith(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

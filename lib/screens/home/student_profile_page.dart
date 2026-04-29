@@ -299,7 +299,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
               title: 'Address',
               rows: _addressRows(),
             ),
-            _markStudentCard(context),
+            //_markStudentCard(context),
           ],
         ),
       ),
@@ -541,53 +541,6 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         ),
       );
 
-  Widget _markStudentCard(context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppTheme.btnColor.withOpacity(0.04),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              border: Border(
-                left: BorderSide(color: AppTheme.btnColor, width: 4),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.btnColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.flag_outlined, size: 15, color: AppTheme.btnColor),
-                ),
-                const SizedBox(width: 10),
-                Text('Mark Student',
-                    style: MyStyles.boldText(size: 14, color: AppTheme.black_Color)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
 
 
@@ -752,8 +705,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   }
 
   String _sessionName() {
-    final raw = _student.session?.name?.toString() ?? '';
-    return raw.replaceAll('SessionName.THE_', '').replaceAll('_', '-');
+    return _student.session?.name?.toString() ?? '';
   }
 
   String _cap(String s) =>
