@@ -432,10 +432,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             }else {
                               Map<String, String> map = {};
                               if(widget.alreadyUser){
-                                map = {
-                                  "whatsapp_phone": widget.phone ?? '',
-                                  "otp": pinController.text.trim() ?? '',
-                                };
+                                if(widget.loginWithType == 'phone'){
+                                  map = {
+                                    "whatsapp_phone": widget.phone ?? '',
+                                    "otp": pinController.text.trim() ?? '',
+                                  };
+                                }else {
+                                  map = {
+                                    "email": widget.phone ?? '',
+                                    "otp": pinController.text.trim() ?? '',
+                                  };
+                                }
+
                               }else if(selectedLoginType == "password" &&  widget.loginWithType == 'phone'){
                                 map = {
                                   "whatsapp_phone":  widget.phone ?? '',

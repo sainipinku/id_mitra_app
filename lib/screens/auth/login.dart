@@ -192,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 8),
 
-                              nameTextField(controller: phoneController),
+                              nameTextField(controller: phoneController,hintName: 'Enter Mobile/Email'),
 
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
