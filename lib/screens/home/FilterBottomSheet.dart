@@ -122,14 +122,14 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
             BlocBuilder<OrdersCubit, OrdersState>(
               buildWhen: (p, c) =>
-                  p.availableClasses != c.availableClasses ||
+              p.availableClasses != c.availableClasses ||
                   p.classesLoading != c.classesLoading,
               builder: (context, state) {
                 if (state.classesLoading) {
                   return Column(
                     children: List.generate(
                       5,
-                      (i) => Padding(
+                          (i) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: shimmerBox(height: 44, radius: 8),
                       ),
@@ -156,17 +156,19 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       final cls = classes[index];
                       final clsId = cls.classId.toString();
                       final clsName = cls.nameWithprefix ?? cls.name;
-                      final isSelected = _selectedClassIds.contains(clsId);
-
+                      final clsKey = "${cls.classId}_${cls.sectionIds}";
+                      final isSelected = _selectedClassIds.contains(clsKey);
                       return InkWell(
+
+
                         onTap: () {
                           setState(() {
                             if (isSelected) {
-                              _selectedClassIds.remove(clsId);
-                              _selectedClassNames.remove(clsId);
+                              _selectedClassIds.remove(clsKey);
+                              _selectedClassNames.remove(clsKey);
                             } else {
-                              _selectedClassIds.add(clsId);
-                              _selectedClassNames[clsId] = clsName;
+                              _selectedClassIds.add(clsKey);
+                              _selectedClassNames[clsKey] = cls.nameWithprefix ?? cls.name;
                             }
                           });
                         },
@@ -240,11 +242,24 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       ),
                     ),
                     onPressed: () {
-                      final classIds = _selectedClassIds.join(',');
+                      final List<String> classIds = []; // keep string flow
+                      final List<int> sectionIds = [];  // array
+
+                      for (var key in _selectedClassIds) {
+                        final parts = key.split('_');
+
+                        if (parts.length == 2) {
+                          classIds.add(parts[0]); // class as string
+                          sectionIds.add(int.tryParse(parts[1]) ?? 0);
+                        }
+                      }
+
                       Navigator.pop(context, {
-                        "class": classIds.isEmpty ? null : classIds,
+                        "class": classIds.isEmpty ? null : classIds.join(','), // ✅ same as before
+                        "section": sectionIds.isEmpty ? null : sectionIds,     // ✅ array
                         "gender": selectedGender,
                       });
+                      print("section list---------$sectionIds");
                     },
                     child: const Text(
                       "Apply Filter",

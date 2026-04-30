@@ -13,6 +13,11 @@ class StudentsState {
   final bool extraLoading;
   final List<StudentDetailsData> extraStudentsList;
 
+  /// 🔥 Filters
+  final String selectedClassId;
+  final List<int> selectedSectionIds;
+  final String selectedGender;
+
   StudentsState({
     this.loading = false,
     this.isPaginationLoading = false,
@@ -22,6 +27,9 @@ class StudentsState {
     this.error,
     this.extraLoading = false,
     this.extraStudentsList = const [],
+    this.selectedClassId = "",
+    this.selectedSectionIds = const [],
+    this.selectedGender = "",
   });
 
   StudentsState copyWith({
@@ -33,6 +41,9 @@ class StudentsState {
     String? error,
     bool? extraLoading,
     List<StudentDetailsData>? extraStudentsList,
+    String? selectedClassId,
+    List<int>? selectedSectionIds,
+    String? selectedGender,
   }) {
     return StudentsState(
       loading: loading ?? this.loading,
@@ -43,6 +54,9 @@ class StudentsState {
       error: error ?? this.error,
       extraLoading: extraLoading ?? this.extraLoading,
       extraStudentsList: extraStudentsList ?? this.extraStudentsList,
+      selectedClassId: selectedClassId ?? this.selectedClassId,
+      selectedSectionIds: selectedSectionIds ?? this.selectedSectionIds,
+      selectedGender: selectedGender ?? this.selectedGender,
     );
   }
 }
