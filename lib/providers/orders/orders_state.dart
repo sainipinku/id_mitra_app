@@ -67,7 +67,7 @@ class OrdersState {
 
 class OrderClass {
   final int classId;
-  final List<int> sectionIds;
+  final int sectionIds;
   final String name;
   final String? nameWithprefix;
 
