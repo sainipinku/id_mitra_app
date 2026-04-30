@@ -78,6 +78,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
   @override
   void initState() {
     super.initState();
+
     context.read<StudentsCubit>().fetchStudents(
       search: '',
       schoolId: widget.schoolId,
@@ -107,17 +108,25 @@ class _StudentListingPageState extends State<StudentListingPage> {
   }
 
   @override
+  void dispose() {
+    searchController.dispose();
+    _scrollController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CommonAppBar(title: 'Student Listings'),
       floatingActionButton: _isGridView
           ? null
           : FloatingActionButton(
-        backgroundColor: AppTheme.btnColor,
-        tooltip: 'Add Student',
-        onPressed: () => _navigateToAddStudent(context),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+              backgroundColor: AppTheme.btnColor,
+              tooltip: 'Add Student',
+              onPressed: () => _navigateToAddStudent(context),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       body: RefreshIndicator(
         onRefresh: refreshData,
         child: Padding(
@@ -186,21 +195,39 @@ class _StudentListingPageState extends State<StudentListingPage> {
                   ),
 
                   const SizedBox(width: 8),
+                  // ID Card View Toggle Button
                   GestureDetector(
                     onTap: () => setState(() => _isGridView = !_isGridView),
                     child: Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: _isGridView ? AppTheme.btnColor : Colors.white,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
+                          width: 1,
+                        ),
+                        boxShadow: _isGridView
+                            ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
+                            : [],
                       ),
-                      child: Icon(
-                        _isGridView
-                            ? Icons.view_list_rounded
-                            : Icons.badge_outlined,
-                        size: 20,
-                        color:
-                        _isGridView ? Colors.white : AppTheme.black_Color,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
+                            size: 18,
+                            color: _isGridView ? Colors.white : AppTheme.black_Color,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isGridView ? 'List' : 'ID Card',
+                            style: MyStyles.mediumText(
+                              size: 12,
+                              color: _isGridView ? Colors.white : AppTheme.black_Color,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -241,11 +268,16 @@ class _StudentListingPageState extends State<StudentListingPage> {
                               child: Center(
                                 child: SizedBox(
                                   width: 300,
-                                  child: StudentIdCardWidget(
-                                    student: state.studentsList[index],
-                                    schoolId: widget.schoolId,
-                                    schoolDetailsModel:
-                                    widget.schoolDetailsModel,
+                                  child: Hero(
+                                    tag: 'student_card_${state.studentsList[index].uuid}',
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: StudentIdCardWidget(
+                                        student: state.studentsList[index],
+                                        schoolId: widget.schoolId,
+                                        schoolDetailsModel: widget.schoolDetailsModel,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -253,8 +285,7 @@ class _StudentListingPageState extends State<StudentListingPage> {
                           }
                           return const Padding(
                             padding: EdgeInsets.all(16),
-                            child:
-                            Center(child: CircularProgressIndicator()),
+                            child: Center(child: CircularProgressIndicator()),
                           );
                         },
                       );

@@ -5,6 +5,7 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/config/ScreenSize.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
+import 'package:idmitra/providers/staff_form/staff_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
@@ -91,9 +92,16 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                 final schoolName = schoolDetailsModel?.name ?? '';
                 navigateWithTransition(
                   context: context,
-                  page: BlocProvider(
-                    create: (_) => StudentFormCubit()
-                      ..loadFromSchoolId(schoolId: schoolId, schoolName: schoolName),
+                  page: MultiBlocProvider(
+                    providers: [
+                      BlocProvider(
+                        create: (_) => StudentFormCubit()
+                          ..loadFromSchoolId(schoolId: schoolId, schoolName: schoolName),
+                      ),
+                      BlocProvider(
+                        create: (_) => StaffFormCubit()..loadFields(schoolId),
+                      ),
+                    ],
                     child: StudentForm(schoolDetailsModel: widget.schoolDetailsModel!),
                   ),
                 );

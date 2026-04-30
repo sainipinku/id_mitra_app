@@ -7,6 +7,7 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/config/sharedpref.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/login_auth/login_cubit.dart';
+import 'package:idmitra/providers/staff_form/staff_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
@@ -30,12 +31,19 @@ class _AdminSettingState extends State<AdminSetting> {
 
     navigateWithTransition(
       context: context,
-      page: BlocProvider(
-        create: (_) => StudentFormCubit()
-          ..loadFromSchoolId(
-            schoolId: schoolId,
-            schoolName: schoolName,
+      page: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => StudentFormCubit()
+              ..loadFromSchoolId(
+                schoolId: schoolId,
+                schoolName: schoolName,
+              ),
           ),
+          BlocProvider(
+            create: (_) => StaffFormCubit()..loadFields(schoolId),
+          ),
+        ],
         child: StudentForm(
           schoolDetailsModel: SchoolDetailsModel(
             name: schoolName,

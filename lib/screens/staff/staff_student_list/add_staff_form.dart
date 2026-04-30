@@ -727,62 +727,10 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       }
     }
 
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: sections,
-    );
-  }
-
-  Widget _additionalCollapsible(
-    List<StudentFormField> fields,
-    List<StaffRole> roles,
-  ) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.backBtnBgColor),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () =>
-                setState(() => _additionalExpanded = !_additionalExpanded),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Additional Information',
-                      style: MyStyles.boldText(
-                        size: 15,
-                        color: AppTheme.black_Color,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _additionalExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: AppTheme.graySubTitleColor,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_additionalExpanded) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: _twoColGrid(fields, roles),
-            ),
-          ],
-        ],
-      ),
     );
   }
 
@@ -1067,6 +1015,25 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                     if (state.fields.isNotEmpty)
                                       _twoColGrid(state.fields, state.roles),
                                     ..._buildStaticMainFields(state.fields),
+                                    ...() {
+                                      final pwFields = state.availableFields
+                                          .where(
+                                            (f) =>
+                                                !state.fields.any(
+                                                  (c) => c.name == f.name,
+                                                ) &&
+                                                (f.type == 'password' ||
+                                                    f.name
+                                                        .toLowerCase()
+                                                        .contains('password')),
+                                          )
+                                          .toList();
+                                      if (pwFields.isEmpty) return <Widget>[];
+                                      return [
+                                        const SizedBox(height: 12),
+                                        _twoColGrid(pwFields, state.roles),
+                                      ];
+                                    }(),
                                     if (state.fields.isEmpty)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 8),
@@ -1082,32 +1049,6 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
                                 ),
                               ),
 
-                              if (() {
-                                final additionalFields = state.availableFields
-                                    .where(
-                                      (f) => !state.fields.any(
-                                        (c) => c.name == f.name,
-                                      ),
-                                    )
-                                    .toList();
-                                return additionalFields.isNotEmpty;
-                              }())
-                                Builder(
-                                  builder: (ctx) {
-                                    final additionalFields = state
-                                        .availableFields
-                                        .where(
-                                          (f) => !state.fields.any(
-                                            (c) => c.name == f.name,
-                                          ),
-                                        )
-                                        .toList();
-                                    return _additionalCollapsible(
-                                      additionalFields,
-                                      state.roles,
-                                    );
-                                  },
-                                ),
 
                               _basicInfoCollapsible(),
                             ],

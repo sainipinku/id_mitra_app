@@ -228,6 +228,16 @@ class _StudentCardState extends State<StudentCard> {
   }
 
   @override
+  void didUpdateWidget(covariant StudentCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.studentData.uuid != widget.studentData.uuid) {
+      setState(() {
+        studentDetailsData = widget.studentData;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -378,7 +388,9 @@ class _StudentCardState extends State<StudentCard> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.grey),
             onSelected: (value) async {
-              if (value == 'delete') {
+              if (value == 'edit') {
+                widget.onEdit?.call();
+              } else if (value == 'delete') {
                 _confirmDelete(context);
               } else if (value == 'extra') {
                 final success = await _moveToExtra();
@@ -428,6 +440,16 @@ class _StudentCardState extends State<StudentCard> {
               }
             },
             itemBuilder: (_) => [
+              // const PopupMenuItem(
+              //   value: 'edit',
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.edit, size: 18, color: Colors.blue),
+              //       SizedBox(width: 8),
+              //       Text('Edit'),
+              //     ],
+              //   ),
+              // ),
               const PopupMenuItem(
                 value: 'extra',
                 child: Row(
