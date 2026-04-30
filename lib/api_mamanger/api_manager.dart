@@ -19,7 +19,7 @@ class ApiManager {
         "Content-Type": "application/json",
       },
     );
-    print('status code-----${response.statusCode} and base url----${url}');
+    print('status code-----${response.statusCode} and base url----${url} and token-------$token');
     if (response.statusCode == 201 ||
         response.statusCode == 200 ||
         response.statusCode == 401 ||
