@@ -106,6 +106,7 @@ class _StudentListBodyState extends State<_StudentListBody> {
   @override
   void initState() {
     super.initState();
+
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
@@ -145,17 +146,13 @@ class _StudentListBodyState extends State<_StudentListBody> {
           child: AdminAddStudentFormPage(schoolId: widget.schoolId),
         ),
       ),
-    ).then((result) {
-      if (result != null && result is StudentDetailsData) {
-        context.read<StudentsCubit>().prependStudent(result);
-      } else {
-        context.read<StudentsCubit>().fetchStudents(
-          search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
-          gender: '',
-          classId: '',
-        );
-      }
+    ).then((_) {
+      context.read<StudentsCubit>().fetchStudents(
+        search: _searchCtrl.text.trim(),
+        schoolId: widget.schoolId,
+        gender: '',
+        classId: '',
+      );
     });
   }
 
@@ -174,12 +171,14 @@ class _StudentListBodyState extends State<_StudentListBody> {
       appBar: widget.showAppBar
           ? CommonAppBar(title: "Student Listing")
           : null,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.btnColor,
-        tooltip: 'Add Student',
-        onPressed: _navigateToAddStudent,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: _isGridView
+          ? null
+          : FloatingActionButton(
+              backgroundColor: AppTheme.btnColor,
+              tooltip: 'Add Student',
+              onPressed: _navigateToAddStudent,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: Padding(
@@ -227,21 +226,39 @@ class _StudentListBodyState extends State<_StudentListBody> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // ID Card View Toggle Button
                   GestureDetector(
                     onTap: () => setState(() => _isGridView = !_isGridView),
                     child: Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: _isGridView ? AppTheme.btnColor : Colors.white,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
+                          width: 1,
+                        ),
+                        boxShadow: _isGridView
+                            ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
+                            : [],
                       ),
-                      child: Icon(
-                        _isGridView
-                            ? Icons.view_list_rounded
-                            : Icons.badge_outlined,
-                        size: 20,
-                        color:
-                        _isGridView ? Colors.white : AppTheme.black_Color,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
+                            size: 18,
+                            color: _isGridView ? Colors.white : AppTheme.black_Color,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isGridView ? 'List' : 'ID Card',
+                            style: MyStyles.mediumText(
+                              size: 12,
+                              color: _isGridView ? Colors.white : AppTheme.black_Color,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -280,11 +297,16 @@ class _StudentListBodyState extends State<_StudentListBody> {
                               child: Center(
                                 child: SizedBox(
                                   width: 300,
-                                  child: StudentIdCardWidget(
-                                    student: state.studentsList[index],
-                                    schoolId: widget.schoolId,
-                                    schoolDetailsModel:
-                                    widget.schoolDetailsModel,
+                                  child: Hero(
+                                    tag: 'student_card_${state.studentsList[index].uuid}',
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: StudentIdCardWidget(
+                                        student: state.studentsList[index],
+                                        schoolId: widget.schoolId,
+                                        schoolDetailsModel: widget.schoolDetailsModel,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -292,8 +314,7 @@ class _StudentListBodyState extends State<_StudentListBody> {
                           }
                           return const Padding(
                             padding: EdgeInsets.all(16),
-                            child:
-                            Center(child: CircularProgressIndicator()),
+                            child: Center(child: CircularProgressIndicator()),
                           );
                         },
                       );
@@ -305,8 +326,10 @@ class _StudentListBodyState extends State<_StudentListBody> {
                       itemCount: itemCount,
                       itemBuilder: (context, index) {
                         if (index < state.studentsList.length) {
+                          final student = state.studentsList[index];
                           return StudentCard(
-                            studentData: state.studentsList[index],
+                            key: ValueKey(student.uuid),
+                            studentData: student,
                             schoolId: widget.schoolId,
                           );
                         }

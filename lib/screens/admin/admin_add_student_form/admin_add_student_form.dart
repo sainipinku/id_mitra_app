@@ -920,7 +920,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
       case 'is_rte_student':
         return _stringDropdown(name, _kRteOptions);
       case 'class_section':
-        final selectedClassId = (_selectVal['class'] as int?);
+        final selectedClassId = _toInt(_selectVal['class']);
         if (selectedClassId == null) {
           return _loadingTile('Select a class first');
         }
@@ -1113,6 +1113,39 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     List<StudentFormField> additionalFields,
     StudentFormDataModel? data,
   ) {
+    Widget? _inlineSectionWidget() {
+      final selectedClassId = _toInt(_selectVal['class']);
+      if (selectedClassId == null) return null;
+      final hasClassField = currentFields.any((f) => f.name == 'class');
+      if (!hasClassField) return null;
+      final hasSectionField = currentFields.any((f) => f.name == 'class_section') ||
+          (data?.classes ?? []).isEmpty;
+      if (hasSectionField) return null;
+
+      final selectedClass = data?.classes.firstWhere(
+        (c) => c.id == selectedClassId,
+        orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
+      );
+      var sections = selectedClass?.sections ?? [];
+      if (sections.isEmpty && (selectedClass?.sectionsIds.isNotEmpty ?? false)) {
+        sections = selectedClass!.sectionsIds
+            .map((id) => SectionOption(id: id, name: 'Section $id'))
+            .toList();
+      }
+      if (sections.isEmpty) return null;
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Section'),
+            _sectionDropdown(sections),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Form(
@@ -1135,7 +1168,17 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                         ),
                       ),
                     )
-                  : _twoColGrid(currentFields, data),
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _twoColGrid(currentFields, data),
+                        Builder(builder: (_) {
+                          final sectionWidget = _inlineSectionWidget();
+                          if (sectionWidget == null) return const SizedBox.shrink();
+                          return sectionWidget;
+                        }),
+                      ],
+                    ),
             ),
             if (additionalFields.isNotEmpty)
               _additionalCollapsible(additionalFields, data),

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
 import 'package:idmitra/screens/home/student_profile_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:idmitra/api_mamanger/api_manager.dart';
+import 'package:idmitra/api_mamanger/config.dart';
+import 'package:idmitra/providers/students/students_cubit.dart';
 
 const double kCardHeight = 420.0;
 
@@ -16,6 +20,136 @@ class StudentIdCardWidget extends StatelessWidget {
     required this.schoolId,
     this.schoolDetailsModel,
   });
+
+
+  Future<bool> _moveToExtra(BuildContext context) async {
+    try {
+      final response = await ApiManager().postWithoutRequest(
+        Config.baseUrl +
+            Routes.moveStudentToExtra(
+              student.schoolId?.toString() ?? '',
+              student.uuid ?? '',
+            ),
+      );
+      return response != null &&
+          (response.statusCode == 200 || response.statusCode == 201);
+    } catch (e) {
+      debugPrint("Move to extra error: $e");
+      return false;
+    }
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 50,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Are you sure you want to\ndelete this student?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final success = await context
+                            .read<StudentsCubit>()
+                            .deleteStudent(
+                          student.uuid ?? '',
+                          student.schoolId?.toString() ?? '',
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Student deleted successfully'
+                                    : 'Failed to delete student',
+                              ),
+                              backgroundColor:
+                              success ? Colors.green : Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text("Yes, I'm sure"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade300,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('No, cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -35,16 +169,18 @@ class StudentIdCardWidget extends StatelessWidget {
     final session = student.session?.name ?? '';
     final schoolAddr = schoolDetailsModel?.address ?? '';
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StudentProfilePage(
-            student: student,
-            schoolId: schoolId,
-          ),
-        ),
-      ),
+    return
+      GestureDetector(
+      onTap: () {},
+      // => Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (_) => StudentProfilePage(
+      //       student: student,
+      //       schoolId: schoolId,
+      //     ),
+      //  ),
+    //  ),
       child: Container(
         height: kCardHeight,
         decoration: BoxDecoration(
@@ -65,7 +201,6 @@ class StudentIdCardWidget extends StatelessWidget {
               height: 85,
               child: _TopSection(school: schoolDetailsModel, session: session),
             ),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Column(
@@ -100,11 +235,9 @@ class StudentIdCardWidget extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 4),
             _StudentPhoto(url: student.profilePhotoUrl),
             const SizedBox(height: 6),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
@@ -120,7 +253,6 @@ class StudentIdCardWidget extends StatelessWidget {
                 ),
               ),
             ),
-
             if (className.isNotEmpty) ...[
               const SizedBox(height: 4),
               Container(
@@ -140,15 +272,12 @@ class StudentIdCardWidget extends StatelessWidget {
                 ),
               ),
             ],
-
             const SizedBox(height: 6),
-
             Container(
               height: 1,
               margin: const EdgeInsets.symmetric(horizontal: 12),
               color: Colors.grey.shade200,
             ),
-
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 10, 4),
@@ -175,7 +304,89 @@ class StudentIdCardWidget extends StatelessWidget {
 
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _PhonePill(phone: mobile.isEmpty ? '-' : mobile),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _PhonePill(phone: mobile.isEmpty ? '-' : mobile),
+
+                  const SizedBox(width: 16),
+
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Extra Button (Comment kar diya hai abhi ke liye)
+                      // IconButton(
+                      //   onPressed: () async {
+                      //     final success = await _moveToExtra(context);
+                      //     if (context.mounted) {
+                      //       ScaffoldMessenger.of(context).showSnackBar(
+                      //         SnackBar(
+                      //           content: Text(
+                      //             success
+                      //                 ? 'Student moved to extra list'
+                      //                 : 'Failed to move student to extra',
+                      //           ),
+                      //           backgroundColor: success ? Colors.green : Colors.red,
+                      //         ),
+                      //       );
+                      //     }
+                      //   },
+                      //   icon: const Icon(Icons.move_to_inbox, color: Colors.orange, size: 22),
+                      //   tooltip: 'Extra',
+                      // ),
+                      IconButton(
+                        onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentProfilePage(
+                                student: student,
+                                schoolId: schoolId,
+                              ),
+                           ),
+                           ),
+                        icon: const Icon(Icons.edit, color: Colors.green, size: 22),
+                        tooltip: 'Edit',
+                      ),
+
+                      IconButton(
+                        onPressed: () => _confirmDelete(context),
+                        icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 22),
+                        tooltip: 'Delete',
+                      ),
+
+                      IconButton(
+                        onPressed: () async {
+                          final success = await context
+                              .read<StudentsCubit>()
+                              .toggleStudentStatus(
+                            student.uuid ?? '',
+                            schoolId,
+                            student.status ?? 0,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  success ? 'Status updated' : 'Failed to update status',
+                                ),
+                                backgroundColor: success ? Colors.green : Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        icon: Icon(
+                          (student.status ?? 0) == 1
+                              ? Icons.toggle_on_rounded
+                              : Icons.toggle_off_rounded,
+                          size: 26,
+                          color: (student.status ?? 0) == 1 ? Colors.green : Colors.red,
+                        ),
+                        tooltip: (student.status ?? 0) == 1 ? 'Deactivate' : 'Activate',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -184,10 +395,10 @@ class StudentIdCardWidget extends StatelessWidget {
   }
 }
 
+
 class _TopSection extends StatelessWidget {
   final SchoolDetailsModel? school;
   final String session;
-
   const _TopSection({this.school, required this.session});
 
   @override
@@ -198,7 +409,6 @@ class _TopSection extends StatelessWidget {
         Positioned.fill(
           child: Container(color: const Color(0xFFF5ECD7)),
         ),
-
         Positioned(
           top: 0,
           right: 0,
@@ -219,7 +429,6 @@ class _TopSection extends StatelessWidget {
             ),
           ),
         ),
-
         Positioned(
           top: 10,
           left: 0,
@@ -231,8 +440,7 @@ class _TopSection extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
-                border:
-                Border.all(color: const Color(0xFFB8860B), width: 2),
+                border: Border.all(color: const Color(0xFFB8860B), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15),
@@ -241,8 +449,7 @@ class _TopSection extends StatelessWidget {
                 ],
               ),
               child: ClipOval(
-                child: (school?.logoUrl != null &&
-                    school!.logoUrl!.isNotEmpty)
+                child: (school?.logoUrl != null && school!.logoUrl!.isNotEmpty)
                     ? Image.network(
                   school!.logoUrl!,
                   fit: BoxFit.cover,
@@ -261,8 +468,6 @@ class _TopSection extends StatelessWidget {
             ),
           ),
         ),
-
-        // Session text
         if (session.isNotEmpty)
           Positioned(
             top: 7,
@@ -276,8 +481,6 @@ class _TopSection extends StatelessWidget {
               ),
             ),
           ),
-
-        // Paper plane icon
         Positioned(
           top: 18,
           right: 22,
@@ -294,7 +497,6 @@ class _TopSection extends StatelessWidget {
     );
   }
 }
-
 
 class _RedCornerPainter extends CustomPainter {
   @override
@@ -323,7 +525,6 @@ class _RedCornerPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
-
 
 class _StudentPhoto extends StatelessWidget {
   final String? url;

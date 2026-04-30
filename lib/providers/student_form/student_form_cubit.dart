@@ -213,7 +213,6 @@ List<StudentFormField> get _masterAvailableFields => _kAllAvailableFields
     .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
     .toList();
 
-// Core fields jo hamesha form mein hone chahiye
 const List<Map<String, dynamic>> _kCoreFields = [
   {
     'name': 'student_name',
@@ -253,10 +252,24 @@ const List<Map<String, dynamic>> _kCoreFields = [
   },
 ];
 
-/// API se aayi fields mein core fields ensure karo
 List<StudentFormField> _ensureCoreFields(List<StudentFormField> fields) {
   final result = List<StudentFormField>.from(fields);
-  for (final core in _kCoreFields) {
+
+  if (!result.any((f) => f.name == 'class_section')) {
+    final classIndex = result.indexWhere((f) => f.name == 'class');
+    final sectionField = StudentFormField.fromJson(
+      Map<String, dynamic>.from(
+        _kCoreFields.firstWhere((c) => c['name'] == 'class_section'),
+      ),
+    );
+    if (classIndex >= 0) {
+      result.insert(classIndex + 1, sectionField);
+    } else {
+      result.add(sectionField);
+    }
+  }
+
+  for (final core in _kCoreFields.where((c) => c['name'] != 'class_section')) {
     final name = core['name'] as String;
     if (!result.any((f) => f.name == name)) {
       result.insert(
@@ -265,6 +278,7 @@ List<StudentFormField> _ensureCoreFields(List<StudentFormField> fields) {
       );
     }
   }
+
   return result;
 }
 
@@ -326,7 +340,7 @@ class StudentFormCubit extends Cubit<StudentFormState> {
       emit(
         state.copyWith(
           loading: false,
-          fields: fields,
+          fields: _ensureCoreFields(fields),
           availableFields: availableFields,
           schoolName: schoolName,
         ),
@@ -344,7 +358,7 @@ class StudentFormCubit extends Cubit<StudentFormState> {
     _schoolId = schoolId;
     emit(
       state.copyWith(
-        fields: fields,
+        fields: _ensureCoreFields(fields),
         availableFields: _masterAvailableFields,
         schoolName: schoolName,
         error: null,
@@ -364,7 +378,7 @@ class StudentFormCubit extends Cubit<StudentFormState> {
     _schoolId = schoolId;
     emit(
       state.copyWith(
-        fields: fields,
+        fields: _ensureCoreFields(fields),
         availableFields: _masterAvailableFields,
         schoolName: schoolName,
         error: null,

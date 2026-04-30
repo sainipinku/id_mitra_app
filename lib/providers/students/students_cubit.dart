@@ -42,7 +42,6 @@ class StudentsCubit extends Cubit<StudentsState> {
         loading: true,
         page: 1,
         hasMore: true,
-        // studentsList empty mat karo
       ));
     } else {
       emit(state.copyWith(isPaginationLoading: true));

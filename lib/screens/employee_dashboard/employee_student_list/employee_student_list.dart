@@ -16,10 +16,13 @@ import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/screens/admin/admin_add_student_form/admin_add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
+import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
+import 'package:idmitra/models/schools/SchoolListModel.dart';
 
 class EmployeeStudentsScreen extends StatefulWidget {
   final String? schoolId;
-  const EmployeeStudentsScreen({super.key, this.schoolId});
+  final SchoolDetailsModel? schoolDetailsModel;
+  const EmployeeStudentsScreen({super.key, this.schoolId, this.schoolDetailsModel});
 
   @override
   State<EmployeeStudentsScreen> createState() => _EmployeeStudentsScreenState();
@@ -74,13 +77,14 @@ class _EmployeeStudentsScreenState extends State<EmployeeStudentsScreen> {
         ),
       );
     }
-    return _EmployeeStudentListBody(schoolId: _schoolId);
+    return _EmployeeStudentListBody(schoolId: _schoolId, schoolDetailsModel: widget.schoolDetailsModel);
   }
 }
 
 class _EmployeeStudentListBody extends StatefulWidget {
   final String schoolId;
-  const _EmployeeStudentListBody({required this.schoolId});
+  final SchoolDetailsModel? schoolDetailsModel;
+  const _EmployeeStudentListBody({required this.schoolId, this.schoolDetailsModel});
 
   @override
   State<_EmployeeStudentListBody> createState() => _EmployeeStudentListBodyState();
@@ -90,10 +94,12 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   Timer? _debounce;
+  bool _isGridView = false;
 
   @override
   void initState() {
     super.initState();
+
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
@@ -160,12 +166,14 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.appBackgroundColor,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.btnColor,
-        tooltip: 'Add Student',
-        onPressed: _navigateToAddStudent,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: _isGridView
+          ? null
+          : FloatingActionButton(
+              backgroundColor: AppTheme.btnColor,
+              tooltip: 'Add Student',
+              onPressed: _navigateToAddStudent,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: Padding(
@@ -214,6 +222,43 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // ID Card View Toggle Button
+                  GestureDetector(
+                    onTap: () => setState(() => _isGridView = !_isGridView),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _isGridView ? AppTheme.btnColor : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
+                          width: 1,
+                        ),
+                        boxShadow: _isGridView
+                            ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
+                            : [],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
+                            size: 18,
+                            color: _isGridView ? Colors.white : AppTheme.black_Color,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isGridView ? 'List' : 'ID Card',
+                            style: MyStyles.mediumText(
+                              size: 12,
+                              color: _isGridView ? Colors.white : AppTheme.black_Color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 15),
@@ -227,22 +272,56 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
                         ? Center(
                             child: Image.asset('assets/images/no_data.png', height: 200),
                           )
-                        : ListView.builder(
-                            controller: _scrollCtrl,
-                            itemCount: state.studentsList.length + (state.hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index < state.studentsList.length) {
-                                return StudentCard(
-                                  studentData: state.studentsList[index],
-                                  schoolId: widget.schoolId,
-                                );
-                              }
-                              return const Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(child: CircularProgressIndicator()),
-                              );
-                            },
-                          ),
+                        : _isGridView
+                            ? ListView.builder(
+                                controller: _scrollCtrl,
+                                itemCount: state.studentsList.length + (state.hasMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index < state.studentsList.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 20),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 300,
+                                          child: Hero(
+                                            tag: 'student_card_${state.studentsList[index].uuid}',
+                                            child: Material(
+                                              color: Colors.transparent,
+                                              child: StudentIdCardWidget(
+                                                student: state.studentsList[index],
+                                                schoolId: widget.schoolId ?? '',
+                                                schoolDetailsModel: widget.schoolDetailsModel,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Center(child: CircularProgressIndicator()),
+                                  );
+                                },
+                              )
+                            : ListView.builder(
+                                controller: _scrollCtrl,
+                                itemCount: state.studentsList.length + (state.hasMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index < state.studentsList.length) {
+                                    final student = state.studentsList[index];
+                                    return StudentCard(
+                                      key: ValueKey(student.uuid),
+                                      studentData: student,
+                                      schoolId: widget.schoolId,
+                                    );
+                                  }
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Center(child: CircularProgressIndicator()),
+                                  );
+                                },
+                              ),
                   );
                 },
               ),
