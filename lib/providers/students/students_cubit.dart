@@ -26,13 +26,36 @@ class StudentsCubit extends Cubit<StudentsState> {
 
   ApiManager apiManager = ApiManager();
 
+  void applyFilters({
+    String classId = "",
+    List<int> sectionIds = const [],
+    String gender = "",
+    required String schoolId,
+  }) {
+    emit(state.copyWith(
+      selectedClassId: classId,
+      selectedSectionIds: sectionIds,
+      selectedGender: gender,
+      page: 1,
+      hasMore: true,
+    ));
+
+    fetchStudents(
+      schoolId: schoolId,
+      classId: classId,
+      sectionIds: sectionIds,
+      gender: gender,
+    );
+  }
   Future<void> fetchStudents({
     bool isLoadMore = false,
     String search = "",
     String schoolId = "",
     String gender = "",
     String classId = "",
+    List<int> sectionIds = const [],
   }) async {
+    print('setionids-------------$sectionIds');
     if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
 
     int currentPage = isLoadMore ? state.page : 1;
@@ -48,10 +71,39 @@ class StudentsCubit extends Cubit<StudentsState> {
     }
 
     try {
-      final response = await apiManager
-          .getRequest(
-        "${Config.baseUrl}auth/school/$schoolId?perPage=10&search=$search&page=$currentPage&gender=$gender&class_filters=$classId",
-      );
+      /// ✅ fallback from state (important)
+      final usedClassId =
+      classId.isEmpty ? state.selectedClassId : classId;
+
+      final usedSectionIds =
+      sectionIds.isEmpty ? state.selectedSectionIds : sectionIds;
+
+      final usedGender =
+      gender.isEmpty ? state.selectedGender : gender;
+
+      /// 🔥 Base URL
+      String url =
+          "${Config.baseUrl}auth/school/$schoolId"
+          "?perPage=10"
+          "&search=$search"
+          "&page=$currentPage"
+          "&gender=$usedGender"
+          "&class_filters=$usedClassId";
+      String sectionQuery = "";
+
+      if (usedSectionIds.isNotEmpty) {
+        sectionQuery = usedSectionIds
+            .asMap()
+            .entries
+            .map((entry) => "sectionsIds[${entry.key}]=${entry.value}")
+            .join("&");
+      }
+
+      if (sectionQuery.isNotEmpty) {
+        url += "&$sectionQuery";
+      }
+
+      final response = await apiManager.getRequest(url);
 
       final jsonData = jsonDecode(response.body);
 
@@ -81,7 +133,6 @@ class StudentsCubit extends Cubit<StudentsState> {
       debugPrint("Fetch Error: $e");
     }
   }
-
   void prependStudent(StudentDetailsData student) {
     emit(state.copyWith(
       studentsList: [student, ...state.studentsList],

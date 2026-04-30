@@ -154,7 +154,8 @@ class _StudentListingPageState extends State<StudentListingPage> {
                         ),
                         builder: (_) {
                           return BlocProvider(
-                            create: (_) => OrdersCubit()
+                            create: (_) =>
+                            OrdersCubit()
                               ..fetchSchoolClasses(widget.schoolId),
                             child: FilterBottomSheet(
                               schoolId: widget.schoolId,
@@ -164,18 +165,28 @@ class _StudentListingPageState extends State<StudentListingPage> {
                       );
 
                       if (result != null) {
+                        print("Class: ${result['class']}");
+                        print("Gender: ${result['gender']}");
+                        print("section: ${result['section']}");
+
                         final String? classId = result['class'];
-                        final String? gender =
-                        result['gender']?.toString().toLowerCase();
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        final String? gender = result['gender']
+                            ?.toString()
+                            .toLowerCase();
+
+                        if (_debounce?.isActive ?? false) {
+                          _debounce!.cancel();
+                        }
+
                         _debounce = Timer(
                           const Duration(milliseconds: 500),
                               () {
                             context.read<StudentsCubit>().fetchStudents(
-                              search: '',
-                              schoolId: widget.schoolId,
-                              classId: classId ?? '',
-                              gender: gender ?? '',
+                                search: '',
+                                schoolId: widget.schoolId,
+                                classId: classId ?? '', // null bhi ja sakta hai
+                                gender: gender ?? '',
+                                sectionIds: result['section'] ?? []// male / female / null
                             );
                           },
                         );
