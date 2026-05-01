@@ -36,9 +36,10 @@ class HomeCubit extends Cubit<HomeState> {
         Config.baseUrl + Routes.getUserDetails(),
       );
 
-      /// Null check — agar koi bhi response null hai toh error emit karo
+      /// Null check - agar response null hai (no internet), keep existing data
       if (dashboardResponse == null || userResponse == null) {
-        emit(state.copyWith(loading: false, error: "Unable to connect to the server. Please try again."));
+        // Don't show error, just stop loading - keep existing data visible
+        emit(state.copyWith(loading: false));
         return;
       }
 
@@ -53,7 +54,7 @@ class HomeCubit extends Cubit<HomeState> {
 
         // HTML response check - server ne error page diya
         if (userBody.startsWith('<') || dashboardBody.startsWith('<')) {
-          emit(state.copyWith(loading: false, error: "Server error - invalid response"));
+          emit(state.copyWith(loading: false));
           return;
         }
 
@@ -74,14 +75,12 @@ class HomeCubit extends Cubit<HomeState> {
       } else if (dashboardResponse.statusCode == 404) {
         emit(state.copyWith(loading: false, error: "Something went wrong. Please try again later"));
       } else {
-        emit(state.copyWith(
-          loading: false,
-          error: "Something went wrong (${dashboardResponse.statusCode})",
-        ));
+        emit(state.copyWith(loading: false));
       }
     } catch (e, st) {
       print('HomeCubit error: $e\n$st');
-      emit(state.copyWith(loading: false, error: "Error: ${e.toString()}"));
+      // Don't show error message, just stop loading
+      emit(state.copyWith(loading: false));
     }
   }
 }

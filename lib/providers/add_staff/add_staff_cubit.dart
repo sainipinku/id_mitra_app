@@ -94,6 +94,7 @@ class AddStaffCubit extends Cubit<AddStaffState> {
       print('Update staff URL: $url');
 
       final body = <String, dynamic>{};
+
       _addIfNotEmpty(body, 'name', fields['name']);
       _addIfNotEmpty(body, 'email', fields['email']);
       _addIfNotEmpty(body, 'phone', fields['phone']);
@@ -111,33 +112,36 @@ class AddStaffCubit extends Cubit<AddStaffState> {
       _addIfNotEmpty(body, 'employee_id', fields['employee_id']);
       _addIfNotEmpty(body, 'national_code', fields['national_code']);
 
+      // ==================== ROLE + PERMISSIONS FIX ====================
       final roleRaw = roleId ?? fields['role'];
 
-      if (roleRaw != null) {
+      if (roleRaw != null && roleRaw.toString().trim().isNotEmpty) {
         String roleStr = roleRaw.toString().trim();
-
         if (roleStr.startsWith('[') && roleStr.endsWith(']')) {
           roleStr = roleStr.replaceAll('[', '').replaceAll(']', '').trim();
         }
 
         final roleInt = int.tryParse(roleStr);
         if (roleInt != null) {
-          body['role'] = roleInt;
-        } else {
+          body['role'] = [roleInt];           // Role as array
+          body['roles'] = [roleInt];          // ← Try sending 'roles' also (plural)
         }
       }
+      // =============================================================
 
-
+      // Gender
       final gender = fields['gender']?.toString().trim() ?? '';
       if (gender.isNotEmpty && gender.toLowerCase() != '-select gender-') {
         body['gender'] = gender.toLowerCase();
       }
 
+      // Blood Group
       final bg = fields['blood_group']?.toString().trim() ?? '';
       if (bg.isNotEmpty && bg != 'Select Blood Group') {
         body['blood_group'] = bg;
       }
 
+      // Emergency Contacts
       final validContacts = emergencyContacts
           .where((e) =>
       (e['name'] ?? '').trim().isNotEmpty ||
@@ -149,11 +153,9 @@ class AddStaffCubit extends Cubit<AddStaffState> {
       })
           .toList();
 
-      if (validContacts.isNotEmpty) {
-        body['emergency_contacts'] = validContacts;
-      }
+      body['emergency_contacts'] = validContacts.isNotEmpty ? validContacts : [];
 
-      print('UPDATE BODY: $body');
+      print('FINAL UPDATE BODY: $body');
 
       final response = await http.put(
         Uri.parse(url),
@@ -181,6 +183,8 @@ class AddStaffCubit extends Cubit<AddStaffState> {
         emit(AddStaffState(error: _parseError(response)));
       }
     } catch (e, stack) {
+      print('UPDATE STAFF EXCEPTION: $e');
+      print('Stack Trace: $stack');
       emit(AddStaffState(error: e.toString()));
     }
   }

@@ -280,21 +280,21 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                       ),
                     ),
                   ),
-                  statCard(
-                    title: "TOTAL ORDERS",
-                    value: "${schoolDetailsModel?.orderCount ?? 0}",
-                    callBtn: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AdminOrdersPage(
-                          schoolId: schoolDetailsModel?.id.toString() ?? '',
-                          schoolName: schoolDetailsModel?.name ?? '',
-                          totalOrderCount: schoolDetailsModel?.orderCount,
-                          isSchool: true,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // statCard(
+                  //   title: "TOTAL ORDERS",
+                  //   value: "${schoolDetailsModel?.orderCount ?? 0}",
+                  //   callBtn: () => Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (_) => AdminOrdersPage(
+                  //         schoolId: schoolDetailsModel?.id.toString() ?? '',
+                  //         schoolName: schoolDetailsModel?.name ?? '',
+                  //         totalOrderCount: schoolDetailsModel?.orderCount,
+                  //         isSchool: true,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
 

@@ -10,20 +10,19 @@ import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/screens/dashboard/users/user_details_page.dart';
 import 'package:idmitra/screens/splash/splash.dart';
 import 'package:idmitra/utils/GlobalContext.dart';
-
-/////dfkflgjdfgodfiguiogr/// dkjegdfigefgsdfgdf///ddhgdifgsdfgds//jdghdfdih/djfhididg
-
-
-
-
-
-
-
+import 'package:idmitra/api_mamanger/config.dart';
+import 'package:idmitra/services/maintenance_service.dart';
+import 'package:idmitra/services/no_internet_service.dart';
 
 void main() async{
 
-
   WidgetsFlutterBinding.ensureInitialized();
+
+  MaintenanceService.instance.init(Config.proBaseUrl);
+
+  await MaintenanceService.instance.checkOnStartup();
+
+  // NoInternetService will be initialized after MaterialApp is built
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -37,8 +36,22 @@ void main() async{
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize NoInternetService after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NoInternetService.instance.init();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +70,7 @@ class MyApp extends StatelessWidget {
               return MediaQuery(
                 data: MediaQuery.of(context)
                     .copyWith(textScaler: TextScaler.linear(1.0)),
-                child: SafeArea(child: child!),
+                child: child!,
               );
 
             },

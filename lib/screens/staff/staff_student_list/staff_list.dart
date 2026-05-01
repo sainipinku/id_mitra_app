@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
@@ -15,9 +16,16 @@ import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
-import 'package:idmitra/models/staff/StaffListModel.dart';
 import 'package:idmitra/components/text_filed.dart';
+import 'package:idmitra/models/correction/CorrectionListModel.dart';
+import 'package:idmitra/models/orders/OrderModel.dart';
+import 'package:idmitra/models/staff/StaffListModel.dart';
+import 'package:idmitra/providers/correction/correction_cubit.dart';
+import 'package:idmitra/providers/correction/correction_state.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/staff_list/staff_list_cubit.dart';
+import 'package:idmitra/screens/orders/order_staff_page.dart';
+import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'add_staff_form.dart';
 import 'assign_classes_sheet.dart';
@@ -26,20 +34,29 @@ import 'staff_profile_page.dart';
 class StaffListingPage extends StatefulWidget {
   final String schoolId;
   final bool showAppBar;
-  const StaffListingPage({super.key, required this.schoolId, this.showAppBar = true});
+  final bool isSchool;
+  const StaffListingPage({
+    super.key,
+    required this.schoolId,
+    this.showAppBar = true,
+    this.isSchool = false,
+  });
 
   @override
   State<StaffListingPage> createState() => _StaffListingPageState();
 }
 
-class _StaffListingPageState extends State<StaffListingPage> {
+class _StaffListingPageState extends State<StaffListingPage>
+    with SingleTickerProviderStateMixin {
   late final StaffListCubit _cubit;
+  late final TabController _tabController;
   String? _schoolId;
 
   @override
   void initState() {
     super.initState();
     _cubit = StaffListCubit();
+    _tabController = TabController(length: 3, vsync: this);
     _loadSchoolAndFetch();
   }
 
@@ -60,6 +77,7 @@ class _StaffListingPageState extends State<StaffListingPage> {
   @override
   void dispose() {
     _cubit.close();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -70,12 +88,75 @@ class _StaffListingPageState extends State<StaffListingPage> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return BlocProvider.value(
-      value: _cubit,
-      child: _StaffListBody(
-        schoolId: _schoolId!,
-        cubit: _cubit,
-        showAppBar: widget.showAppBar,
+
+    final tabBar = TabBar(
+      controller: _tabController,
+      labelColor: AppTheme.btnColor,
+      unselectedLabelColor: AppTheme.graySubTitleColor,
+      indicatorColor: AppTheme.btnColor,
+      indicatorWeight: 2.5,
+      labelStyle: MyStyles.mediumText(size: 13,color: Colors.white),
+      unselectedLabelStyle: MyStyles.regularText(size: 13,color: Colors.white),
+      tabs: const [
+        Tab(text: 'Staff List'),
+        Tab(text: 'Correction List'),
+        Tab(text: 'Staff Orders'),
+      ],
+    );
+
+    return Scaffold(
+      appBar: widget.showAppBar
+          ? AppBar(
+              elevation: 0,
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              automaticallyImplyLeading: false,
+              leading: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.rectangle,
+                      border: Border.all(color: AppTheme.titleHintColor),
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(5.0),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.black87),
+                    ),
+                  ),
+                ),
+              ),
+              centerTitle: true,
+              title: Text('Staff Listings', style: MyStyles.boldText(size: 20, color: Colors.black)),
+              bottom: tabBar,
+            )
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(kTextTabBarHeight),
+              child: Material(color: Colors.white, child: tabBar),
+            ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: Staff List
+          BlocProvider.value(
+            value: _cubit,
+            child: _StaffListBody(
+              schoolId: _schoolId!,
+              cubit: _cubit,
+              showAppBar: false,
+            ),
+          ),
+          // Tab 2: Correction List
+          BlocProvider(
+            create: (_) => CorrectionCubit()
+              ..fetchCorrectionList(schoolId: _schoolId!, isSchool: widget.isSchool),
+            child: _StaffCorrectionTab(schoolId: _schoolId!, isSchool: widget.isSchool),
+          ),
+          // Tab 3: Staff Orders
+          _StaffOrdersTab(schoolId: _schoolId!, isSchool: widget.isSchool),
+        ],
       ),
     );
   }
@@ -1105,5 +1186,701 @@ class _StaffCardState extends State<_StaffCard> {
         ),
       ),
     );
+  }
+}
+
+// ─── Tab 2: Correction List ───────────────────────────────────────────────────
+
+class _StaffCorrectionTab extends StatefulWidget {
+  final String schoolId;
+  final bool isSchool;
+  const _StaffCorrectionTab({required this.schoolId, this.isSchool = false});
+
+  @override
+  State<_StaffCorrectionTab> createState() => _StaffCorrectionTabState();
+}
+
+class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
+  final ScrollController _scrollCtrl = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(() {
+      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+        context.read<CorrectionCubit>().fetchCorrectionList(
+          schoolId: widget.schoolId,
+          isSchool: widget.isSchool,
+          isLoadMore: true,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CorrectionCubit, CorrectionState>(
+      builder: (context, state) {
+        if (state.loading && state.items.isEmpty) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.btnColor));
+        }
+        if (state.error != null && state.items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                const SizedBox(height: 12),
+                Text(state.error!, style: MyStyles.regularText(size: 14, color: Colors.red)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => context.read<CorrectionCubit>().fetchCorrectionList(
+                    schoolId: widget.schoolId, isSchool: widget.isSchool),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.btnColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        if (state.items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/images/no_data.png', height: 160),
+                const SizedBox(height: 12),
+                Text('No correction items found',
+                    style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
+              ],
+            ),
+          );
+        }
+        return Column(
+          children: [
+            if (state.selectedIds.isNotEmpty)
+              Container(
+                color: AppTheme.btnColor.withOpacity(0.08),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Text('${state.selectedIds.length} selected',
+                        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => context.read<CorrectionCubit>().selectAll(),
+                      child: Text('Select All', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
+                    ),
+                    TextButton(
+                      onPressed: () => context.read<CorrectionCubit>().clearSelection(),
+                      child: Text('Clear', style: MyStyles.mediumText(size: 12, color: AppTheme.cancelTextColor)),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppTheme.btnColor,
+                onRefresh: () async => context.read<CorrectionCubit>().fetchCorrectionList(
+                  schoolId: widget.schoolId, isSchool: widget.isSchool),
+                child: ListView.builder(
+                  controller: _scrollCtrl,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                  itemBuilder: (_, i) {
+                    if (i < state.items.length) {
+                      final item = state.items[i];
+                      final isSelected = state.selectedIds.contains(item.id);
+                      return _CorrectionItemCard(
+                        item: item,
+                        isSelected: isSelected,
+                        onToggle: () => context.read<CorrectionCubit>().toggleSelection(item.id),
+                      );
+                    }
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CorrectionItemCard extends StatelessWidget {
+  final CorrectionItem item;
+  final bool isSelected;
+  final VoidCallback onToggle;
+
+  const _CorrectionItemCard({required this.item, required this.isSelected, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onToggle,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.btnColor.withOpacity(0.06) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppTheme.btnColor : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 22, height: 22,
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.btnColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isSelected ? AppTheme.btnColor : Colors.grey.shade400,
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            ),
+            const SizedBox(width: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: (item.profilePhotoUrl != null && item.profilePhotoUrl!.isNotEmpty)
+                  ? Image.network(item.profilePhotoUrl!, height: 52, width: 52, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder())
+                  : _placeholder(),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(item.studentName ?? '-',
+                            style: MyStyles.boldText(size: 15, color: AppTheme.black_Color),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      if (item.className != null) ...[
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text('• ${item.className}',
+                              style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (item.issue != null && item.issue!.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(item.issue!,
+                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                  if (item.createdAt != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
+                        const SizedBox(width: 3),
+                        Text(item.createdAt!,
+                            style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    height: 52, width: 52,
+    color: Colors.grey.shade200,
+    child: const Icon(Icons.person, color: Colors.grey),
+  );
+}
+
+// ─── Tab 3: Staff Orders ──────────────────────────────────────────────────────
+
+class _StaffOrdersTab extends StatefulWidget {
+  final String schoolId;
+  final bool isSchool;
+  const _StaffOrdersTab({required this.schoolId, this.isSchool = false});
+
+  @override
+  State<_StaffOrdersTab> createState() => _StaffOrdersTabState();
+}
+
+class _StaffOrdersTabState extends State<_StaffOrdersTab> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  final TextEditingController _dateFromCtrl = TextEditingController();
+  final TextEditingController _dateToCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+  Timer? _debounce;
+
+  List<OrderStaffItem> _orders = [];
+  bool _loading = false;
+  bool _hasMore = true;
+  int _page = 1;
+  int _total = 0;
+  String? _error;
+  String _selectedStatus = '';
+
+  bool get _hasActiveFilters =>
+      _selectedStatus.isNotEmpty ||
+      _dateFromCtrl.text.isNotEmpty ||
+      _dateToCtrl.text.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(() {
+      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+        _fetch();
+      }
+    });
+    _fetch(reset: true);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _dateFromCtrl.dispose();
+    _dateToCtrl.dispose();
+    _scrollCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _resetAndFetch() {
+    setState(() { _orders = []; _page = 1; _hasMore = true; _error = null; _loading = false; });
+    _fetch(reset: true);
+  }
+
+  void _clearFilters() {
+    setState(() { _selectedStatus = ''; _dateFromCtrl.clear(); _dateToCtrl.clear(); });
+    _resetAndFetch();
+  }
+
+  Future<void> _fetch({bool reset = false}) async {
+    if (!reset && (_loading || !_hasMore)) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final currentPage = reset ? 1 : _page;
+      // Both partner and school use the same school endpoint for staff orders
+      String url = '${Config.baseUrl}auth/school/${widget.schoolId}/staff/orders?page=$currentPage';
+      if (_selectedStatus.isNotEmpty) url += '&status=$_selectedStatus';
+      if (_searchCtrl.text.trim().isNotEmpty) url += '&search=${_searchCtrl.text.trim()}';
+      if (_dateFromCtrl.text.isNotEmpty) url += '&start_date=${_dateFromCtrl.text}';
+      if (_dateToCtrl.text.isNotEmpty) url += '&end_date=${_dateToCtrl.text}';
+
+      var response = await ApiManager().getRequest(url);
+
+      if (response == null) {
+        setState(() { _loading = false; _error = 'Failed to load staff orders'; });
+        return;
+      }
+
+      final json = jsonDecode(response.body);
+      final isSuccess = (json['status'] == true || json['success'] == true);
+      if (!isSuccess) {
+        setState(() { _loading = false; _error = json['message'] ?? 'Failed to load staff orders'; });
+        return;
+      }
+
+      final data = json['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        setState(() { _loading = false; _error = 'Invalid response format'; });
+        return;
+      }
+
+      List rawList = [];
+      int total = 0, lastPage = 1, respPage = 1;
+
+      if (data.containsKey('list') && data['list'] is Map) {
+        final listData = data['list'] as Map<String, dynamic>;
+        rawList = listData['data'] ?? [];
+        total = listData['total'] ?? 0;
+        lastPage = listData['last_page'] ?? 1;
+        respPage = listData['current_page'] ?? 1;
+      } else if (data.containsKey('orders')) {
+        final ordersData = data['orders'];
+        if (ordersData is List) {
+          rawList = ordersData;
+          total = rawList.length;
+        } else if (ordersData is Map) {
+          rawList = ordersData['data'] ?? [];
+          total = ordersData['total'] ?? 0;
+          lastPage = ordersData['last_page'] ?? 1;
+          respPage = ordersData['current_page'] ?? 1;
+        }
+      } else if (data.containsKey('data') && data['data'] is List) {
+        rawList = data['data'] as List;
+        total = data['total'] ?? rawList.length;
+        lastPage = data['last_page'] ?? 1;
+        respPage = data['current_page'] ?? 1;
+      }
+
+      final newOrders = rawList.map((e) => OrderStaffItem.fromJson(e as Map<String, dynamic>)).toList();
+      setState(() {
+        _loading = false;
+        _total = total;
+        _page = respPage + 1;
+        _hasMore = respPage < lastPage;
+        _orders = reset ? newOrders : [..._orders, ...newOrders];
+      });
+    } catch (e) {
+      setState(() { _loading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: _searchBar(),
+        ),
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            children: [
+              const Divider(height: 1, color: AppTheme.LineColor),
+              const SizedBox(height: 10),
+              _statusDropdown(),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _dateField(_dateFromCtrl, 'From dd-mm-yyyy')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _dateField(_dateToCtrl, 'To dd-mm-yyyy')),
+                ],
+              ),
+              if (_hasActiveFilters) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _clearFilters,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(color: AppTheme.lightRedColor, borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.close, size: 12, color: AppTheme.cancelTextColor),
+                          const SizedBox(width: 4),
+                          Text('Clear Filters', style: MyStyles.mediumText(size: 11, color: AppTheme.cancelTextColor)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (!_loading && _total > 0)
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.btnColor.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.badge_outlined, size: 14, color: AppTheme.btnColor),
+                  const SizedBox(width: 6),
+                  Text('Total: $_total', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
+                ],
+              ),
+            ),
+          ),
+        Expanded(
+          child: _error != null && _orders.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                      const SizedBox(height: 12),
+                      Text(_error!, style: MyStyles.regularText(size: 14, color: Colors.red), textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _resetAndFetch,
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : _orders.isEmpty && !_loading
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset('assets/images/no_data.png', height: 160),
+                          const SizedBox(height: 12),
+                          Text('No staff orders found',
+                              style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: AppTheme.btnColor,
+                      onRefresh: () async => _resetAndFetch(),
+                      child: ListView.builder(
+                        controller: _scrollCtrl,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                        itemCount: _orders.length + (_hasMore ? 1 : 0),
+                        itemBuilder: (_, i) {
+                          if (i < _orders.length) {
+                            return _StaffOrderItemCard(order: _orders[i], schoolId: widget.schoolId);
+                          }
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
+                          );
+                        },
+                      ),
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _searchBar() => TextField(
+    controller: _searchCtrl,
+    style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+    onChanged: (_) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 500), _resetAndFetch);
+    },
+    decoration: InputDecoration(
+      filled: true,
+      fillColor: AppTheme.appBackgroundColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      hintText: 'Search staff orders...',
+      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.graySubTitleColor),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: AppTheme.btnColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      hintStyle: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
+    ),
+  );
+
+  Widget _statusDropdown() => Container(
+    height: 44,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    decoration: BoxDecoration(
+      color: AppTheme.appBackgroundColor,
+      border: Border.all(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: _selectedStatus,
+        isExpanded: true,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppTheme.graySubTitleColor),
+        style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
+        items: kOrderFilterStatuses
+            .map((s) => DropdownMenuItem<String>(value: s.value, child: Text(s.label, overflow: TextOverflow.ellipsis)))
+            .toList(),
+        onChanged: (v) { setState(() => _selectedStatus = v ?? ''); _resetAndFetch(); },
+      ),
+    ),
+  );
+
+  Widget _dateField(TextEditingController ctrl, String hint) {
+    return StatefulBuilder(
+      builder: (context, setLocal) => AppTextField(
+        controller: ctrl,
+        hintText: hint,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[\d.\-/]')),
+          LengthLimitingTextInputFormatter(10),
+          _StaffListDotDateFormatter(),
+        ],
+        suffixIcon: ctrl.text.isNotEmpty
+            ? GestureDetector(
+                onTap: () {
+                  ctrl.clear(); setLocal(() {});
+                  _debounce?.cancel();
+                  _debounce = Timer(const Duration(milliseconds: 200), _resetAndFetch);
+                },
+                child: const Icon(Icons.close, size: 16),
+              )
+            : null,
+        onChanged: (_) {
+          setLocal(() {});
+          if (ctrl.text.length == 10 || ctrl.text.isEmpty) {
+            _debounce?.cancel();
+            _debounce = Timer(const Duration(milliseconds: 400), _resetAndFetch);
+          }
+        },
+      ),
+    );
+  }
+}
+
+class _StaffOrderItemCard extends StatelessWidget {
+  final OrderStaffItem order;
+  final String schoolId;
+  const _StaffOrderItemCard({required this.order, required this.schoolId});
+
+  Color get _statusColor {
+    switch (order.status) {
+      case 'completed': return const Color(0xFF2DC24E);
+      case 'cancelled': return AppTheme.cancelTextColor;
+      case 'work_in_process': return AppTheme.btnColor;
+      case 're_order': return AppTheme.PendingDotColor;
+      default: return AppTheme.graySubTitleColor;
+    }
+  }
+
+  Color get _statusBg {
+    switch (order.status) {
+      case 'completed': return const Color(0xFFE8F9ED);
+      case 'cancelled': return AppTheme.lightRedColor;
+      case 'work_in_process': return AppTheme.lightBlueColor;
+      case 're_order': return AppTheme.PendingLightColor;
+      default: return AppTheme.appBackgroundColor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StaffOrderDetailPage(uuid: order.uuid, schoolId: schoolId),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: (order.staffPhoto != null && order.staffPhoto!.isNotEmpty)
+                  ? Image.network(order.staffPhoto!, height: 60, width: 60, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder())
+                  : _placeholder(),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(order.staffName ?? '-',
+                            style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text('• ${order.typeLabel}',
+                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  if (order.schoolName != null)
+                    Text(order.schoolName!,
+                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                        overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Text('#${order.id}',
+                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: _statusBg, borderRadius: BorderRadius.circular(20)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(width: 5, height: 5,
+                                decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle)),
+                            const SizedBox(width: 4),
+                            Text(order.statusLabel, style: MyStyles.mediumText(size: 11, color: _statusColor)),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
+                      const SizedBox(width: 3),
+                      Text(order.orderedAt,
+                          style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    height: 60, width: 60,
+    color: Colors.grey.shade300,
+    child: const Icon(Icons.person, color: Colors.grey),
+  );
+}
+
+class _StaffListDotDateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
+    return newValue.copyWith(text: text, selection: TextSelection.collapsed(offset: text.length));
   }
 }

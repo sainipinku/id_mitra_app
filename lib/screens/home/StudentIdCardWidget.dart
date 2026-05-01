@@ -171,227 +171,227 @@ class StudentIdCardWidget extends StatelessWidget {
 
     return
       GestureDetector(
-      onTap: () {},
-      // => Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (_) => StudentProfilePage(
-      //       student: student,
-      //       schoolId: schoolId,
-      //     ),
-      //  ),
-    //  ),
-      child: Container(
-        height: kCardHeight,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          children: [
-            SizedBox(
-              height: 85,
-              child: _TopSection(school: schoolDetailsModel, session: session),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Column(
-                children: [
-                  Text(
-                    schoolDetailsModel?.name ?? '',
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF8B0000),
-                      letterSpacing: 0.2,
-                      height: 1.2,
-                    ),
-                  ),
-                  if (schoolAddr.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      schoolAddr,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 7,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1565C0),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            _StudentPhoto(url: student.profilePhotoUrl),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                (student.name ?? '---').toUpperCase(),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF1565C0),
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
-            if (className.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFB71C1C),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'CLASS – $className',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
+        onTap: () {},
+        // => Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (_) => StudentProfilePage(
+        //       student: student,
+        //       schoolId: schoolId,
+        //     ),
+        //  ),
+        //  ),
+        child: Container(
+          height: kCardHeight,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
               ),
             ],
-            const SizedBox(height: 6),
-            Container(
-              height: 1,
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: Colors.grey.shade200,
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 10, 4),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            children: [
+              SizedBox(
+                height: 85,
+                child: _TopSection(school: schoolDetailsModel, session: session),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _InfoLine(
-                        label: 'Father',
-                        value: fatherName.isEmpty ? '-' : fatherName),
-                    _InfoLine(
-                        label: 'Mother',
-                        value: motherName.isEmpty ? '-' : motherName),
-                    _InfoLine(label: 'DOB', value: dob.isEmpty ? '-' : dob),
-                    _InfoLine(
-                        label: 'Mobile',
-                        value: mobile.isEmpty ? '-' : mobile),
-                    _InfoLine(
-                        label: 'Address',
-                        value: address.isEmpty ? '-' : address),
+                    Text(
+                      schoolDetailsModel?.name ?? '',
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF8B0000),
+                        letterSpacing: 0.2,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (schoolAddr.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        schoolAddr,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 7,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1565C0),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _PhonePill(phone: mobile.isEmpty ? '-' : mobile),
-
-                  const SizedBox(width: 16),
-
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 4),
+              _StudentPhoto(url: student.profilePhotoUrl),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  (student.name ?? '---').toUpperCase(),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1565C0),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              if (className.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFB71C1C),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'CLASS – $className',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 6),
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: Colors.grey.shade200,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 10, 4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Extra Button (Comment kar diya hai abhi ke liye)
-                      // IconButton(
-                      //   onPressed: () async {
-                      //     final success = await _moveToExtra(context);
-                      //     if (context.mounted) {
-                      //       ScaffoldMessenger.of(context).showSnackBar(
-                      //         SnackBar(
-                      //           content: Text(
-                      //             success
-                      //                 ? 'Student moved to extra list'
-                      //                 : 'Failed to move student to extra',
-                      //           ),
-                      //           backgroundColor: success ? Colors.green : Colors.red,
-                      //         ),
-                      //       );
-                      //     }
-                      //   },
-                      //   icon: const Icon(Icons.move_to_inbox, color: Colors.orange, size: 22),
-                      //   tooltip: 'Extra',
-                      // ),
-                      IconButton(
-                        onPressed: () => Navigator.push(
+                      _InfoLine(
+                          label: 'Father',
+                          value: fatherName.isEmpty ? '-' : fatherName),
+                      _InfoLine(
+                          label: 'Mother',
+                          value: motherName.isEmpty ? '-' : motherName),
+                      _InfoLine(label: 'DOB', value: dob.isEmpty ? '-' : dob),
+                      _InfoLine(
+                          label: 'Mobile',
+                          value: mobile.isEmpty ? '-' : mobile),
+                      _InfoLine(
+                          label: 'Address',
+                          value: address.isEmpty ? '-' : address),
+                    ],
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    //_PhonePill(phone: mobile.isEmpty ? '-' : mobile),
+
+                    const SizedBox(width: 16),
+
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Extra Button (Comment kar diya hai abhi ke liye)
+                        // IconButton(
+                        //   onPressed: () async {
+                        //     final success = await _moveToExtra(context);
+                        //     if (context.mounted) {
+                        //       ScaffoldMessenger.of(context).showSnackBar(
+                        //         SnackBar(
+                        //           content: Text(
+                        //             success
+                        //                 ? 'Student moved to extra list'
+                        //                 : 'Failed to move student to extra',
+                        //           ),
+                        //           backgroundColor: success ? Colors.green : Colors.red,
+                        //         ),
+                        //       );
+                        //     }
+                        //   },
+                        //   icon: const Icon(Icons.move_to_inbox, color: Colors.orange, size: 22),
+                        //   tooltip: 'Extra',
+                        // ),
+                        IconButton(
+                          onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => StudentProfilePage(
                                 student: student,
                                 schoolId: schoolId,
                               ),
-                           ),
-                           ),
-                        icon: const Icon(Icons.edit, color: Colors.green, size: 22),
-                        tooltip: 'Edit',
-                      ),
-
-                      IconButton(
-                        onPressed: () => _confirmDelete(context),
-                        icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 22),
-                        tooltip: 'Delete',
-                      ),
-
-                      IconButton(
-                        onPressed: () async {
-                          final success = await context
-                              .read<StudentsCubit>()
-                              .toggleStudentStatus(
-                            student.uuid ?? '',
-                            schoolId,
-                            student.status ?? 0,
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  success ? 'Status updated' : 'Failed to update status',
-                                ),
-                                backgroundColor: success ? Colors.green : Colors.red,
-                              ),
-                            );
-                          }
-                        },
-                        icon: Icon(
-                          (student.status ?? 0) == 1
-                              ? Icons.toggle_on_rounded
-                              : Icons.toggle_off_rounded,
-                          size: 26,
-                          color: (student.status ?? 0) == 1 ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          icon: const Icon(Icons.edit, color: Colors.green, size: 22),
+                          tooltip: 'Edit',
                         ),
-                        tooltip: (student.status ?? 0) == 1 ? 'Deactivate' : 'Activate',
-                      ),
-                    ],
-                  ),
-                ],
+
+                        IconButton(
+                          onPressed: () => _confirmDelete(context),
+                          icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 22),
+                          tooltip: 'Delete',
+                        ),
+
+                        IconButton(
+                          onPressed: () async {
+                            final success = await context
+                                .read<StudentsCubit>()
+                                .toggleStudentStatus(
+                              student.uuid ?? '',
+                              schoolId,
+                              student.status ?? 0,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success ? 'Status updated' : 'Failed to update status',
+                                  ),
+                                  backgroundColor: success ? Colors.green : Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            (student.status ?? 0) == 1
+                                ? Icons.toggle_on_rounded
+                                : Icons.toggle_off_rounded,
+                            size: 26,
+                            color: (student.status ?? 0) == 1 ? Colors.green : Colors.red,
+                          ),
+                          tooltip: (student.status ?? 0) == 1 ? 'Deactivate' : 'Activate',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -603,42 +603,42 @@ class _InfoLine extends StatelessWidget {
   }
 }
 
-class _PhonePill extends StatelessWidget {
-  final String phone;
-  const _PhonePill({required this.phone});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFB8860B),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 16,
-            width: 16,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.phone, size: 10, color: Color(0xFFB8860B)),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            phone,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// class _PhonePill extends StatelessWidget {
+//   final String phone;
+//   const _PhonePill({required this.phone});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+//       decoration: BoxDecoration(
+//         color: const Color(0xFFB8860B),
+//         borderRadius: BorderRadius.circular(20),
+//       ),
+//       child: Row(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           Container(
+//             height: 16,
+//             width: 16,
+//             decoration: const BoxDecoration(
+//               color: Colors.white,
+//               shape: BoxShape.circle,
+//             ),
+//             child: const Icon(Icons.phone, size: 10, color: Color(0xFFB8860B)),
+//           ),
+//           const SizedBox(width: 6),
+//           Text(
+//             phone,
+//             style: const TextStyle(
+//               fontSize: 10,
+//               fontWeight: FontWeight.w700,
+//               color: Colors.white,
+//               letterSpacing: 0.3,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

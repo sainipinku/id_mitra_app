@@ -253,20 +253,20 @@ class _UserDetailsContent extends StatelessWidget {
                       page: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
                     ),
                   ),
-                  statCard(
-                    title: "TOTAL ORDERS",
-                    value: "${schoolDetailsModel?.orderCount ?? 0}",
-                    callBtn: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => OrdersPage(
-                          schoolId: schoolDetailsModel?.id.toString() ?? '',
-                          schoolName: schoolDetailsModel?.name ?? '',
-                          totalOrderCount: schoolDetailsModel?.orderCount,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // statCard(
+                  //   title: "TOTAL ORDERS",
+                  //   value: "${schoolDetailsModel?.orderCount ?? 0}",
+                  //   callBtn: () => Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (_) => OrdersPage(
+                  //         schoolId: schoolDetailsModel?.id.toString() ?? '',
+                  //         schoolName: schoolDetailsModel?.name ?? '',
+                  //         totalOrderCount: schoolDetailsModel?.orderCount,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
 

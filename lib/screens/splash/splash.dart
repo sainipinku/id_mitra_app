@@ -8,6 +8,7 @@ import 'package:idmitra/screens/admin/admin_home/admin_dashboard.dart';
 
 import 'package:idmitra/screens/auth/login.dart';
 import 'package:idmitra/screens/dashboard/dashboard.dart';
+import 'package:idmitra/services/update_service.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 
 
@@ -58,7 +59,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
           transition: PageTransitionType.rightToLeft,
         );
       }else if (accountType != 'partner' && accountType != 'super_admin' && accountType != 'school_admin') {
-        // school staff - has school object but not admin/partner
         navigateAndRemoveUntil(
           context: context,
           page:  StaffDashboard(),
@@ -79,6 +79,9 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
         transition: PageTransitionType.rightToLeft,
       );
     }
+
+    // Check for app update after navigation
+    UpdateService.instance.checkForUpdate();
   }
 
   @override

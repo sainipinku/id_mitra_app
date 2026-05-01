@@ -42,18 +42,6 @@ class OrdersCubit extends Cubit<OrdersState> {
     return 999;
   }
 
-  static List<OrderClass> _sortClasses(List<OrderClass> classes) {
-    final sorted = [...classes];
-    sorted.sort((a, b) {
-      final aName = a.nameWithprefix ?? a.name;
-      final bName = b.nameWithprefix ?? b.name;
-      final ai = _classSortIndex(aName);
-      final bi = _classSortIndex(bName);
-      if (ai != bi) return ai.compareTo(bi);
-      return aName.toLowerCase().compareTo(bName.toLowerCase());
-    });
-    return sorted;
-  }
 
   Future<void> fetchSchoolClasses(String schoolId) async {
     if (schoolId.isEmpty) return;
@@ -61,7 +49,8 @@ class OrdersCubit extends Cubit<OrdersState> {
     emit(state.copyWith(classesLoading: true));
 
     try {
-      final url = '${Config.baseUrl}auth/school/$schoolId/students/form-data';
+      final url =
+          '${Config.baseUrl}auth/school/$schoolId/students/form-data';
       final response = await _api.getRequest(url);
 
       if (response == null) {
@@ -78,40 +67,50 @@ class OrdersCubit extends Cubit<OrdersState> {
       for (var item in rawClasses) {
         final int classId = item['id'] ?? 0;
 
-        final String className = item['name_withprefix']?.toString() ?? item['name']?.toString() ?? '';
+        final String className =
+            item['name_withprefix']?.toString() ??
+                item['name']?.toString() ??
+                '';
 
         final List sections = item['sections'] ?? [];
 
-        List<int> ids = [];
-        String firstSectionName = '';
-
+        //  If sections exist → create multiple entries
         if (sections.isNotEmpty) {
-          ids = sections.map<int>((e) => e['id'] ?? 0).toList();
+          for (var sec in sections) {
+            final int sectionId = sec['id'] ?? 0;
 
-          firstSectionName = sections.first['name']
-              ?.toString()
-              .replaceAll('.', '')
-              .trim() ??
-              '';
+            final String sectionName = sec['name']
+                ?.toString()
+                .replaceAll('.', '')
+                .trim() ??
+                '';
+
+            final fullName = '$className - $sectionName';
+
+            classes.add(
+              OrderClass(
+                classId: classId,
+                sectionIds: sectionId,
+                name: fullName,
+                nameWithprefix: fullName,
+              ),
+            );
+          }
+        } else {
+          classes.add(
+            OrderClass(
+              classId: classId,
+              sectionIds: 0,
+              name: className,
+              nameWithprefix: className,
+            ),
+          );
         }
-
-        final fullName = sections.isNotEmpty
-            ? '$className (Section $firstSectionName)'
-            : className;
-
-        classes.add(
-          OrderClass(
-            classId: classId,
-            sectionIds: ids,
-            name: fullName,
-            nameWithprefix: fullName,
-          ),
-        );
       }
 
       emit(
         state.copyWith(
-          availableClasses: _sortClasses(classes),
+          availableClasses: classes,
           classesLoading: false,
         ),
       );
@@ -120,6 +119,7 @@ class OrdersCubit extends Cubit<OrdersState> {
       emit(state.copyWith(classesLoading: false));
     }
   }
+
   Future<void> fetchOrders({
     bool isLoadMore = false,
     String search = '',
@@ -266,10 +266,12 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
-  Future<void> fetchStaffOrdersTotal() async {
+  Future<void> fetchStaffOrdersTotal({required String schoolId}) async {
+    if (schoolId.isEmpty) return;
+
     emit(state.copyWith(staffTotalLoading: true));
     try {
-      final url = '${Config.baseUrl}auth/partner/orders?page=1&per_page=1';
+      final url = '${Config.baseUrl}auth/school/$schoolId/staff/orders?page=1&per_page=1';
       final response = await _api.getRequest(url);
 
       if (response == null) {
@@ -277,22 +279,35 @@ class OrdersCubit extends Cubit<OrdersState> {
         return;
       }
 
+      print('StaffOrdersTotal URL: $url');
+      print('StaffOrdersTotal body: ${response.body}');
+
       final json = jsonDecode(response.body);
       final data = json['data'] as Map<String, dynamic>?;
       int total = 0;
 
       if (data != null) {
-        if (data['orders'] is List) {
+        if (data['list'] is Map) {
+          final listData = data['list'] as Map<String, dynamic>;
+          total = listData['total'] ?? 0;
+        }
+        else if (data['orders'] is List) {
           final pagination = data['pagination'] as Map<String, dynamic>?;
           total = pagination?['total'] ?? 0;
-        } else if (data['orders'] is Map) {
+        }
+        else if (data['orders'] is Map) {
           final ordersData = data['orders'] as Map<String, dynamic>;
           total = ordersData['total'] ?? 0;
         }
+        else if (data['data'] is List) {
+          total = data['total'] ?? 0;
+        }
       }
 
+      print('StaffOrdersTotal: $total');
       emit(state.copyWith(staffTotalLoading: false, staffTotal: total));
-    } catch (_) {
+    } catch (e) {
+      print('StaffOrdersTotal error: $e');
       emit(state.copyWith(staffTotalLoading: false));
     }
   }

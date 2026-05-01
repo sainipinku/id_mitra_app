@@ -168,27 +168,63 @@ class _AdminStaffOrdersPageState extends State<AdminStaffOrdersPage> {
         setState(() { _loading = false; _error = 'Failed to load orders'; });
         return;
       }
+
+      print('AdminStaffOrders URL: $url');
+      print('AdminStaffOrders status: ${response.statusCode}');
+      print('AdminStaffOrders body: ${response.body}');
+
       final json = jsonDecode(response.body);
-      final data = json['data'] as Map<String, dynamic>;
+
+      final isSuccess = (json['status'] == true || json['status'] == 'success' || json['success'] == true);
+      if (!isSuccess) {
+        setState(() { _loading = false; _error = json['message'] ?? 'Failed to load staff orders'; });
+        return;
+      }
+
+      final data = json['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        setState(() { _loading = false; _error = 'Invalid response format'; });
+        return;
+      }
 
       List rawList = [];
       int total = 0;
       int lastPage = 1;
       int respCurrentPage = 1;
 
-      if (data.containsKey('orders') && data['orders'] is List) {
+      // Format: { list: { data: [...], total: N, last_page: N, current_page: N } }
+      if (data.containsKey('list') && data['list'] is Map) {
+        final listData = data['list'] as Map<String, dynamic>;
+        rawList = listData['data'] ?? [];
+        total = listData['total'] ?? 0;
+        lastPage = listData['last_page'] ?? 1;
+        respCurrentPage = listData['current_page'] ?? 1;
+      }
+      // Format: { orders: [...], pagination: { total, last_page, current_page } }
+      else if (data.containsKey('orders') && data['orders'] is List) {
         rawList = data['orders'] as List;
         final pagination = data['pagination'] as Map<String, dynamic>?;
         total = pagination?['total'] ?? rawList.length;
         lastPage = pagination?['last_page'] ?? 1;
         respCurrentPage = pagination?['current_page'] ?? 1;
-      } else if (data.containsKey('orders') && data['orders'] is Map) {
+      }
+      // Format: { orders: { data: [...], total: N, last_page: N, current_page: N } }
+      else if (data.containsKey('orders') && data['orders'] is Map) {
         final ordersData = data['orders'] as Map<String, dynamic>;
         rawList = ordersData['data'] ?? [];
-        total = data['total'] ?? ordersData['total'] ?? 0;
+        total = ordersData['total'] ?? 0;
         lastPage = ordersData['last_page'] ?? 1;
         respCurrentPage = ordersData['current_page'] ?? 1;
       }
+      // Format: { data: [...], total: N }
+      else if (data.containsKey('data') && data['data'] is List) {
+        rawList = data['data'] as List;
+        total = data['total'] ?? rawList.length;
+        lastPage = data['last_page'] ?? 1;
+        respCurrentPage = data['current_page'] ?? 1;
+      }
+
+      print('AdminStaffOrders parsed: ${rawList.length} items, total=$total, page=$respCurrentPage/$lastPage');
 
       final newOrders = rawList
           .map((e) => AdminStaffOrderItem.fromJson(e as Map<String, dynamic>))

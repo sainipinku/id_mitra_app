@@ -32,7 +32,8 @@ class OrdersPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => OrdersCubit()
         ..fetchOrders(schoolId: schoolId, isSchool: isSchool)
-        ..fetchSchoolClasses(schoolId),
+        ..fetchSchoolClasses(schoolId)
+        ..fetchStaffOrdersTotal(schoolId: schoolId),
       child: Builder(
         builder: (_) => _OrdersView(
           schoolId: schoolId,
@@ -139,27 +140,33 @@ class _OrdersViewState extends State<_OrdersView> {
         showText: true,
         showDivider: true,
         actions: [
-          // Staff Cards button
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: TextButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider(
-                    create: (_) => OrdersCubit(),
-                    child: OrderStaffPage(schoolId: widget.schoolId),
+            child: BlocBuilder<OrdersCubit, OrdersState>(
+              buildWhen: (p, c) => p.staffTotal != c.staffTotal || p.staffTotalLoading != c.staffTotalLoading,
+              builder: (_, state) => TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => OrdersCubit(),
+                      child: OrderStaffPage(schoolId: widget.schoolId),
+                    ),
                   ),
                 ),
-              ),
-              icon: const Icon(Icons.badge_outlined, size: 15),
-              label: Text(
-                'Staff',
-                style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.btnColor,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+                icon: const Icon(Icons.badge_outlined, size: 15),
+                label: Text(
+                  state.staffTotalLoading
+                      ? 'Staff'
+                      : state.staffTotal > 0
+                          ? 'Staff (${state.staffTotal})'
+                          : 'Staff',
+                  style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.btnColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
               ),
             ),
           ),
@@ -167,14 +174,12 @@ class _OrdersViewState extends State<_OrdersView> {
       ),
       body: Column(
         children: [
-          // Search bar always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: _searchBar(),
           ),
 
-          // Filters always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -715,7 +720,6 @@ class _OrderCardState extends State<_OrderCard> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Status + date row
                   Row(
                     children: [
                       Container(
