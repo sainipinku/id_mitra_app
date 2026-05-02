@@ -1,9 +1,6 @@
 class Config {
-  static String devBaseUrl = "http://10.0.2.2:8000/api/";  // emulator
-  // static String devBaseUrl = "http://192.168.x.x:8000/api/";  // real device — apna IP daalo
   static String proBaseUrl = "https://idmitra.com/api/";
   static String baseUrl = proBaseUrl;
-  // Base URL without /api/ suffix (for school panel routes)
   static String schoolBaseUrl = "https://idmitra.com/";
 
   /// Safely joins baseUrl + route, removing any accidental double slashes
@@ -91,6 +88,7 @@ class Routes {
   static String getSubCategoryById(String stateID) => "common/cities/$stateID";
   static String getSubCategoryProductById(String subCatId) => "product/subcategory/$subCatId";
   static String updateImageSettings(String schoolId) => "auth/school/image-settings/$schoolId";
+  static String getAppVersion() => "app/version";
   static String moveStudentToExtra(String schoolId, String studentUuid) =>
       "auth/school/$schoolId/students/$studentUuid/move-to-extra";
   static String assignStudent(String schoolId, String studentUuid) =>

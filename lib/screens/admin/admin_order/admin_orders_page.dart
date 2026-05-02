@@ -33,7 +33,9 @@ class AdminOrdersPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => OrdersCubit()
         ..fetchOrders(schoolId: schoolId, isSchool: isSchool)
-        ..fetchSchoolClasses(schoolId),
+        ..fetchSchoolClasses(schoolId)
+        // ✅ FIXED: schoolId pass kiya
+        ..fetchStaffOrdersTotal(schoolId: schoolId),
       child: _AdminOrdersView(
         schoolId: schoolId,
         schoolName: schoolName,
@@ -75,7 +77,8 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
         context.read<OrdersCubit>().fetchOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
@@ -114,9 +117,9 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
 
   bool get _hasActiveFilters =>
       _selectedStatus.isNotEmpty ||
-          _selectedClass.isNotEmpty ||
-          _dateFromCtrl.text.isNotEmpty ||
-          _dateToCtrl.text.isNotEmpty;
+      _selectedClass.isNotEmpty ||
+      _dateFromCtrl.text.isNotEmpty ||
+      _dateToCtrl.text.isNotEmpty;
 
   void _clearFilters() {
     setState(() {
@@ -140,16 +143,34 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: TextButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => AdminStaffOrdersPage(schoolId: widget.schoolId)),
-              ),
-              icon: const Icon(Icons.badge_outlined, size: 15),
-              label: Text('Staff', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.btnColor,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: BlocBuilder<OrdersCubit, OrdersState>(
+              buildWhen: (p, c) =>
+                  p.staffTotal != c.staffTotal ||
+                  p.staffTotalLoading != c.staffTotalLoading,
+              builder: (_, state) => TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        AdminStaffOrdersPage(schoolId: widget.schoolId),
+                  ),
+                ),
+                icon: const Icon(Icons.badge_outlined, size: 15),
+                label: Text(
+                  state.staffTotalLoading
+                      ? 'Staff...'
+                      : state.staffTotal > 0
+                      ? 'Staff (${state.staffTotal})'
+                      : 'Staff',
+                  style: MyStyles.mediumText(
+                    size: 12,
+                    color: AppTheme.btnColor,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.btnColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
               ),
             ),
           ),
@@ -157,14 +178,12 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
       ),
       body: Column(
         children: [
-          // Search always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: _searchBar(),
           ),
 
-          // Filters always visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -182,7 +201,9 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(child: _dateField(_dateFromCtrl, 'From dd-mm-yyyy')),
+                    Expanded(
+                      child: _dateField(_dateFromCtrl, 'From dd-mm-yyyy'),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(child: _dateField(_dateToCtrl, 'To dd-mm-yyyy')),
                   ],
@@ -194,7 +215,10 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                     child: GestureDetector(
                       onTap: _clearFilters,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.lightRedColor,
                           borderRadius: BorderRadius.circular(20),
@@ -202,9 +226,19 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.close, size: 12, color: AppTheme.cancelTextColor),
+                            const Icon(
+                              Icons.close,
+                              size: 12,
+                              color: AppTheme.cancelTextColor,
+                            ),
                             const SizedBox(width: 4),
-                            Text('Clear Filters', style: MyStyles.mediumText(size: 11, color: AppTheme.cancelTextColor)),
+                            Text(
+                              'Clear Filters',
+                              style: MyStyles.mediumText(
+                                size: 11,
+                                color: AppTheme.cancelTextColor,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -215,29 +249,47 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
             ),
           ),
 
-          // Summary bar
           BlocBuilder<OrdersCubit, OrdersState>(
             buildWhen: (p, c) => p.total != c.total || p.loading != c.loading,
             builder: (_, state) {
-              if (state.loading || state.total == 0) return const SizedBox.shrink();
+              if (state.loading || state.total == 0)
+                return const SizedBox.shrink();
               return Container(
                 color: Colors.white,
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.btnColor.withOpacity(0.07),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.receipt_long_outlined, size: 14, color: AppTheme.btnColor),
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 14,
+                        color: AppTheme.btnColor,
+                      ),
                       const SizedBox(width: 6),
-                      Text('Total Orders: ${state.total}',
-                          style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
+                      Text(
+                        'Total Orders: ${state.total}',
+                        style: MyStyles.mediumText(
+                          size: 12,
+                          color: AppTheme.btnColor,
+                        ),
+                      ),
                       if (_hasActiveFilters) ...[
                         const Spacer(),
-                        Text('Filtered', style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                        Text(
+                          'Filtered',
+                          style: MyStyles.regularText(
+                            size: 11,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -245,8 +297,6 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
               );
             },
           ),
-
-          // List
           Expanded(
             child: BlocBuilder<OrdersCubit, OrdersState>(
               builder: (_, state) {
@@ -261,9 +311,19 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red.shade300,
+                        ),
                         const SizedBox(height: 12),
-                        Text(state.error!, style: MyStyles.regularText(size: 14, color: Colors.red)),
+                        Text(
+                          state.error!,
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: Colors.red,
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: _resetAndFetch,
@@ -272,7 +332,9 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.btnColor,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
                       ],
@@ -286,12 +348,24 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                       children: [
                         Image.asset('assets/images/no_data.png', height: 160),
                         const SizedBox(height: 12),
-                        Text('No orders found', style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
+                        Text(
+                          'No orders found',
+                          style: MyStyles.mediumText(
+                            size: 14,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                        ),
                         if (_hasActiveFilters) ...[
                           const SizedBox(height: 8),
                           TextButton(
                             onPressed: _clearFilters,
-                            child: Text('Clear filters', style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
+                            child: Text(
+                              'Clear filters',
+                              style: MyStyles.mediumText(
+                                size: 13,
+                                color: AppTheme.btnColor,
+                              ),
+                            ),
                           ),
                         ],
                       ],
@@ -304,7 +378,8 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                   child: ListView.builder(
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                    itemCount: state.ordersList.length + (state.hasMore ? 1 : 0),
+                    itemCount:
+                        state.ordersList.length + (state.hasMore ? 1 : 0),
                     itemBuilder: (_, i) {
                       if (i < state.ordersList.length) {
                         return _AdminOrderCard(
@@ -315,7 +390,12 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
                       }
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.btnColor,
+                            strokeWidth: 2,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -340,16 +420,24 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
       fillColor: AppTheme.appBackgroundColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       hintText: 'Search by student name, order ID...',
-      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.graySubTitleColor),
+      prefixIcon: const Icon(
+        Icons.search_rounded,
+        size: 20,
+        color: AppTheme.graySubTitleColor,
+      ),
       suffixIcon: _searchCtrl.text.isNotEmpty
           ? GestureDetector(
-        onTap: () {
-          _searchCtrl.clear();
-          setState(() {});
-          _resetAndFetch();
-        },
-        child: const Icon(Icons.close, size: 16, color: AppTheme.graySubTitleColor),
-      )
+              onTap: () {
+                _searchCtrl.clear();
+                setState(() {});
+                _resetAndFetch();
+              },
+              child: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppTheme.graySubTitleColor,
+              ),
+            )
           : null,
       enabledBorder: OutlineInputBorder(
         borderSide: BorderSide(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
@@ -359,12 +447,17 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
         borderSide: const BorderSide(color: AppTheme.btnColor),
         borderRadius: BorderRadius.circular(12),
       ),
-      hintStyle: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
+      hintStyle: MyStyles.regularText(
+        size: 13,
+        color: AppTheme.graySubTitleColor,
+      ),
     ),
   );
 
   Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
-    buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.classesLoading != c.classesLoading,
+    buildWhen: (p, c) =>
+        p.availableClasses != c.availableClasses ||
+        p.classesLoading != c.classesLoading,
     builder: (_, state) {
       return _dropdown(
         value: _selectedClass.isEmpty ? '' : _selectedClass,
@@ -372,10 +465,15 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
         loading: state.classesLoading,
         items: [
           const DropdownMenuItem(value: '', child: Text('All Classes')),
-          ...state.availableClasses.map((c) => DropdownMenuItem(
-            value: c.classId.toString(),
-            child: Text(c.nameWithprefix ?? c.name, overflow: TextOverflow.ellipsis),
-          )),
+          ...state.availableClasses.map(
+            (c) => DropdownMenuItem(
+              value: c.classId.toString(),
+              child: Text(
+                c.nameWithprefix ?? c.name,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
         ],
         onChanged: (v) {
           setState(() => _selectedClass = v ?? '');
@@ -389,10 +487,12 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
     value: _selectedStatus,
     hint: 'All Status',
     items: kOrderFilterStatuses
-        .map((s) => DropdownMenuItem<String>(
-      value: s.value,
-      child: Text(s.label, overflow: TextOverflow.ellipsis),
-    ))
+        .map(
+          (s) => DropdownMenuItem<String>(
+            value: s.value,
+            child: Text(s.label, overflow: TextOverflow.ellipsis),
+          ),
+        )
         .toList(),
     onChanged: (v) {
       setState(() => _selectedStatus = v ?? '');
@@ -406,29 +506,39 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
     required List<DropdownMenuItem<String>> items,
     required void Function(String?) onChanged,
     bool loading = false,
-  }) =>
-      Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: AppTheme.appBackgroundColor,
-          border: Border.all(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            menuMaxHeight: 300,
-            icon: loading
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor))
-                : const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppTheme.graySubTitleColor),
-            style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
-            items: items,
-            onChanged: onChanged,
-          ),
-        ),
-      );
+  }) => Container(
+    height: 44,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    decoration: BoxDecoration(
+      color: AppTheme.appBackgroundColor,
+      border: Border.all(color: AppTheme.backBtnBgColor.withOpacity(0.5)),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: value,
+        isExpanded: true,
+        menuMaxHeight: 300,
+        icon: loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.btnColor,
+                ),
+              )
+            : const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppTheme.graySubTitleColor,
+              ),
+        style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
+        items: items,
+        onChanged: onChanged,
+      ),
+    ),
+  );
 
   Widget _dateField(TextEditingController ctrl, String hint) {
     return StatefulBuilder(
@@ -443,20 +553,26 @@ class _AdminOrdersViewState extends State<_AdminOrdersView> {
         ],
         suffixIcon: ctrl.text.isNotEmpty
             ? GestureDetector(
-          onTap: () {
-            ctrl.clear();
-            setLocal(() {});
-            if (_debounce?.isActive ?? false) _debounce!.cancel();
-            _debounce = Timer(const Duration(milliseconds: 200), _resetAndFetch);
-          },
-          child: const Icon(Icons.close, size: 16),
-        )
+                onTap: () {
+                  ctrl.clear();
+                  setLocal(() {});
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  _debounce = Timer(
+                    const Duration(milliseconds: 200),
+                    _resetAndFetch,
+                  );
+                },
+                child: const Icon(Icons.close, size: 16),
+              )
             : null,
         onChanged: (_) {
           setLocal(() {});
           if (ctrl.text.length == 10 || ctrl.text.isEmpty) {
             if (_debounce?.isActive ?? false) _debounce!.cancel();
-            _debounce = Timer(const Duration(milliseconds: 400), _resetAndFetch);
+            _debounce = Timer(
+              const Duration(milliseconds: 400),
+              _resetAndFetch,
+            );
           }
         },
       ),
@@ -468,7 +584,11 @@ class _AdminOrderCard extends StatefulWidget {
   final OrderModel order;
   final String schoolId;
   final bool isSchool;
-  const _AdminOrderCard({required this.order, this.schoolId = '', this.isSchool = false});
+  const _AdminOrderCard({
+    required this.order,
+    this.schoolId = '',
+    this.isSchool = false,
+  });
 
   @override
   State<_AdminOrderCard> createState() => _AdminOrderCardState();
@@ -486,27 +606,42 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Color get _statusColor {
     switch (_currentStatus) {
-      case 'completed': return const Color(0xFF2DC24E);
-      case 'cancelled': return AppTheme.cancelTextColor;
-      case 'work_in_process': return AppTheme.btnColor;
-      case 're_order': return AppTheme.PendingDotColor;
-      default: return AppTheme.graySubTitleColor;
+      case 'completed':
+        return const Color(0xFF2DC24E);
+      case 'cancelled':
+        return AppTheme.cancelTextColor;
+      case 'work_in_process':
+        return AppTheme.btnColor;
+      case 're_order':
+        return AppTheme.PendingDotColor;
+      default:
+        return AppTheme.graySubTitleColor;
     }
   }
 
   Color get _statusBg {
     switch (_currentStatus) {
-      case 'completed': return const Color(0xFFE8F9ED);
-      case 'cancelled': return AppTheme.lightRedColor;
-      case 'work_in_process': return AppTheme.lightBlueColor;
-      case 're_order': return AppTheme.PendingLightColor;
-      default: return AppTheme.appBackgroundColor;
+      case 'completed':
+        return const Color(0xFFE8F9ED);
+      case 'cancelled':
+        return AppTheme.lightRedColor;
+      case 'work_in_process':
+        return AppTheme.lightBlueColor;
+      case 're_order':
+        return AppTheme.PendingLightColor;
+      default:
+        return AppTheme.appBackgroundColor;
     }
   }
 
   String get _statusLabel => kOrderStatuses
-      .firstWhere((s) => s.value == _currentStatus,
-      orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')))
+      .firstWhere(
+        (s) => s.value == _currentStatus,
+        orElse: () => OrderStatusOption(
+          _currentStatus,
+          _currentStatus.replaceAll('_', ' '),
+        ),
+      )
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
@@ -526,9 +661,9 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success
-            ? 'Status updated successfully'
-            : 'Failed to update status'),
+        content: Text(
+          success ? 'Status updated successfully' : 'Failed to update status',
+        ),
         backgroundColor: success ? AppTheme.btnColor : Colors.red,
       ),
     );
@@ -542,7 +677,12 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => AdminOrderDetailPage(uuid: widget.order.uuid, schoolId: widget.schoolId)),
+        MaterialPageRoute(
+          builder: (_) => AdminOrderDetailPage(
+            uuid: widget.order.uuid,
+            schoolId: widget.schoolId,
+          ),
+        ),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -557,18 +697,20 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
             // Avatar
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: (student?.profilePhotoUrl != null && student!.profilePhotoUrl!.isNotEmpty)
+              child:
+                  (student?.profilePhotoUrl != null &&
+                      student!.profilePhotoUrl!.isNotEmpty)
                   ? Image.network(
-                student.profilePhotoUrl!,
-                height: 60, width: 60, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _placeholder(),
-              )
+                      student.profilePhotoUrl!,
+                      height: 60,
+                      width: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
+                    )
                   : _placeholder(),
             ),
 
             const SizedBox(width: 12),
-
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,7 +720,10 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                       Flexible(
                         child: Text(
                           student?.name ?? '-',
-                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                          style: MyStyles.boldText(
+                            size: 16,
+                            color: AppTheme.black_Color,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -587,7 +732,10 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                         Flexible(
                           child: Text(
                             '• ${student!.className!}',
-                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+                            style: MyStyles.boldText(
+                              size: 14,
+                              color: AppTheme.btnColor,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -596,17 +744,30 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                   ),
                   const SizedBox(height: 3),
                   if (school?.name != null)
-                    Text(school!.name,
-                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
-                        overflow: TextOverflow.ellipsis),
+                    Text(
+                      school!.name,
+                      style: MyStyles.regularText(
+                        size: 12,
+                        color: AppTheme.graySubTitleColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   const SizedBox(height: 3),
-                  Text('#${widget.order.id} • ${widget.order.typeLabel}',
-                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  Text(
+                    '#${widget.order.id} • ${widget.order.typeLabel}',
+                    style: MyStyles.regularText(
+                      size: 12,
+                      color: AppTheme.graySubTitleColor,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: _statusBg,
                           borderRadius: BorderRadius.circular(20),
@@ -615,52 +776,83 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 5, height: 5,
-                              decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle),
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: _statusColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                             const SizedBox(width: 4),
-                            Text(_statusLabel, style: MyStyles.mediumText(size: 11, color: _statusColor)),
+                            Text(
+                              _statusLabel,
+                              style: MyStyles.mediumText(
+                                size: 11,
+                                color: _statusColor,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const Spacer(),
-                      Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 11,
+                        color: AppTheme.graySubTitleColor,
+                      ),
                       const SizedBox(width: 3),
-                      Text(widget.order.orderedAt,
-                          style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                      Text(
+                        widget.order.orderedAt,
+                        style: MyStyles.regularText(
+                          size: 11,
+                          color: AppTheme.graySubTitleColor,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
 
-            // 3-dot menu
             _updating
                 ? const Padding(
-              padding: EdgeInsets.all(4),
-              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor)),
-            )
+                    padding: EdgeInsets.all(4),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.btnColor,
+                      ),
+                    ),
+                  )
                 : _currentStatus == 'completed'
                 ? const SizedBox.shrink()
                 : PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.grey),
-              offset: const Offset(0, 32),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 8,
-              onSelected: _updateStatus,
-              itemBuilder: (_) => [
-                const PopupMenuItem<String>(
-                  value: 'completed',
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle_outline, size: 16, color: AppTheme.graySubTitleColor),
-                      SizedBox(width: 10),
-                      Text('Mark as Completed'),
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    offset: const Offset(0, 32),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 8,
+                    onSelected: _updateStatus,
+                    itemBuilder: (_) => [
+                      const PopupMenuItem<String>(
+                        value: 'completed',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                              color: AppTheme.graySubTitleColor,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Mark as Completed'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -668,7 +860,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   }
 
   Widget _placeholder() => Container(
-    height: 60, width: 60,
+    height: 60,
+    width: 60,
     color: Colors.grey.shade300,
     child: const Icon(Icons.person, color: Colors.grey),
   );
@@ -676,8 +869,14 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
 class _AdminDotDateFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
-    return newValue.copyWith(text: text, selection: TextSelection.collapsed(offset: text.length));
+    return newValue.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 }

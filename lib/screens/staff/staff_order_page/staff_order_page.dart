@@ -34,7 +34,8 @@ class StaffOrderPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => OrdersCubit()
         ..fetchOrders(schoolId: schoolId, isSchool: isSchool)
-        ..fetchSchoolClasses(schoolId),
+        ..fetchSchoolClasses(schoolId)
+        ..fetchStaffOrdersTotal(schoolId: schoolId),
       child: _StaffOrderView(
         schoolId: schoolId,
         schoolName: schoolName,
@@ -141,16 +142,26 @@ class _StaffOrderViewState extends State<_StaffOrderView> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: TextButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => AdminStaffOrdersPage(schoolId: widget.schoolId)),
-              ),
-              icon: const Icon(Icons.badge_outlined, size: 15),
-              label: Text('Staff', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.btnColor,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: BlocBuilder<OrdersCubit, OrdersState>(
+              buildWhen: (p, c) => p.staffTotal != c.staffTotal || p.staffTotalLoading != c.staffTotalLoading,
+              builder: (_, state) => TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AdminStaffOrdersPage(schoolId: widget.schoolId)),
+                ),
+                icon: const Icon(Icons.badge_outlined, size: 15),
+                label: Text(
+                  state.staffTotalLoading
+                      ? 'Staff'
+                      : state.staffTotal > 0
+                          ? 'Staff (${state.staffTotal})'
+                          : 'Staff',
+                  style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.btnColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                ),
               ),
             ),
           ),
