@@ -5,7 +5,6 @@ import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/models/correction/CorrectionListModel.dart';
 import 'package:idmitra/providers/correction/correction_state.dart';
-
 class CorrectionCubit extends Cubit<CorrectionState> {
   CorrectionCubit() : super(const CorrectionState());
 
@@ -97,5 +96,118 @@ class CorrectionCubit extends Cubit<CorrectionState> {
 
   void clearSelection() {
     emit(state.copyWith(selectedIds: {}));
+  }
+
+  Future<void> sendOrder({required String schoolId}) async {
+    if (state.selectedIds.isEmpty) return;
+    emit(state.copyWith(sendOrderLoading: true, clearSendOrderError: true, sendOrderSuccess: false));
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/send';
+      final body = {'checklist_ids': state.selectedIds.toList()};
+      final response = await _api.postRequest(body, url);
+      if (response == null) {
+        emit(state.copyWith(sendOrderLoading: false, sendOrderError: 'Failed to send order'));
+        return;
+      }
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderSuccess: true,
+          selectedIds: {},
+        ));
+      } else {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderError: json['message'] ?? 'Failed to send order',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(sendOrderLoading: false, sendOrderError: e.toString()));
+    }
+  }
+
+  Future<void> fetchDownloadColumns({
+    required String schoolId,
+    bool isSchool = false,
+  }) async {
+    emit(state.copyWith(columnsLoading: true));
+    try {
+      String url = '${Config.baseUrl}auth/school/$schoolId/form-fields';
+      var response = await _api.getRequest(url);
+
+      if (response != null && response.statusCode == 403) {
+        url = '${Config.baseUrl}auth/partner/school/$schoolId/student-form-fields';
+        response = await _api.getRequest(url);
+      }
+
+      if (response == null) {
+        emit(state.copyWith(columnsLoading: false));
+        return;
+      }
+
+      final json = jsonDecode(response.body);
+      final data = json['data'] ?? json['props']?['school'] ?? {};
+
+      List rawFields = [];
+      if (data['student_form_fields'] is List) {
+        rawFields = data['student_form_fields'] as List;
+      } else if (data['available_student_form_fields'] is List) {
+        rawFields = data['available_student_form_fields'] as List;
+      } else if (json['data'] is List) {
+        rawFields = json['data'] as List;
+      }
+
+      final columns = rawFields
+          .where((e) => e['name'] != null && e['label'] != null)
+          .map((e) => DownloadColumn(
+                key: e['name'].toString(),
+                label: e['label'].toString(),
+              ))
+          .toList();
+
+      emit(state.copyWith(columnsLoading: false, downloadColumns: columns));
+    } catch (e) {
+      emit(state.copyWith(columnsLoading: false));
+    }
+  }
+
+  Future<void> downloadCorrectionList({
+    required String schoolId,
+    required List<String> columns,
+    required String printType,
+  }) async {
+    emit(state.copyWith(downloadLoading: true, clearDownloadError: true, clearDownloadUrl: true));
+    try {
+      String url = '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/download';
+      final body = {
+        'columns': columns,
+        'print_type': printType,
+      };
+      var response = await _api.postRequest(body, url);
+
+      if (response != null && response.statusCode == 403) {
+        final partnerUrl = '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/download';
+        response = await _api.postRequest(body, partnerUrl);
+      }
+
+      if (response == null) {
+        emit(state.copyWith(downloadLoading: false, downloadError: 'Failed to download. Please try again.'));
+        return;
+      }
+
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        final fileUrl = json['data']?['url'] ?? json['data']?['file_url'] ?? json['url'] ?? '';
+        emit(state.copyWith(downloadLoading: false, downloadUrl: fileUrl.toString()));
+      } else {
+        emit(state.copyWith(
+          downloadLoading: false,
+          downloadError: json['message'] ?? 'Download failed',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(downloadLoading: false, downloadError: e.toString()));
+    }
   }
 }

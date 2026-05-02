@@ -1,5 +1,11 @@
 import 'package:idmitra/models/correction/CorrectionListModel.dart';
 
+class DownloadColumn {
+  final String key;
+  final String label;
+  const DownloadColumn({required this.key, required this.label});
+}
+
 class CorrectionState {
   final bool loading;
   final List<CorrectionItem> items;
@@ -7,6 +13,14 @@ class CorrectionState {
   final bool hasMore;
   final String? error;
   final Set<int> selectedIds;
+  final bool sendOrderLoading;
+  final bool sendOrderSuccess;
+  final String? sendOrderError;
+  final bool downloadLoading;
+  final String? downloadUrl;
+  final String? downloadError;
+  final bool columnsLoading;
+  final List<DownloadColumn> downloadColumns;
 
   const CorrectionState({
     this.loading = false,
@@ -15,6 +29,14 @@ class CorrectionState {
     this.hasMore = true,
     this.error,
     this.selectedIds = const {},
+    this.sendOrderLoading = false,
+    this.sendOrderSuccess = false,
+    this.sendOrderError,
+    this.downloadLoading = false,
+    this.downloadUrl,
+    this.downloadError,
+    this.columnsLoading = false,
+    this.downloadColumns = const [],
   });
 
   CorrectionState copyWith({
@@ -25,6 +47,17 @@ class CorrectionState {
     String? error,
     bool? clearError,
     Set<int>? selectedIds,
+    bool? sendOrderLoading,
+    bool? sendOrderSuccess,
+    String? sendOrderError,
+    bool? clearSendOrderError,
+    bool? downloadLoading,
+    String? downloadUrl,
+    String? downloadError,
+    bool? clearDownloadError,
+    bool? clearDownloadUrl,
+    bool? columnsLoading,
+    List<DownloadColumn>? downloadColumns,
   }) {
     return CorrectionState(
       loading: loading ?? this.loading,
@@ -33,6 +66,14 @@ class CorrectionState {
       hasMore: hasMore ?? this.hasMore,
       error: clearError == true ? null : (error ?? this.error),
       selectedIds: selectedIds ?? this.selectedIds,
+      sendOrderLoading: sendOrderLoading ?? this.sendOrderLoading,
+      sendOrderSuccess: sendOrderSuccess ?? this.sendOrderSuccess,
+      sendOrderError: clearSendOrderError == true ? null : (sendOrderError ?? this.sendOrderError),
+      downloadLoading: downloadLoading ?? this.downloadLoading,
+      downloadUrl: clearDownloadUrl == true ? null : (downloadUrl ?? this.downloadUrl),
+      downloadError: clearDownloadError == true ? null : (downloadError ?? this.downloadError),
+      columnsLoading: columnsLoading ?? this.columnsLoading,
+      downloadColumns: downloadColumns ?? this.downloadColumns,
     );
   }
 }
