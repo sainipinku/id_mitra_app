@@ -22,6 +22,13 @@ class CorrectionState {
   final bool columnsLoading;
   final List<DownloadColumn> downloadColumns;
 
+  final bool studentsLoading;
+  final List<CorrectionStudentItem> students;
+  final int studentsPage;
+  final bool studentsHasMore;
+  final String? studentsError;
+  final Set<int> selectedStudentIds;
+
   const CorrectionState({
     this.loading = false,
     this.items = const [],
@@ -37,6 +44,12 @@ class CorrectionState {
     this.downloadError,
     this.columnsLoading = false,
     this.downloadColumns = const [],
+    this.studentsLoading = false,
+    this.students = const [],
+    this.studentsPage = 1,
+    this.studentsHasMore = true,
+    this.studentsError,
+    this.selectedStudentIds = const {},
   });
 
   CorrectionState copyWith({
@@ -58,6 +71,13 @@ class CorrectionState {
     bool? clearDownloadUrl,
     bool? columnsLoading,
     List<DownloadColumn>? downloadColumns,
+    bool? studentsLoading,
+    List<CorrectionStudentItem>? students,
+    int? studentsPage,
+    bool? studentsHasMore,
+    String? studentsError,
+    bool? clearStudentsError,
+    Set<int>? selectedStudentIds,
   }) {
     return CorrectionState(
       loading: loading ?? this.loading,
@@ -74,6 +94,12 @@ class CorrectionState {
       downloadError: clearDownloadError == true ? null : (downloadError ?? this.downloadError),
       columnsLoading: columnsLoading ?? this.columnsLoading,
       downloadColumns: downloadColumns ?? this.downloadColumns,
+      studentsLoading: studentsLoading ?? this.studentsLoading,
+      students: students ?? this.students,
+      studentsPage: studentsPage ?? this.studentsPage,
+      studentsHasMore: studentsHasMore ?? this.studentsHasMore,
+      studentsError: clearStudentsError == true ? null : (studentsError ?? this.studentsError),
+      selectedStudentIds: selectedStudentIds ?? this.selectedStudentIds,
     );
   }
 }

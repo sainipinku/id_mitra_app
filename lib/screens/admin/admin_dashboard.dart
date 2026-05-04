@@ -19,11 +19,11 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _widgetOptions = [
+  static final List<Widget> _widgetOptions = [
     AdminHome(),
-    AdminReports(),
-    AdminSchool(),
-    AdminSetting(),
+    const AdminReports(),
+    const AdminSchool(),
+    const AdminSetting(),
   ];
 
   void _onItemTapped(int index) {

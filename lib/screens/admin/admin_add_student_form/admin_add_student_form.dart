@@ -32,7 +32,6 @@ const List<String> _kGenderOptions = [
   'Female',
   'Transgender',
 ];
-const List<String> _kSectionOptions = ['A', 'B', 'C', 'D'];
 const List<String> _kTransportOptions = [
   'Select Mode',
   'self_pickup',
@@ -572,19 +571,6 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     );
   }
 
-  Widget _staticSectionDropdown() {
-    final val = (_selectVal['class_section'] as String?);
-    final selected = (val != null && _kSectionOptions.contains(val)) ? val : null;
-    return Dropdown<String>(
-      value: selected,
-      items: _kSectionOptions,
-      hintText: 'Select Section',
-      onChange: (v) => setState(() => _selectVal['class_section'] = v),
-      displayText: (_, o) => o,
-      showClearButton: false,
-    );
-  }
-
   Widget _transportDropdown() {
     const items = [
       {'label': 'Self Pickup', 'value': 'self_pickup'},
@@ -935,9 +921,6 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
               .map((id) => SectionOption(id: id, name: 'Section $id'))
               .toList();
         }
-        if (sections.isEmpty) {
-          return _staticSectionDropdown();
-        }
         return _sectionDropdown(sections);
       default:
         return _stringDropdown(name, ['-Select-']);
@@ -1113,34 +1096,36 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
     List<StudentFormField> additionalFields,
     StudentFormDataModel? data,
   ) {
-    Widget? _inlineSectionWidget() {
-      final selectedClassId = _toInt(_selectVal['class']);
-      if (selectedClassId == null) return null;
-      final hasClassField = currentFields.any((f) => f.name == 'class');
-      if (!hasClassField) return null;
-      final hasSectionField = currentFields.any((f) => f.name == 'class_section') ||
-          (data?.classes ?? []).isEmpty;
-      if (hasSectionField) return null;
+    // In edit mode, always show class_section dropdown with ALL sections from ALL classes
+    // and class_section is not already in currentFields
+    Widget? _editModeSectionWidget() {
+      if (widget.editStudent == null) return null;
+      if (currentFields.any((f) => f.name == 'class_section')) return null;
 
-      final selectedClass = data?.classes.firstWhere(
-        (c) => c.id == selectedClassId,
-        orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
-      );
-      var sections = selectedClass?.sections ?? [];
-      if (sections.isEmpty && (selectedClass?.sectionsIds.isNotEmpty ?? false)) {
-        sections = selectedClass!.sectionsIds
-            .map((id) => SectionOption(id: id, name: 'Section $id'))
-            .toList();
+      // Collect all sections from all classes as a flat list
+      final allSections = <SectionOption>[];
+      for (final cls in data?.classes ?? []) {
+        var sections = cls.sections;
+        if (sections.isEmpty && cls.sectionsIds.isNotEmpty) {
+          sections = cls.sectionsIds
+              .map((id) => SectionOption(id: id, name: 'Section $id'))
+              .toList();
+        }
+        for (final sec in sections) {
+          allSections.add(SectionOption(
+            id: sec.id,
+            name: '${cls.nameWithPrefix} - ${sec.name}',
+          ));
+        }
       }
-      if (sections.isEmpty) return null;
 
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(top: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _label('Section'),
-            _sectionDropdown(sections),
+            _sectionDropdown(allSections),
           ],
         ),
       );
@@ -1173,15 +1158,16 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                       children: [
                         _twoColGrid(currentFields, data),
                         Builder(builder: (_) {
-                          final sectionWidget = _inlineSectionWidget();
-                          if (sectionWidget == null) return const SizedBox.shrink();
-                          return sectionWidget;
+                          final w = _editModeSectionWidget();
+                          if (w == null) return const SizedBox.shrink();
+                          return w;
                         }),
                       ],
                     ),
             ),
-            if (additionalFields.isNotEmpty)
-              _additionalCollapsible(additionalFields, data),
+            // Additional Information section hidden for now
+            // if (additionalFields.isNotEmpty)
+            //   _additionalCollapsible(additionalFields, data),
           ],
         ),
       ),
@@ -1301,28 +1287,16 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
               ),
               body: Column(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    decoration: BoxDecoration(
-                      color: AppTheme.appBackgroundColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  Material(
+                    color: Colors.white,
                     child: TabBar(
                       controller: _tabController,
-                      indicator: BoxDecoration(
-                        color: AppTheme.btnColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      labelColor: Colors.white,
+                      labelColor: AppTheme.btnColor,
                       unselectedLabelColor: AppTheme.graySubTitleColor,
-                      labelStyle: MyStyles.boldText(
-                        size: 13,
-                        color: Colors.white,
-                      ),
-                      unselectedLabelStyle: MyStyles.regularText(
-                        size: 13,
-                        color: AppTheme.graySubTitleColor,
-                      ),
+                      indicatorColor: AppTheme.btnColor,
+                      indicatorWeight: 2.5,
+                      labelStyle: MyStyles.mediumText(size: 13, color: Colors.white),
+                      unselectedLabelStyle: MyStyles.regularText(size: 13, color: Colors.white),
                       tabs: const [
                         Tab(text: 'Main Information'),
                         Tab(text: 'Other Student'),
@@ -1507,8 +1481,7 @@ class _AdminAddStudentFormPageState extends State<AdminAddStudentFormPage>
                                   : () {
                                       final allVisibleFields = [
                                         ...currentFields,
-                                        if (_additionalExpanded)
-                                          ...additionalFields,
+                                        // Additional Information hidden, so not validated
                                       ];
                                       final validationError = _validateForm(
                                         allVisibleFields,

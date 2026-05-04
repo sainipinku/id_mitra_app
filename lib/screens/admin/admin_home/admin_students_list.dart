@@ -1,8 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_exif_rotation/flutter_exif_rotation.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:idmitra/api_mamanger/api_manager.dart';
+import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/components/app_theme.dart';
@@ -59,7 +67,10 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
       _schoolLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.read<StudentsCubit>().fetchStudents(search: '', schoolId: _schoolId);
+          context.read<StudentsCubit>().fetchStudents(
+            search: '',
+            schoolId: _schoolId,
+          );
         }
       });
     }
@@ -76,7 +87,10 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.read<StudentsCubit>().fetchStudents(search: '', schoolId: _schoolId);
+          context.read<StudentsCubit>().fetchStudents(
+            search: '',
+            schoolId: _schoolId,
+          );
         }
       });
     }
@@ -124,25 +138,35 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
                     ),
                     child: const Padding(
                       padding: EdgeInsets.all(5.0),
-                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.black87),
+                      child: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 18,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ),
               ),
               centerTitle: true,
-              title: Text('Student Listings', style: MyStyles.boldText(size: 20, color: Colors.black)),
+              title: Text(
+                'Student Listings',
+                style: MyStyles.boldText(size: 20, color: Colors.black),
+              ),
               bottom: TabBar(
                 controller: _tabController,
                 labelColor: AppTheme.btnColor,
                 unselectedLabelColor: AppTheme.graySubTitleColor,
                 indicatorColor: AppTheme.btnColor,
                 indicatorWeight: 2.5,
-                labelStyle: MyStyles.mediumText(size: 13,color: Colors.white),
-                unselectedLabelStyle: MyStyles.regularText(size: 13,color: Colors.white),
+                labelStyle: MyStyles.mediumText(size: 13, color: Colors.white),
+                unselectedLabelStyle: MyStyles.regularText(
+                  size: 13,
+                  color: Colors.white,
+                ),
                 tabs: const [
                   Tab(text: 'Students List'),
                   Tab(text: 'Correction List'),
-                  Tab(text: 'Orders'),
+                  Tab(text: 'Orders List'),
                 ],
               ),
             )
@@ -156,10 +180,16 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
                   unselectedLabelColor: AppTheme.graySubTitleColor,
                   indicatorColor: AppTheme.btnColor,
                   indicatorWeight: 2.5,
-                  labelStyle: MyStyles.mediumText(size: 13,color: Colors.white),
-                  unselectedLabelStyle: MyStyles.regularText(size: 13,color: Colors.white),
+                  labelStyle: MyStyles.mediumText(
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                  unselectedLabelStyle: MyStyles.regularText(
+                    size: 13,
+                    color: Colors.white,
+                  ),
                   tabs: const [
-                    Tab(text: 'Students'),
+                    Tab(text: 'Students List'),
                     Tab(text: 'Correction List'),
                     Tab(text: 'Orders'),
                   ],
@@ -169,18 +199,15 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Tab 1: Students
           _AdminStudentsTab(
             schoolId: _schoolId,
             schoolDetailsModel: widget.schoolDetailsModel,
           ),
-          // Tab 2: Correction List (isSchool = true for admin)
           BlocProvider(
-            create: (_) => CorrectionCubit()
-              ..fetchCorrectionList(schoolId: _schoolId, isSchool: true),
+            create: (_) =>
+                CorrectionCubit()..fetchCorrectionStudents(schoolId: _schoolId),
             child: _AdminCorrectionTab(schoolId: _schoolId),
           ),
-          // Tab 3: Orders
           BlocProvider(
             create: (_) => OrdersCubit()
               ..fetchOrders(schoolId: _schoolId, isSchool: true)
@@ -192,7 +219,6 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
     );
   }
 }
-
 
 class _AdminStudentsTab extends StatefulWidget {
   final String schoolId;
@@ -245,7 +271,9 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
               create: (_) => StudentFormCubit()
                 ..loadFromSchoolId(schoolId: widget.schoolId, schoolName: ''),
             ),
-            BlocProvider(create: (_) => StudentFormDataCubit()..load(widget.schoolId)),
+            BlocProvider(
+              create: (_) => StudentFormDataCubit()..load(widget.schoolId),
+            ),
             BlocProvider(create: (_) => AddStudentCubit()),
           ],
           child: AdminAddStudentFormPage(schoolId: widget.schoolId),
@@ -289,29 +317,40 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () async {
-                      final result = await showModalBottomSheet<Map<String, dynamic>>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: AppTheme.whiteColor,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-                        ),
-                        builder: (_) => BlocProvider(
-                          create: (_) => OrdersCubit()..fetchSchoolClasses(widget.schoolId),
-                          child: FilterBottomSheet(schoolId: widget.schoolId),
-                        ),
-                      );
+                      final result =
+                          await showModalBottomSheet<Map<String, dynamic>>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: AppTheme.whiteColor,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(25),
+                              ),
+                            ),
+                            builder: (_) => BlocProvider(
+                              create: (_) =>
+                                  OrdersCubit()
+                                    ..fetchSchoolClasses(widget.schoolId),
+                              child: FilterBottomSheet(
+                                schoolId: widget.schoolId,
+                              ),
+                            ),
+                          );
                       if (result != null) {
                         _debounce?.cancel();
-                        _debounce = Timer(const Duration(milliseconds: 300), () {
-                          context.read<StudentsCubit>().applyFilters(
-                            schoolId: widget.schoolId,
-                            classId: result["class"] ?? "",
-                            sectionIds: List<int>.from(result["section"] ?? []),
-                            gender: result["gender"] ?? "",
-                          );
-
-                        });
+                        _debounce = Timer(
+                          const Duration(milliseconds: 300),
+                          () {
+                            context.read<StudentsCubit>().applyFilters(
+                              schoolId: widget.schoolId,
+                              classId: result["class"] ?? "",
+                              sectionIds: List<int>.from(
+                                result["section"] ?? [],
+                              ),
+                              gender: result["gender"] ?? "",
+                            );
+                          },
+                        );
                       }
                     },
                     child: Container(
@@ -320,56 +359,83 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: svgIcon(icon: 'assets/icons/filtter.svg', clr: AppTheme.black_Color),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => setState(() => _isGridView = !_isGridView),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _isGridView ? AppTheme.btnColor : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
-                          width: 1,
-                        ),
-                        boxShadow: _isGridView
-                            ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
-                            : [],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
-                            size: 18,
-                            color: _isGridView ? Colors.white : AppTheme.black_Color,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _isGridView ? 'List' : 'ID Card',
-                            style: MyStyles.mediumText(
-                              size: 12,
-                              color: _isGridView ? Colors.white : AppTheme.black_Color,
-                            ),
-                          ),
-                        ],
+                      child: svgIcon(
+                        icon: 'assets/icons/filtter.svg',
+                        clr: AppTheme.black_Color,
                       ),
                     ),
                   ),
+                //  const SizedBox(width: 8),
+                  // GestureDetector(
+                  //   onTap: () => setState(() => _isGridView = !_isGridView),
+                  //   child: Container(
+                  //     padding: const EdgeInsets.symmetric(
+                  //       horizontal: 12,
+                  //       vertical: 10,
+                  //     ),
+                  //     decoration: BoxDecoration(
+                  //       color: _isGridView ? AppTheme.btnColor : Colors.white,
+                  //       borderRadius: BorderRadius.circular(12),
+                  //       border: Border.all(
+                  //         color: _isGridView
+                  //             ? AppTheme.btnColor
+                  //             : Colors.grey.shade300,
+                  //         width: 1,
+                  //       ),
+                  //       boxShadow: _isGridView
+                  //           ? [
+                  //               BoxShadow(
+                  //                 color: AppTheme.btnColor.withOpacity(0.3),
+                  //                 blurRadius: 8,
+                  //                 offset: const Offset(0, 3),
+                  //               ),
+                  //             ]
+                  //           : [],
+                  //     ),
+                  //     child: Row(
+                  //       mainAxisSize: MainAxisSize.min,
+                  //       children: [
+                  //         Icon(
+                  //           _isGridView
+                  //               ? Icons.view_list_rounded
+                  //               : Icons.badge_outlined,
+                  //           size: 18,
+                  //           color: _isGridView
+                  //               ? Colors.white
+                  //               : AppTheme.black_Color,
+                  //         ),
+                  //         const SizedBox(width: 6),
+                  //         Text(
+                  //           _isGridView ? 'List' : 'ID Card',
+                  //           style: MyStyles.mediumText(
+                  //             size: 12,
+                  //             color: _isGridView
+                  //                 ? Colors.white
+                  //                 : AppTheme.black_Color,
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
               const SizedBox(height: 15),
               Expanded(
                 child: BlocBuilder<StudentsCubit, StudentsState>(
                   builder: (context, state) {
-                    if (state.loading) return const ShimmerList(expanded: false);
+                    if (state.loading)
+                      return const ShimmerList(expanded: false);
                     if (state.studentsList.isEmpty) {
-                      return Center(child: Image.asset('assets/images/no_data.png', height: 200));
+                      return Center(
+                        child: Image.asset(
+                          'assets/images/no_data.png',
+                          height: 200,
+                        ),
+                      );
                     }
-                    final itemCount = state.studentsList.length + (state.hasMore ? 1 : 0);
+                    final itemCount =
+                        state.studentsList.length + (state.hasMore ? 1 : 0);
                     if (_isGridView) {
                       return ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -383,13 +449,15 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
                                 child: SizedBox(
                                   width: 300,
                                   child: Hero(
-                                    tag: 'student_card_${state.studentsList[index].uuid}',
+                                    tag:
+                                        'student_card_${state.studentsList[index].uuid}',
                                     child: Material(
                                       color: Colors.transparent,
                                       child: StudentIdCardWidget(
                                         student: state.studentsList[index],
                                         schoolId: widget.schoolId,
-                                        schoolDetailsModel: widget.schoolDetailsModel,
+                                        schoolDetailsModel:
+                                            widget.schoolDetailsModel,
                                       ),
                                     ),
                                   ),
@@ -459,12 +527,13 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
         borderSide: BorderSide(color: AppTheme.backBtnBgColor),
         borderRadius: BorderRadius.circular(15),
       ),
-      hintStyle: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+      hintStyle: MyStyles.regularText(
+        size: 14,
+        color: AppTheme.graySubTitleColor,
+      ),
     ),
   );
 }
-
-// ─── Tab 2: Correction List ───────────────────────────────────────────────────
 
 class _AdminCorrectionTab extends StatefulWidget {
   final String schoolId;
@@ -479,15 +548,16 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
   final ScrollController _scrollCtrl = ScrollController();
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
+  bool _isGridView = false;
 
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<CorrectionCubit>().fetchCorrectionList(
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
+        context.read<CorrectionCubit>().fetchCorrectionStudents(
           schoolId: widget.schoolId,
-          isSchool: true,
           isLoadMore: true,
         );
       }
@@ -504,33 +574,51 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<CorrectionCubit, CorrectionState>(
+    return Scaffold(
+      floatingActionButton: _isGridView
+          ? null
+          : FloatingActionButton(
+              backgroundColor: AppTheme.btnColor,
+              tooltip: 'Download',
+              onPressed: () => _showDownloadDialog(context),
+              child: const Icon(Icons.download_rounded, color: Colors.white),
+            ),
+      body: BlocListener<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
-          p.sendOrderSuccess != c.sendOrderSuccess ||
-          p.sendOrderError != c.sendOrderError ||
           p.downloadUrl != c.downloadUrl ||
-          p.downloadError != c.downloadError,
+          p.downloadError != c.downloadError ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
       listener: (context, state) async {
         if (state.sendOrderSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text('Order sent successfully!'),
-            backgroundColor: AppTheme.btnColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
-          widget.onOrderSent?.call();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Order sent successfully!'),
+              backgroundColor: AppTheme.btnColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(12),
+            ),
+          );
         }
         if (state.sendOrderError != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.sendOrderError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.sendOrderError!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(12),
+            ),
+          );
         }
-        if (!state.downloadLoading && state.downloadUrl != null && state.downloadUrl!.isNotEmpty) {
+        if (!state.downloadLoading &&
+            state.downloadUrl != null &&
+            state.downloadUrl!.isNotEmpty) {
           final uri = Uri.tryParse(state.downloadUrl!);
           if (uri != null) {
             try {
@@ -539,13 +627,17 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
           }
         }
         if (!state.downloadLoading && state.downloadError != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.downloadError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.downloadError!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(12),
+            ),
+          );
         }
       },
       child: Column(
@@ -556,41 +648,66 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
               children: [
                 Expanded(child: _searchBar()),
                 const SizedBox(width: 8),
-                // Download button
                 GestureDetector(
-                  onTap: () => _showDownloadDialog(context),
+                  onTap: () => setState(() => _isGridView = !_isGridView),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _isGridView ? AppTheme.btnColor : Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
+                      ),
+                      boxShadow: _isGridView
+                          ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
+                          : [],
                     ),
-                    child: const Icon(Icons.download_rounded, size: 20, color: Colors.black87),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
+                          size: 18,
+                          color: _isGridView ? Colors.white : AppTheme.black_Color,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _isGridView ? 'List' : 'ID Card',
+                          style: MyStyles.mediumText(
+                            size: 12,
+                            color: _isGridView ? Colors.white : AppTheme.black_Color,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () async {
-                    final result = await showModalBottomSheet<Map<String, dynamic>>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: AppTheme.whiteColor,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-                      ),
-                      builder: (_) => BlocProvider(
-                        create: (_) => OrdersCubit()..fetchSchoolClasses(widget.schoolId),
-                        child: FilterBottomSheet(schoolId: widget.schoolId),
-                      ),
-                    );
+                    final result =
+                        await showModalBottomSheet<Map<String, dynamic>>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: AppTheme.whiteColor,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(25),
+                            ),
+                          ),
+                          builder: (_) => BlocProvider(
+                            create: (_) =>
+                                OrdersCubit()
+                                  ..fetchSchoolClasses(widget.schoolId),
+                            child: FilterBottomSheet(schoolId: widget.schoolId),
+                          ),
+                        );
                     if (result != null) {
                       _debounce?.cancel();
                       _debounce = Timer(const Duration(milliseconds: 300), () {
-                        context.read<CorrectionCubit>().fetchCorrectionList(
+                        context.read<CorrectionCubit>().fetchCorrectionStudents(
                           schoolId: widget.schoolId,
-                          isSchool: true,
-                          classId: result['class'] ?? '',
-                          gender: result['gender']?.toString().toLowerCase() ?? '',
+                          classFilter: result['class'] ?? '',
                         );
                       });
                     }
@@ -601,7 +718,10 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: svgIcon(icon: 'assets/icons/filtter.svg', clr: AppTheme.black_Color),
+                    child: svgIcon(
+                      icon: 'assets/icons/filtter.svg',
+                      clr: AppTheme.black_Color,
+                    ),
                   ),
                 ),
               ],
@@ -610,125 +730,233 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
           Expanded(
             child: BlocBuilder<CorrectionCubit, CorrectionState>(
               builder: (context, state) {
-                if (state.loading && state.items.isEmpty) {
-                  return const Center(child: CircularProgressIndicator(color: AppTheme.btnColor));
+                if (state.studentsLoading && state.students.isEmpty) {
+                  return const ShimmerList(expanded: false);
                 }
-                if (state.error != null && state.items.isEmpty) {
+                if (state.studentsError != null && state.students.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red.shade300,
+                        ),
                         const SizedBox(height: 12),
-                        Text(state.error!, style: MyStyles.regularText(size: 14, color: Colors.red)),
+                        Text(
+                          state.studentsError!,
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: Colors.red,
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
-                          onPressed: () => context.read<CorrectionCubit>().fetchCorrectionList(
-                            schoolId: widget.schoolId, isSchool: true),
+                          onPressed: () => context
+                              .read<CorrectionCubit>()
+                              .fetchCorrectionStudents(
+                                schoolId: widget.schoolId,
+                              ),
                           icon: const Icon(Icons.refresh, size: 16),
                           label: const Text('Retry'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.btnColor,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   );
                 }
-                if (state.items.isEmpty) {
+                if (state.students.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset('assets/images/no_data.png', height: 160),
                         const SizedBox(height: 12),
-                        Text('No correction items found',
-                            style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
+                        Text(
+                          'No students found',
+                          style: MyStyles.mediumText(
+                            size: 14,
+                            color: AppTheme.graySubTitleColor,
+                          ),
+                        ),
                       ],
                     ),
                   );
                 }
-                return Column(
-                  children: [
-                    if (state.selectedIds.isNotEmpty)
-                      Container(
-                        color: AppTheme.btnColor.withOpacity(0.08),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        child: Row(
-                          children: [
-                            Text('${state.selectedIds.length} selected',
-                                style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
-                            const Spacer(),
-                            TextButton(
-                              onPressed: () => context.read<CorrectionCubit>().selectAll(),
-                              child: Text('Select All', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
-                            ),
-                            TextButton(
-                              onPressed: () => context.read<CorrectionCubit>().clearSelection(),
-                              child: Text('Clear', style: MyStyles.mediumText(size: 12, color: AppTheme.cancelTextColor)),
-                            ),
-                            const SizedBox(width: 4),
-                            state.sendOrderLoading
-                                ? const SizedBox(
-                                    width: 20, height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor),
-                                  )
-                                : GestureDetector(
-                                    onTap: () => context.read<CorrectionCubit>().sendOrder(schoolId: widget.schoolId),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                                      decoration: BoxDecoration(
+                return RefreshIndicator(
+                  color: AppTheme.btnColor,
+                  onRefresh: () async => context
+                      .read<CorrectionCubit>()
+                      .fetchCorrectionStudents(schoolId: widget.schoolId),
+                  child: Column(
+                    children: [
+                      if (!_isGridView && state.selectedStudentIds.isNotEmpty)
+                        Container(
+                          color: AppTheme.btnColor.withOpacity(0.08),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${state.selectedStudentIds.length} selected',
+                                style: MyStyles.mediumText(
+                                  size: 13,
+                                  color: AppTheme.btnColor,
+                                ),
+                              ),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () => context
+                                    .read<CorrectionCubit>()
+                                    .selectAllStudents(),
+                                child: Text(
+                                  'Select All',
+                                  style: MyStyles.mediumText(
+                                    size: 12,
+                                    color: AppTheme.btnColor,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => context
+                                    .read<CorrectionCubit>()
+                                    .clearStudentSelection(),
+                                child: Text(
+                                  'Clear',
+                                  style: MyStyles.mediumText(
+                                    size: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              state.sendOrderLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
                                         color: AppTheme.btnColor,
-                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.send_rounded, size: 13, color: Colors.white),
-                                          const SizedBox(width: 5),
-                                          Text('Send Order', style: MyStyles.mediumText(size: 12, color: Colors.white)),
-                                        ],
+                                    )
+                                  : GestureDetector(
+                                      onTap: () {},
+                                      // => context
+                                      //     .read<CorrectionCubit>()
+                                      //     .processOrder(
+                                      //       schoolId: widget.schoolId,
+                                      //     ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 7,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.btnColor,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.send_rounded,
+                                              size: 13,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              'Send Order',
+                                              style: MyStyles.mediumText(
+                                                size: 12,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    Expanded(
-                      child: RefreshIndicator(
-                        color: AppTheme.btnColor,
-                        onRefresh: () async => context.read<CorrectionCubit>().fetchCorrectionList(
-                          schoolId: widget.schoolId, isSchool: true),
-                        child: ListView.builder(
+                      Expanded(
+                        child: _isGridView
+                            ? ListView.builder(
+                                controller: _scrollCtrl,
+                                padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                                itemCount: state.students.length + (state.studentsHasMore ? 1 : 0),
+                                itemBuilder: (_, i) {
+                                  if (i < state.students.length) {
+                                    final s = state.students[i].student;
+                                    if (s == null) return const SizedBox.shrink();
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 20),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 300,
+                                          child: StudentIdCardWidget(
+                                            student: _correctionToStudentData(s),
+                                            schoolId: widget.schoolId,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 20),
+                                    child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
+                                  );
+                                },
+                              )
+                            : ListView.builder(
                           controller: _scrollCtrl,
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                          itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                          itemCount:
+                              state.students.length +
+                              (state.studentsHasMore ? 1 : 0),
                           itemBuilder: (_, i) {
-                            if (i < state.items.length) {
-                              final item = state.items[i];
-                              final isSelected = state.selectedIds.contains(item.id);
-                              return _CorrectionCard(
+                            if (i < state.students.length) {
+                              final item = state.students[i];
+                              final isSelected = state.selectedStudentIds
+                                  .contains(item.id);
+                              return _CorrectionStudentCard(
                                 item: item,
                                 isSelected: isSelected,
-                                onToggle: () => context.read<CorrectionCubit>().toggleSelection(item.id),
+                                onToggle: () => context
+                                    .read<CorrectionCubit>()
+                                    .toggleStudentSelection(item.id),
                               );
                             }
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 20),
-                              child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppTheme.btnColor,
+                                  strokeWidth: 2,
+                                ),
+                              ),
                             );
                           },
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 );
               },
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -744,15 +972,42 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
     );
   }
 
+  StudentDetailsData _correctionToStudentData(CorrectionStudentData s) {
+    return StudentDetailsData(
+      id: s.id,
+      uuid: s.uuid,
+      schoolId: s.schoolId,
+      name: s.name,
+      photo: s.photo,
+      profilePhotoUrl: s.photoUrl,
+      fatherName: s.fatherName,
+      fatherPhone: s.fatherPhone,
+      motherName: s.motherName,
+      motherPhone: s.motherPhone,
+      address: s.address,
+      dob: s.dob,
+      regNo: s.regNo,
+      rollNo: s.rollNo,
+      admissionNo: s.admissionNo,
+      schoolClassId: s.schoolClassId,
+      schoolClassSectionId: s.schoolClassSectionId,
+      datumClass: s.studentClass != null
+          ? Class(id: s.studentClass!.id, nameWithprefix: s.studentClass!.nameWithPrefix)
+          : null,
+      section: s.section != null
+          ? Section(id: s.section!.id, name: s.section!.name)
+          : null,
+    );
+  }
+
   Widget _searchBar() => TextField(
     controller: _searchCtrl,
     style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
     onChanged: (value) {
       _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 500), () {
-        context.read<CorrectionCubit>().fetchCorrectionList(
+        context.read<CorrectionCubit>().fetchCorrectionStudents(
           schoolId: widget.schoolId,
-          isSchool: true,
           search: value.trim(),
         );
       });
@@ -771,58 +1026,272 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
         borderSide: BorderSide(color: AppTheme.backBtnBgColor),
         borderRadius: BorderRadius.circular(15),
       ),
-      hintStyle: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+      hintStyle: MyStyles.regularText(
+        size: 14,
+        color: AppTheme.graySubTitleColor,
+      ),
     ),
   );
 }
 
-class _CorrectionCard extends StatelessWidget {
-  final CorrectionItem item;
+class _CorrectionStudentCard extends StatefulWidget {
+  final CorrectionStudentItem item;
   final bool isSelected;
   final VoidCallback onToggle;
+  const _CorrectionStudentCard({
+    required this.item,
+    required this.isSelected,
+    required this.onToggle,
+  });
 
-  const _CorrectionCard({required this.item, required this.isSelected, required this.onToggle});
+  @override
+  State<_CorrectionStudentCard> createState() => _CorrectionStudentCardState();
+}
+
+class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
+  String? _currentPhotoUrl;
+  bool _isUploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.item.student;
+    _currentPhotoUrl = s?.photoUrl ?? s?.photo ?? '';
+  }
+
+  Future<void> _fromCamera() async {
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 100,
+    );
+    if (pickedFile != null) {
+      File rotatedImage = await FlutterExifRotation.rotateImage(path: pickedFile.path);
+      await _uploadImage(rotatedImage.path);
+    }
+  }
+
+  Future<void> _fromGallery() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+    CroppedFile? croppedFile = await ImageCropper().cropImage(
+      sourcePath: pickedFile.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Image',
+          toolbarColor: AppTheme.MainColor,
+          toolbarWidgetColor: Colors.white,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
+        IOSUiSettings(title: 'Crop Image', aspectRatioLockEnabled: true),
+      ],
+    );
+    if (croppedFile != null) {
+      await _uploadImage(croppedFile.path);
+    }
+  }
+
+  Future<void> _uploadImage(String path) async {
+    setState(() => _isUploading = true);
+    try {
+      File fixedImage = await FlutterExifRotation.rotateImage(path: path);
+      final uuid = widget.item.student?.uuid ?? '';
+      var response = await ApiManager().multiRequestRoute(
+        fixedImage.path,
+        Config.baseUrl + Routes.updateStudentProfile(uuid),
+      );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        setState(() {
+          _currentPhotoUrl = jsonData['data']['profile_photo_url'];
+        });
+      }
+    } catch (e) {
+      debugPrint("Upload error: $e");
+    }
+    setState(() => _isUploading = false);
+  }
+
+  void _showPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.whiteColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Choose Image", style: MyStyles.boldText(size: 14, color: Colors.black)),
+            const SizedBox(height: 15),
+            InkWell(
+              onTap: () { Navigator.pop(ctx); _fromCamera(); },
+              child: Row(children: [
+                SvgPicture.asset('assets/icons/camera_single.svg'),
+                const SizedBox(width: 10),
+                Text("Camera", style: MyStyles.regularText(size: 14, color: Colors.black)),
+              ]),
+            ),
+            Container(margin: const EdgeInsets.symmetric(vertical: 10), height: 1, color: Colors.grey.shade300),
+            InkWell(
+              onTap: () { Navigator.pop(ctx); _fromGallery(); },
+              child: Row(children: [
+                SvgPicture.asset('assets/icons/choose_from_gallery.svg'),
+                const SizedBox(width: 10),
+                Text("Gallery", style: MyStyles.regularText(size: 14, color: Colors.black)),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImagePreview(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            color: Colors.black,
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    minScale: 0.8,
+                    maxScale: 4,
+                    child: Image.network(
+                      imageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
+                      },
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 300,
+                        width: double.infinity,
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showPicker();
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Edit Profile Image"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.item.student;
+    final className = s?.studentClass?.nameWithPrefix ?? '';
+    final sectionName = s?.section?.name ?? '';
+    final fatherPhone = s?.fatherPhone ?? '';
+    final photoUrl = _currentPhotoUrl ?? '';
+
     return GestureDetector(
-      onTap: onToggle,
+      onTap: widget.onToggle,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.btnColor.withOpacity(0.06) : Colors.white,
+          color: widget.isSelected
+              ? AppTheme.btnColor.withOpacity(0.06)
+              : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? AppTheme.btnColor : Colors.transparent,
+            color: widget.isSelected ? AppTheme.btnColor : Colors.transparent,
             width: 1.5,
           ),
         ),
         child: Row(
           children: [
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.btnColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isSelected ? AppTheme.btnColor : Colors.grey.shade400,
-                  width: 1.5,
-                ),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: widget.isSelected,
+                onChanged: (_) => widget.onToggle(),
+                activeColor: AppTheme.btnColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                side: BorderSide(color: AppTheme.graySubTitleColor),
               ),
-              child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
             ),
-            const SizedBox(width: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: (item.profilePhotoUrl != null && item.profilePhotoUrl!.isNotEmpty)
-                  ? Image.network(
-                      item.profilePhotoUrl!,
-                      height: 52, width: 52, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
-                    )
-                  : _placeholder(),
+            const SizedBox(width: 10),
+            // Photo with tap handler
+            GestureDetector(
+              onTap: () {
+                if (photoUrl.isNotEmpty) {
+                  _showImagePreview(photoUrl);
+                } else {
+                  _showPicker();
+                }
+              },
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: _isUploading
+                        ? const SizedBox(
+                            height: 60,
+                            width: 60,
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : photoUrl.isNotEmpty
+                            ? Image.network(
+                                photoUrl,
+                                height: 60,
+                                width: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _placeholder(),
+                              )
+                            : _placeholder(),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      height: 22,
+                      width: 22,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Icon(
+                        photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -832,37 +1301,40 @@ class _CorrectionCard extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(item.studentName ?? '-',
-                            style: MyStyles.boldText(size: 15, color: AppTheme.black_Color),
-                            overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          s?.name ?? '',
+                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      if (item.className != null) ...[
+                      if (className.isNotEmpty) ...[
                         const SizedBox(width: 5),
                         Flexible(
-                          child: Text('• ${item.className}',
-                              style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            '• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
+                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ],
                   ),
-                  if (item.issue != null && item.issue!.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(item.issue!,
-                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                  if (item.createdAt != null) ...[
-                    const SizedBox(height: 4),
+                  const SizedBox(height: 3),
+                  if (fatherPhone.isNotEmpty)
                     Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
-                        const SizedBox(width: 3),
-                        Text(item.createdAt!,
-                            style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                        const Icon(Icons.phone, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
                       ],
                     ),
-                  ],
+                  const SizedBox(height: 2),
+                  if ((s?.fatherName ?? '').isNotEmpty)
+                    Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  if ((s?.motherName ?? '').isNotEmpty)
+                    Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  if ((s?.address ?? '').isNotEmpty)
+                    Text(s!.address!, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor), overflow: TextOverflow.ellipsis, maxLines: 1),
                 ],
               ),
             ),
@@ -873,36 +1345,61 @@ class _CorrectionCard extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-    height: 52, width: 52,
+    height: 60,
+    width: 60,
     color: Colors.grey.shade200,
     child: const Icon(Icons.person, color: Colors.grey),
   );
 }
-
-// ─── Download Checklist Dialog ────────────────────────────────────────────────
 
 class _DownloadChecklistDialog extends StatefulWidget {
   final String schoolId;
   const _DownloadChecklistDialog({required this.schoolId});
 
   @override
-  State<_DownloadChecklistDialog> createState() => _DownloadChecklistDialogState();
+  State<_DownloadChecklistDialog> createState() =>
+      _DownloadChecklistDialogState();
 }
 
 class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
   Set<String> _selectedColumns = {};
   String _printType = '';
 
-  final List<Map<String, String>> _printTypes = [
-    {'value': '', 'label': '-Select Print Type-'},
-    {'value': 'class_wise', 'label': 'Class Wise'},
-    {'value': 'section_wise', 'label': 'Section Wise'},
-  ];
+  List<Map<String, String>> _buildPrintTypes(List<CorrectionItem> items) {
+    final types = items
+        .map((e) => e.listType ?? '')
+        .where((t) => t.isNotEmpty)
+        .toSet()
+        .toList();
+    return [
+      {'value': '', 'label': '-Select Print Type-'},
+      ...types.map(
+        (t) => {
+          'value': t,
+          'label': t == 'class_wise'
+              ? 'Class Wise'
+              : t == 'section_wise'
+              ? 'Section Wise'
+              : t
+                    .replaceAll('_', ' ')
+                    .split(' ')
+                    .map(
+                      (w) => w.isNotEmpty
+                          ? '${w[0].toUpperCase()}${w.substring(1)}'
+                          : '',
+                    )
+                    .join(' '),
+        },
+      ),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
-    context.read<CorrectionCubit>().fetchDownloadColumns(schoolId: widget.schoolId);
+    context.read<CorrectionCubit>().fetchDownloadColumns(
+      schoolId: widget.schoolId,
+    );
   }
 
   void _toggleColumn(String key) {
@@ -924,28 +1421,38 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
           p.downloadError != c.downloadError ||
           (p.columnsLoading && !c.columnsLoading),
       listener: (ctx, state) async {
-        if (!state.columnsLoading && state.downloadColumns.isNotEmpty && _selectedColumns.isEmpty) {
+        if (!state.columnsLoading &&
+            state.downloadColumns.isNotEmpty &&
+            _selectedColumns.isEmpty) {
           setState(() {
             _selectedColumns = state.downloadColumns.map((c) => c.key).toSet();
           });
         }
-        if (!state.downloadLoading && state.downloadUrl != null && state.downloadUrl!.isNotEmpty) {
+        if (!state.downloadLoading &&
+            state.downloadUrl != null &&
+            state.downloadUrl!.isNotEmpty) {
           Navigator.of(context).pop();
           final uri = Uri.tryParse(state.downloadUrl!);
           if (uri != null) {
-            try { await launchUrl(uri, mode: LaunchMode.externalApplication); } catch (_) {}
+            try {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } catch (_) {}
           }
         }
         if (!state.downloadLoading && state.downloadError != null) {
           Navigator.of(context).pop();
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.downloadError!),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(12),
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.downloadError!),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                margin: const EdgeInsets.all(12),
+              ),
+            );
           }
         }
       },
@@ -960,35 +1467,63 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
             children: [
               Row(
                 children: [
-                  Text('Download Checklist', style: MyStyles.boldText(size: 18, color: AppTheme.black_Color)),
+                  Text(
+                    'Download Checklist',
+                    style: MyStyles.boldText(
+                      size: 18,
+                      color: AppTheme.black_Color,
+                    ),
+                  ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
-                      width: 32, height: 32,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.close, color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
-              Text('Select Data You Want to Display in Correction List',
-                  style: MyStyles.mediumText(size: 13, color: AppTheme.graySubTitleColor)),
+              Text(
+                'Select Data You Want to Display in Correction List',
+                style: MyStyles.mediumText(
+                  size: 13,
+                  color: AppTheme.graySubTitleColor,
+                ),
+              ),
               const SizedBox(height: 16),
               if (state.columnsLoading)
-                const Center(child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2),
-                ))
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.btnColor,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
               else if (state.downloadColumns.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No columns available',
-                      style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor)),
+                  child: Text(
+                    'No columns available',
+                    style: MyStyles.regularText(
+                      size: 13,
+                      color: AppTheme.graySubTitleColor,
+                    ),
+                  ),
                 )
               else
                 GridView.count(
@@ -1005,30 +1540,52 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
                       child: Row(
                         children: [
                           Container(
-                            width: 20, height: 20,
+                            width: 20,
+                            height: 20,
                             decoration: BoxDecoration(
-                              color: isSelected ? AppTheme.btnColor : Colors.transparent,
+                              color: isSelected
+                                  ? AppTheme.btnColor
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(5),
                               border: Border.all(
-                                color: isSelected ? AppTheme.btnColor : Colors.grey.shade400,
+                                color: isSelected
+                                    ? AppTheme.btnColor
+                                    : Colors.grey.shade400,
                                 width: 1.5,
                               ),
                             ),
-                          child: isSelected ? const Icon(Icons.check, size: 13, color: Colors.white) : null,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(col.label,
-                              style: MyStyles.regularText(size: 12, color: AppTheme.black_Color),
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 13,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              col.label,
+                              style: MyStyles.regularText(
+                                size: 12,
+                                color: AppTheme.black_Color,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               const SizedBox(height: 16),
-              Text('Print List Type *', style: MyStyles.mediumText(size: 13, color: AppTheme.black_Color)),
+              Text(
+                'Print List Type *',
+                style: MyStyles.mediumText(
+                  size: 13,
+                  color: AppTheme.black_Color,
+                ),
+              ),
               const SizedBox(height: 8),
               Container(
                 height: 48,
@@ -1041,12 +1598,28 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
                   child: DropdownButton<String>(
                     value: _printType,
                     isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.graySubTitleColor),
-                    style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
-                    items: _printTypes.map((t) => DropdownMenuItem<String>(
-                      value: t['value']!,
-                      child: Text(t['label']!, style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
-                    )).toList(),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppTheme.graySubTitleColor,
+                    ),
+                    style: MyStyles.regularText(
+                      size: 14,
+                      color: AppTheme.black_Color,
+                    ),
+                    items: _buildPrintTypes(state.items)
+                        .map(
+                          (t) => DropdownMenuItem<String>(
+                            value: t['value']!,
+                            child: Text(
+                              t['label']!,
+                              style: MyStyles.regularText(
+                                size: 14,
+                                color: AppTheme.black_Color,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (v) => setState(() => _printType = v ?? ''),
                   ),
                 ),
@@ -1056,55 +1629,99 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: state.downloadLoading ? null : () => Navigator.of(context).pop(),
+                    onTap: state.downloadLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFF6B6B),
                         borderRadius: BorderRadius.circular(25),
                       ),
-                      child: Text('Cancel', style: MyStyles.mediumText(size: 14, color: Colors.white)),
+                      child: Text(
+                        'Cancel',
+                        style: MyStyles.mediumText(
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: state.downloadLoading ? null : () {
-                      if (_printType.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: const Text('Please select a Print List Type'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      if (_selectedColumns.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: const Text('Please select at least one column'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      context.read<CorrectionCubit>().downloadCorrectionList(
-                        schoolId: widget.schoolId,
-                        columns: _selectedColumns.toList(),
-                        printType: _printType,
-                      );
-                    },
+                    onTap: state.downloadLoading
+                        ? null
+                        : () {
+                            if (_printType.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Please select a Print List Type',
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  margin: const EdgeInsets.all(12),
+                                ),
+                              );
+                              return;
+                            }
+                            if (_selectedColumns.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Please select at least one column',
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  margin: const EdgeInsets.all(12),
+                                ),
+                              );
+                              return;
+                            }
+                            context
+                                .read<CorrectionCubit>()
+                                .downloadCorrectionList(
+                                  schoolId: widget.schoolId,
+                                  columns: _selectedColumns.toList(),
+                                  printType: _printType,
+                                );
+                          },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: state.downloadLoading ? Colors.grey : const Color(0xFF6C63FF),
+                        color: state.downloadLoading
+                            ? Colors.grey
+                            : const Color(0xFF6C63FF),
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: state.downloadLoading
-                          ? const SizedBox(width: 18, height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text('Confirm', style: MyStyles.mediumText(size: 14, color: Colors.white)),
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'Confirm',
+                              style: MyStyles.mediumText(
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -1116,8 +1733,6 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
     );
   }
 }
-
-// ─── Tab 3: Orders ────────────────────────────────────────────────────────────
 
 class _AdminOrdersTab extends StatefulWidget {
   final String schoolId;
@@ -1142,7 +1757,8 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
         context.read<OrdersCubit>().fetchOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
@@ -1233,7 +1849,10 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                   child: GestureDetector(
                     onTap: _clearFilters,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.lightRedColor,
                         borderRadius: BorderRadius.circular(20),
@@ -1241,10 +1860,19 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.close, size: 12, color: AppTheme.cancelTextColor),
+                          const Icon(
+                            Icons.close,
+                            size: 12,
+                            color: AppTheme.cancelTextColor,
+                          ),
                           const SizedBox(width: 4),
-                          Text('Clear Filters',
-                              style: MyStyles.mediumText(size: 11, color: AppTheme.cancelTextColor)),
+                          Text(
+                            'Clear Filters',
+                            style: MyStyles.mediumText(
+                              size: 11,
+                              color: AppTheme.cancelTextColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1258,16 +1886,29 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
           child: BlocBuilder<OrdersCubit, OrdersState>(
             builder: (_, state) {
               if (state.loading && state.ordersList.isEmpty) {
-                return const Padding(padding: EdgeInsets.all(16), child: OrderListShimmer());
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: OrderListShimmer(),
+                );
               }
               if (state.error != null && state.ordersList.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red.shade300,
+                      ),
                       const SizedBox(height: 12),
-                      Text(state.error!, style: MyStyles.regularText(size: 14, color: Colors.red)),
+                      Text(
+                        state.error!,
+                        style: MyStyles.regularText(
+                          size: 14,
+                          color: Colors.red,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _resetAndFetch,
@@ -1276,7 +1917,9 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.btnColor,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
                     ],
@@ -1290,14 +1933,24 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                     children: [
                       Image.asset('assets/images/no_data.png', height: 160),
                       const SizedBox(height: 12),
-                      Text('No orders found',
-                          style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
+                      Text(
+                        'No orders found',
+                        style: MyStyles.mediumText(
+                          size: 14,
+                          color: AppTheme.graySubTitleColor,
+                        ),
+                      ),
                       if (_hasActiveFilters) ...[
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: _clearFilters,
-                          child: Text('Clear filters',
-                              style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
+                          child: Text(
+                            'Clear filters',
+                            style: MyStyles.mediumText(
+                              size: 13,
+                              color: AppTheme.btnColor,
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -1321,7 +1974,12 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                     }
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.btnColor,
+                          strokeWidth: 2,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -1345,11 +2003,23 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
       fillColor: AppTheme.appBackgroundColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       hintText: 'Search by student name, order ID...',
-      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.graySubTitleColor),
+      prefixIcon: const Icon(
+        Icons.search_rounded,
+        size: 20,
+        color: AppTheme.graySubTitleColor,
+      ),
       suffixIcon: _searchCtrl.text.isNotEmpty
           ? GestureDetector(
-              onTap: () { _searchCtrl.clear(); setState(() {}); _resetAndFetch(); },
-              child: const Icon(Icons.close, size: 16, color: AppTheme.graySubTitleColor),
+              onTap: () {
+                _searchCtrl.clear();
+                setState(() {});
+                _resetAndFetch();
+              },
+              child: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppTheme.graySubTitleColor,
+              ),
             )
           : null,
       enabledBorder: OutlineInputBorder(
@@ -1360,22 +2030,32 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
         borderSide: const BorderSide(color: AppTheme.btnColor),
         borderRadius: BorderRadius.circular(12),
       ),
-      hintStyle: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
+      hintStyle: MyStyles.regularText(
+        size: 13,
+        color: AppTheme.graySubTitleColor,
+      ),
     ),
   );
 
   Widget _classDropdown() => BlocBuilder<OrdersCubit, OrdersState>(
-    buildWhen: (p, c) => p.availableClasses != c.availableClasses || p.classesLoading != c.classesLoading,
+    buildWhen: (p, c) =>
+        p.availableClasses != c.availableClasses ||
+        p.classesLoading != c.classesLoading,
     builder: (_, state) => _dropdown(
       value: _selectedClass.isEmpty ? '' : _selectedClass,
       hint: 'All Classes',
       loading: state.classesLoading,
       items: [
         const DropdownMenuItem(value: '', child: Text('All Classes')),
-        ...state.availableClasses.map((c) => DropdownMenuItem(
-          value: c.classId.toString(),
-          child: Text(c.nameWithprefix ?? c.name, overflow: TextOverflow.ellipsis),
-        )),
+        ...state.availableClasses.map(
+          (c) => DropdownMenuItem(
+            value: c.classId.toString(),
+            child: Text(
+              c.nameWithprefix ?? c.name,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
       ],
       onChanged: (v) {
         setState(() => _selectedClass = v ?? '');
@@ -1388,7 +2068,12 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
     value: _selectedStatus,
     hint: 'All Status',
     items: kOrderFilterStatuses
-        .map((s) => DropdownMenuItem<String>(value: s.value, child: Text(s.label, overflow: TextOverflow.ellipsis)))
+        .map(
+          (s) => DropdownMenuItem<String>(
+            value: s.value,
+            child: Text(s.label, overflow: TextOverflow.ellipsis),
+          ),
+        )
         .toList(),
     onChanged: (v) {
       setState(() => _selectedStatus = v ?? '');
@@ -1416,8 +2101,19 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
         isExpanded: true,
         menuMaxHeight: 300,
         icon: loading
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor))
-            : const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppTheme.graySubTitleColor),
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.btnColor,
+                ),
+              )
+            : const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppTheme.graySubTitleColor,
+              ),
         style: MyStyles.regularText(size: 13, color: AppTheme.black_Color),
         items: items,
         onChanged: onChanged,
@@ -1442,7 +2138,10 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                   ctrl.clear();
                   setLocal(() {});
                   _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 200), _resetAndFetch);
+                  _debounce = Timer(
+                    const Duration(milliseconds: 200),
+                    _resetAndFetch,
+                  );
                 },
                 child: const Icon(Icons.close, size: 16),
               )
@@ -1451,7 +2150,10 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
           setLocal(() {});
           if (ctrl.text.length == 10 || ctrl.text.isEmpty) {
             _debounce?.cancel();
-            _debounce = Timer(const Duration(milliseconds: 400), _resetAndFetch);
+            _debounce = Timer(
+              const Duration(milliseconds: 400),
+              _resetAndFetch,
+            );
           }
         },
       ),
@@ -1463,7 +2165,11 @@ class _AdminOrderCard extends StatefulWidget {
   final OrderModel order;
   final String schoolId;
   final bool isSchool;
-  const _AdminOrderCard({required this.order, this.schoolId = '', this.isSchool = true});
+  const _AdminOrderCard({
+    required this.order,
+    this.schoolId = '',
+    this.isSchool = true,
+  });
 
   @override
   State<_AdminOrderCard> createState() => _AdminOrderCardState();
@@ -1481,38 +2187,63 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Color get _statusColor {
     switch (_currentStatus) {
-      case 'completed': return const Color(0xFF2DC24E);
-      case 'cancelled': return AppTheme.cancelTextColor;
-      case 'work_in_process': return AppTheme.btnColor;
-      case 're_order': return AppTheme.PendingDotColor;
-      default: return AppTheme.graySubTitleColor;
+      case 'completed':
+        return const Color(0xFF2DC24E);
+      case 'cancelled':
+        return AppTheme.cancelTextColor;
+      case 'work_in_process':
+        return AppTheme.btnColor;
+      case 're_order':
+        return AppTheme.PendingDotColor;
+      default:
+        return AppTheme.graySubTitleColor;
     }
   }
 
   Color get _statusBg {
     switch (_currentStatus) {
-      case 'completed': return const Color(0xFFE8F9ED);
-      case 'cancelled': return AppTheme.lightRedColor;
-      case 'work_in_process': return AppTheme.lightBlueColor;
-      case 're_order': return AppTheme.PendingLightColor;
-      default: return AppTheme.appBackgroundColor;
+      case 'completed':
+        return const Color(0xFFE8F9ED);
+      case 'cancelled':
+        return AppTheme.lightRedColor;
+      case 'work_in_process':
+        return AppTheme.lightBlueColor;
+      case 're_order':
+        return AppTheme.PendingLightColor;
+      default:
+        return AppTheme.appBackgroundColor;
     }
   }
 
   String get _statusLabel => kOrderStatuses
-      .firstWhere((s) => s.value == _currentStatus,
-          orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')))
+      .firstWhere(
+        (s) => s.value == _currentStatus,
+        orElse: () => OrderStatusOption(
+          _currentStatus,
+          _currentStatus.replaceAll('_', ' '),
+        ),
+      )
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
     setState(() => _updating = true);
-    final success = await context.read<OrdersCubit>().updateOrderStatus(widget.order.uuid, newStatus);
+    final success = await context.read<OrdersCubit>().updateOrderStatus(
+      widget.order.uuid,
+      newStatus,
+    );
     if (!mounted) return;
-    setState(() { _updating = false; if (success) _currentStatus = newStatus; });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(success ? 'Status updated successfully' : 'Failed to update status'),
-      backgroundColor: success ? AppTheme.btnColor : Colors.red,
-    ));
+    setState(() {
+      _updating = false;
+      if (success) _currentStatus = newStatus;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Status updated successfully' : 'Failed to update status',
+        ),
+        backgroundColor: success ? AppTheme.btnColor : Colors.red,
+      ),
+    );
   }
 
   @override
@@ -1524,21 +2255,34 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => AdminOrderDetailPage(uuid: widget.order.uuid, schoolId: widget.schoolId),
+          builder: (_) => AdminOrderDetailPage(
+            uuid: widget.order.uuid,
+            schoolId: widget.schoolId,
+          ),
         ),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: (student?.profilePhotoUrl != null && student!.profilePhotoUrl!.isNotEmpty)
-                  ? Image.network(student.profilePhotoUrl!, height: 60, width: 60, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder())
+              child:
+                  (student?.profilePhotoUrl != null &&
+                      student!.profilePhotoUrl!.isNotEmpty)
+                  ? Image.network(
+                      student.profilePhotoUrl!,
+                      height: 60,
+                      width: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
+                    )
                   : _placeholder(),
             ),
             const SizedBox(width: 12),
@@ -1549,77 +2293,140 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(student?.name ?? '-',
-                            style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
-                            overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          student?.name ?? '-',
+                          style: MyStyles.boldText(
+                            size: 16,
+                            color: AppTheme.black_Color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (student?.className != null) ...[
                         const SizedBox(width: 5),
                         Flexible(
-                          child: Text('• ${student!.className!}',
-                              style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            '• ${student!.className!}',
+                            style: MyStyles.boldText(
+                              size: 14,
+                              color: AppTheme.btnColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 3),
                   if (school?.name != null)
-                    Text(school!.name,
-                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
-                        overflow: TextOverflow.ellipsis),
+                    Text(
+                      school!.name,
+                      style: MyStyles.regularText(
+                        size: 12,
+                        color: AppTheme.graySubTitleColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   const SizedBox(height: 3),
-                  Text('#${widget.order.id} • ${widget.order.typeLabel}',
-                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  Text(
+                    '#${widget.order.id} • ${widget.order.typeLabel}',
+                    style: MyStyles.regularText(
+                      size: 12,
+                      color: AppTheme.graySubTitleColor,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: _statusBg, borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(width: 5, height: 5,
-                                decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle)),
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: _statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
                             const SizedBox(width: 4),
-                            Text(_statusLabel, style: MyStyles.mediumText(size: 11, color: _statusColor)),
+                            Text(
+                              _statusLabel,
+                              style: MyStyles.mediumText(
+                                size: 11,
+                                color: _statusColor,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const Spacer(),
-                      Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 11,
+                        color: AppTheme.graySubTitleColor,
+                      ),
                       const SizedBox(width: 3),
-                      Text(widget.order.orderedAt,
-                          style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
+                      Text(
+                        widget.order.orderedAt,
+                        style: MyStyles.regularText(
+                          size: 11,
+                          color: AppTheme.graySubTitleColor,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
             _updating
-                ? const Padding(padding: EdgeInsets.all(4),
-                    child: SizedBox(width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor)))
-                : _currentStatus == 'completed'
-                    ? const SizedBox.shrink()
-                    : PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: Colors.grey),
-                        offset: const Offset(0, 32),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 8,
-                        onSelected: _updateStatus,
-                        itemBuilder: (_) => [
-                          const PopupMenuItem<String>(
-                            value: 'completed',
-                            child: Row(children: [
-                              Icon(Icons.check_circle_outline, size: 16, color: AppTheme.graySubTitleColor),
-                              SizedBox(width: 10),
-                              Text('Mark as Completed'),
-                            ]),
-                          ),
-                        ],
+                ? const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.btnColor,
                       ),
+                    ),
+                  )
+                : _currentStatus == 'completed'
+                ? const SizedBox.shrink()
+                : PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    offset: const Offset(0, 32),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 8,
+                    onSelected: _updateStatus,
+                    itemBuilder: (_) => [
+                      const PopupMenuItem<String>(
+                        value: 'completed',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                              color: AppTheme.graySubTitleColor,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Mark as Completed'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
           ],
         ),
       ),
@@ -1627,7 +2434,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   }
 
   Widget _placeholder() => Container(
-    height: 60, width: 60,
+    height: 60,
+    width: 60,
     color: Colors.grey.shade300,
     child: const Icon(Icons.person, color: Colors.grey),
   );
@@ -1635,8 +2443,14 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
 class _DotDateFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final text = newValue.text.replaceAll('/', '-').replaceAll('.', '-');
-    return newValue.copyWith(text: text, selection: TextSelection.collapsed(offset: text.length));
+    return newValue.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 }
