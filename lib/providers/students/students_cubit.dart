@@ -11,6 +11,7 @@ import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
+import 'package:idmitra/local_db/student_local_ds/student_local_ds.dart';
 import 'package:idmitra/models/LoginModel.dart';
 import 'package:idmitra/models/LogoutModel.dart';
 import 'package:idmitra/models/home/PartnerDashboardModel.dart';
@@ -25,7 +26,7 @@ class StudentsCubit extends Cubit<StudentsState> {
   StudentsCubit() : super(StudentsState());
 
   ApiManager apiManager = ApiManager();
-
+  final localDS = StudentLocalDS();
   void applyFilters({
     String classId = "",
     List<int> sectionIds = const [],
@@ -55,84 +56,89 @@ class StudentsCubit extends Cubit<StudentsState> {
     String classId = "",
     List<int> sectionIds = const [],
   }) async {
-    print('setionids-------------$sectionIds');
-    if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
+
+    if (state.isPaginationLoading) return;
 
     int currentPage = isLoadMore ? state.page : 1;
 
     if (!isLoadMore) {
-      emit(state.copyWith(
-        loading: true,
-        page: 1,
-        hasMore: true,
-      ));
+      emit(state.copyWith(loading: true, page: 1));
     } else {
       emit(state.copyWith(isPaginationLoading: true));
     }
 
-    try {
-      /// ✅ fallback from state (important)
-      final usedClassId =
-      classId.isEmpty ? state.selectedClassId : classId;
+    final localList = await localDS.getStudents(
+      page: currentPage,
+      search: search,
+      gender: gender,
+      classId: classId,
+      sectionIds: sectionIds,
+    );
 
-      final usedSectionIds =
-      sectionIds.isEmpty ? state.selectedSectionIds : sectionIds;
+    emit(state.copyWith(
+      loading: false,
+      isPaginationLoading: false,
+      studentsList: isLoadMore
+          ? [...state.studentsList, ...localList]
+          : localList,
+      page: currentPage + 1,
+      hasMore: localList.length == 10,
+    ));
+  }
+  Future<void> syncAllStudents({
+    required String schoolId,
+    String search = "",
+    String gender = "",
+    String classId = "",
+    List<int> sectionIds = const [],
+  }) async {
 
-      final usedGender =
-      gender.isEmpty ? state.selectedGender : gender;
+    int page = 1;
+    bool hasMore = true;
 
-      /// 🔥 Base URL
+    while (hasMore) {
       String url =
           "${Config.baseUrl}auth/school/$schoolId"
-          "?perPage=10"
+          "?perPage=510"
           "&search=$search"
-          "&page=$currentPage"
-          "&gender=$usedGender"
-          "&class_filters=$usedClassId";
-      String sectionQuery = "";
+          "&page=$page"
+          "&gender=$gender"
+          "&class_filters=$classId";
 
-      if (usedSectionIds.isNotEmpty) {
-        sectionQuery = usedSectionIds
+      if (sectionIds.isNotEmpty) {
+        url += "&" + sectionIds
             .asMap()
             .entries
-            .map((entry) => "sectionsIds[${entry.key}]=${entry.value}")
+            .map((e) => "sectionsIds[${e.key}]=${e.value}")
             .join("&");
       }
 
-      if (sectionQuery.isNotEmpty) {
-        url += "&$sectionQuery";
+      try {
+        final response = await apiManager.getRequest(url);
+        final jsonData = jsonDecode(response.body);
+
+        List list = jsonData["data"]?["data"] ?? [];
+        int total = jsonData["data"]["total"] ?? 0;
+
+        List<StudentDetailsData> newList =
+        list.map((e) => StudentDetailsData.fromJson(e)).toList();
+
+        await localDS.insertStudents(newList);
+
+        int count = await localDS.getCount();
+
+        hasMore = count < total;
+        page++;
+
+      } catch (e) {
+        print("Sync stopped: $e");
+        break;
       }
-
-      final response = await apiManager.getRequest(url);
-
-      final jsonData = jsonDecode(response.body);
-
-      List list = jsonData["data"]?["data"] ?? [];
-
-      List<StudentDetailsData> newList =
-      list.map((e) => StudentDetailsData.fromJson(e)).toList();
-
-      final total = jsonData["data"]["total"] ?? 0;
-
-      List<StudentDetailsData> updatedList = isLoadMore
-          ? [...state.studentsList, ...newList]
-          : newList;
-
-      emit(state.copyWith(
-        loading: false,
-        isPaginationLoading: false,
-        studentsList: updatedList,
-        page: currentPage + 1,
-        hasMore: updatedList.length < total,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        loading: false,
-        isPaginationLoading: false,
-      ));
-      debugPrint("Fetch Error: $e");
     }
+
+    print("✅ FULL DATA SYNC DONE");
   }
+
   void prependStudent(StudentDetailsData student) {
     emit(state.copyWith(
       studentsList: [student, ...state.studentsList],

@@ -178,21 +178,14 @@ class _StudentsTabState extends State<_StudentsTab> {
   @override
   void initState() {
     super.initState();
-    context.read<StudentsCubit>().fetchStudents(
-      search: '',
-      schoolId: widget.schoolId,
-    );
-    _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
-        context.read<StudentsCubit>().fetchStudents(
-          isLoadMore: true,
-          search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
-          gender: '',
-          classId: '',
-        );
-      }
-    });
+    final cubit = context.read<StudentsCubit>();
+
+    /// 🔥 1. Show local data
+    cubit.fetchStudents(schoolId: widget.schoolId);
+
+    /// 🔥 2. Background sync (no UI block)
+    cubit.syncAllStudents(schoolId: widget.schoolId);
+
   }
 
   @override
@@ -313,6 +306,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                       return Center(child: Image.asset('assets/images/no_data.png', height: 200));
                     }
                     final itemCount = state.studentsList.length + (state.hasMore ? 1 : 0);
+
                     if (_isGridView) {
                       return ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
