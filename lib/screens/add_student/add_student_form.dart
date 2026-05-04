@@ -49,7 +49,6 @@ const List<String> _kBloodGroupOptions = [
   'O-',
 ];
 const List<String> _kRteOptions = ['-Select-', 'Yes', 'No'];
-const List<String> _kSectionOptions = ['A', 'B', 'C', 'D'];
 
 class AddStudentFormPage extends StatefulWidget {
   final String schoolId;
@@ -519,19 +518,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
     );
   }
 
-  Widget _staticSectionDropdown() {
-    final val = (_selectVal['class_section'] as String?);
-    final selected = (val != null && _kSectionOptions.contains(val)) ? val : null;
-    return Dropdown<String>(
-      value: selected,
-      items: _kSectionOptions,
-      hintText: 'Select Section',
-      onChange: (v) => setState(() => _selectVal['class_section'] = v),
-      displayText: (_, o) => o,
-      showClearButton: false,
-    );
-  }
-
   Widget _transportDropdown() {
     const items = [
       {'label': 'Self Pickup', 'value': 'self_pickup'},
@@ -827,7 +813,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           ],
         );
       default:
-      // date_of_birth field — apply dot formatter regardless of type value from API
         if (f.name == 'date_of_birth' || f.name == 'dob') {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,9 +869,6 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
           sections = selectedClass!.sectionsIds
               .map((id) => SectionOption(id: id, name: 'Section $id'))
               .toList();
-        }
-        if (sections.isEmpty) {
-          return _staticSectionDropdown();
         }
         return _sectionDropdown(sections);
       default:
@@ -1083,37 +1065,34 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
       List<StudentFormField> additionalFields,
       StudentFormDataModel? data,
       ) {
-    // Build section widget to inject after class field if class has sections
-    Widget? _inlineSectionWidget() {
-      final selectedClassId = _toInt(_selectVal['class']);
-      if (selectedClassId == null) return null;
-      // Check if class field is in currentFields (form config)
-      final hasClassField = currentFields.any((f) => f.name == 'class');
-      if (!hasClassField) return null;
-      // Check if class_section is already in form fields
-      final hasSectionField = currentFields.any((f) => f.name == 'class_section') ||
-          (data?.classes ?? []).isEmpty;
-      if (hasSectionField) return null;
 
-      final selectedClass = data?.classes.firstWhere(
-        (c) => c.id == selectedClassId,
-        orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
-      );
-      var sections = selectedClass?.sections ?? [];
-      if (sections.isEmpty && (selectedClass?.sectionsIds.isNotEmpty ?? false)) {
-        sections = selectedClass!.sectionsIds
-            .map((id) => SectionOption(id: id, name: 'Section $id'))
-            .toList();
+    Widget? _editModeSectionWidget() {
+      if (widget.editStudent == null) return null;
+      if (currentFields.any((f) => f.name == 'class_section')) return null;
+
+      final allSections = <SectionOption>[];
+      for (final cls in data?.classes ?? []) {
+        var sections = cls.sections;
+        if (sections.isEmpty && cls.sectionsIds.isNotEmpty) {
+          sections = cls.sectionsIds
+              .map((id) => SectionOption(id: id, name: 'Section $id'))
+              .toList();
+        }
+        for (final sec in sections) {
+          allSections.add(SectionOption(
+            id: sec.id,
+            name: '${cls.nameWithPrefix} - ${sec.name}',
+          ));
+        }
       }
-      if (sections.isEmpty) return null;
 
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(top: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _label('Section'),
-            _sectionDropdown(sections),
+            _label('Class_section'),
+            _sectionDropdown(allSections),
           ],
         ),
       );
@@ -1146,15 +1125,16 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                 children: [
                   _twoColGrid(currentFields, data),
                   Builder(builder: (_) {
-                    final sectionWidget = _inlineSectionWidget();
-                    if (sectionWidget == null) return const SizedBox.shrink();
-                    return sectionWidget;
+                    final w = _editModeSectionWidget();
+                    if (w == null) return const SizedBox.shrink();
+                    return w;
                   }),
                 ],
               ),
             ),
-            if (additionalFields.isNotEmpty)
-              _additionalCollapsible(additionalFields, data),
+            // Additional Information section hidden for now
+            // if (additionalFields.isNotEmpty)
+            //   _additionalCollapsible(additionalFields, data),
           ],
         ),
       ),
@@ -1360,10 +1340,8 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                                         backgroundColor: Colors.green,
                                       ),
                                     );
-                                    // Return updated student - use newStudent from API or manually update
                                     StudentDetailsData? returnStudent = state.newStudent;
                                     if (returnStudent == null && widget.editStudent != null) {
-                                      // Manually update the student with form fields
                                       final allFields = {
                                         ..._ctrl.map((k, v) => MapEntry(k, v.text)),
                                         ..._selectVal,
@@ -1408,10 +1386,8 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                                   onTap: state.loading
                                       ? () {}
                                       : () {
-                                    // Only validate fields that are actually visible on screen
                                     final allVisibleFields = [
                                       ...currentFields,
-                                      if (_additionalExpanded) ...additionalFields,
                                     ];
                                     final validationError = _validateForm(allVisibleFields, data);
                                     if (validationError != null) {

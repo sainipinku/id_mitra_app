@@ -255,20 +255,8 @@ const List<Map<String, dynamic>> _kCoreFields = [
 List<StudentFormField> _ensureCoreFields(List<StudentFormField> fields) {
   final result = List<StudentFormField>.from(fields);
 
-  if (!result.any((f) => f.name == 'class_section')) {
-    final classIndex = result.indexWhere((f) => f.name == 'class');
-    final sectionField = StudentFormField.fromJson(
-      Map<String, dynamic>.from(
-        _kCoreFields.firstWhere((c) => c['name'] == 'class_section'),
-      ),
-    );
-    if (classIndex >= 0) {
-      result.insert(classIndex + 1, sectionField);
-    } else {
-      result.add(sectionField);
-    }
-  }
-
+  // class_section is NOT injected by default — it only shows if the API returns it
+  // Only ensure student_name, session, and class are present
   for (final core in _kCoreFields.where((c) => c['name'] != 'class_section')) {
     final name = core['name'] as String;
     if (!result.any((f) => f.name == name)) {

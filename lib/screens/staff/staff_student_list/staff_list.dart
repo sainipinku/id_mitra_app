@@ -27,6 +27,9 @@ import 'package:idmitra/providers/staff_list/staff_list_cubit.dart';
 import 'package:idmitra/screens/orders/order_staff_page.dart';
 import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
+import 'package:idmitra/Widgets/svg_file.dart';
+import 'package:idmitra/screens/home/FilterBottomSheet.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'add_staff_form.dart';
 import 'assign_classes_sheet.dart';
 import 'staff_profile_page.dart';
@@ -151,7 +154,7 @@ class _StaffListingPageState extends State<StaffListingPage>
           // Tab 2: Correction List
           BlocProvider(
             create: (_) => CorrectionCubit()
-              ..fetchCorrectionList(schoolId: _schoolId!, isSchool: widget.isSchool),
+              ..fetchCorrectionStudents(schoolId: _schoolId!),
             child: _StaffCorrectionTab(schoolId: _schoolId!, isSchool: widget.isSchool),
           ),
           // Tab 3: Staff Orders
@@ -1189,7 +1192,6 @@ class _StaffCardState extends State<_StaffCard> {
   }
 }
 
-// ─── Tab 2: Correction List ───────────────────────────────────────────────────
 
 class _StaffCorrectionTab extends StatefulWidget {
   final String schoolId;
@@ -1202,15 +1204,16 @@ class _StaffCorrectionTab extends StatefulWidget {
 
 class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
   final ScrollController _scrollCtrl = ScrollController();
+  final TextEditingController _searchCtrl = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<CorrectionCubit>().fetchCorrectionList(
+        context.read<CorrectionCubit>().fetchCorrectionStudents(
           schoolId: widget.schoolId,
-          isSchool: widget.isSchool,
           isLoadMore: true,
         );
       }
@@ -1220,151 +1223,283 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
   @override
   void dispose() {
     _scrollCtrl.dispose();
+    _searchCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CorrectionCubit, CorrectionState>(
-      builder: (context, state) {
-        if (state.loading && state.items.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.btnColor));
+    return BlocListener<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+          p.sendOrderSuccess != c.sendOrderSuccess || p.sendOrderError != c.sendOrderError,
+      listener: (context, state) async {
+        if (state.sendOrderSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text('Order sent successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
-        if (state.error != null && state.items.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+        if (state.sendOrderError != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.sendOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
-                const SizedBox(height: 12),
-                Text(state.error!, style: MyStyles.regularText(size: 14, color: Colors.red)),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => context.read<CorrectionCubit>().fetchCorrectionList(
-                    schoolId: widget.schoolId, isSchool: widget.isSchool),
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.btnColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                Expanded(child: _searchBar()),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<Map<String, dynamic>>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: AppTheme.whiteColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                      ),
+                      builder: (_) => BlocProvider(
+                        create: (_) => OrdersCubit()..fetchSchoolClasses(widget.schoolId),
+                        child: FilterBottomSheet(schoolId: widget.schoolId),
+                      ),
+                    );
+                    if (result != null) {
+                      _debounce?.cancel();
+                      _debounce = Timer(const Duration(milliseconds: 300), () {
+                        context.read<CorrectionCubit>().fetchCorrectionStudents(
+                          schoolId: widget.schoolId,
+                          classFilter: result['class'] ?? '',
+                        );
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: svgIcon(icon: 'assets/icons/filtter.svg', clr: AppTheme.black_Color),
                   ),
                 ),
               ],
             ),
-          );
-        }
-        if (state.items.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/images/no_data.png', height: 160),
-                const SizedBox(height: 12),
-                Text('No correction items found',
-                    style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
-              ],
-            ),
-          );
-        }
-        return Column(
-          children: [
-            if (state.selectedIds.isNotEmpty)
-              Container(
-                color: AppTheme.btnColor.withOpacity(0.08),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  children: [
-                    Text('${state.selectedIds.length} selected',
-                        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => context.read<CorrectionCubit>().selectAll(),
-                      child: Text('Select All', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
+          ),
+          Expanded(
+            child: BlocBuilder<CorrectionCubit, CorrectionState>(
+              builder: (context, state) {
+                if (state.studentsLoading && state.students.isEmpty) {
+                  return const Center(child: CircularProgressIndicator(color: AppTheme.btnColor));
+                }
+                if (state.studentsError != null && state.students.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                        const SizedBox(height: 12),
+                        Text(state.studentsError!, style: MyStyles.regularText(size: 14, color: Colors.red)),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => context.read<CorrectionCubit>().fetchCorrectionStudents(schoolId: widget.schoolId),
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.btnColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
                     ),
-                    TextButton(
-                      onPressed: () => context.read<CorrectionCubit>().clearSelection(),
-                      child: Text('Clear', style: MyStyles.mediumText(size: 12, color: AppTheme.cancelTextColor)),
+                  );
+                }
+                if (state.students.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset('assets/images/no_data.png', height: 160),
+                        const SizedBox(height: 12),
+                        Text('No students found',
+                            style: MyStyles.mediumText(size: 14, color: AppTheme.graySubTitleColor)),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            Expanded(
-              child: RefreshIndicator(
-                color: AppTheme.btnColor,
-                onRefresh: () async => context.read<CorrectionCubit>().fetchCorrectionList(
-                  schoolId: widget.schoolId, isSchool: widget.isSchool),
-                child: ListView.builder(
-                  controller: _scrollCtrl,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                  itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                  itemBuilder: (_, i) {
-                    if (i < state.items.length) {
-                      final item = state.items[i];
-                      final isSelected = state.selectedIds.contains(item.id);
-                      return _CorrectionItemCard(
-                        item: item,
-                        isSelected: isSelected,
-                        onToggle: () => context.read<CorrectionCubit>().toggleSelection(item.id),
-                      );
-                    }
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2)),
-                    );
-                  },
-                ),
-              ),
+                  );
+                }
+                return RefreshIndicator(
+                  color: AppTheme.btnColor,
+                  onRefresh: () async => context.read<CorrectionCubit>().fetchCorrectionStudents(schoolId: widget.schoolId),
+                  child: Column(
+                    children: [
+                      if (state.selectedStudentIds.isNotEmpty)
+                        Container(
+                          color: AppTheme.btnColor.withOpacity(0.08),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              Text('${state.selectedStudentIds.length} selected',
+                                  style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor)),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () => context.read<CorrectionCubit>().selectAllStudents(),
+                                child: Text('Select All', style: MyStyles.mediumText(size: 12, color: AppTheme.btnColor)),
+                              ),
+                              TextButton(
+                                onPressed: () => context.read<CorrectionCubit>().clearStudentSelection(),
+                                child: Text('Clear', style: MyStyles.mediumText(size: 12, color: Colors.grey)),
+                              ),
+                              const SizedBox(width: 4),
+                              state.sendOrderLoading
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor))
+                                  : GestureDetector(
+                                      onTap: () {},
+                                   //   => context.read<CorrectionCubit>().processOrder(schoolId: widget.schoolId),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                        decoration: BoxDecoration(color: AppTheme.btnColor, borderRadius: BorderRadius.circular(20)),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.send_rounded, size: 13, color: Colors.white),
+                                            const SizedBox(width: 5),
+                                            Text('Send Order', style: MyStyles.mediumText(size: 12, color: Colors.white)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                          itemCount: state.students.length + (state.studentsHasMore ? 1 : 0),
+                          itemBuilder: (_, i) {
+                            if (i < state.students.length) {
+                              final item = state.students[i];
+                              final isSelected = state.selectedStudentIds.contains(item.id);
+                              return _CorrectionItemCard(
+                                item: item,
+                                isSelected: isSelected,
+                                onToggle: () => context.read<CorrectionCubit>().toggleStudentSelection(item.id),
+                              );
+                            }
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(child: CircularProgressIndicator(color: AppTheme.btnColor, strokeWidth: 2,)),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
+
+  void _showDownloadDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider.value(
+        value: ctx.read<CorrectionCubit>(),
+        child: _DownloadChecklistDialog(schoolId: widget.schoolId),
+      ),
+    );
+  }
+
+  Widget _searchBar() => TextField(
+    controller: _searchCtrl,
+    style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+    onChanged: (value) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 500), () {
+        context.read<CorrectionCubit>().fetchCorrectionStudents(
+          schoolId: widget.schoolId,
+          search: value.trim(),
+        );
+      });
+    },
+    decoration: InputDecoration(
+      filled: true,
+      fillColor: AppTheme.whiteColor,
+      contentPadding: const EdgeInsets.all(12),
+      hintText: 'Search by name...',
+      prefixIcon: const Icon(Icons.search),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppTheme.backBtnBgColor),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppTheme.backBtnBgColor),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      hintStyle: MyStyles.regularText(size: 14, color: AppTheme.graySubTitleColor),
+    ),
+  );
 }
 
 class _CorrectionItemCard extends StatelessWidget {
-  final CorrectionItem item;
+  final CorrectionStudentItem item;
   final bool isSelected;
   final VoidCallback onToggle;
-
   const _CorrectionItemCard({required this.item, required this.isSelected, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
+    final s = item.student;
+    final className = s?.studentClass?.nameWithPrefix ?? '';
+    final sectionName = s?.section?.name ?? '';
+    final photoUrl = s?.photoUrl ?? s?.photo ?? '';
+    final fatherPhone = s?.fatherPhone ?? '';
+
     return GestureDetector(
       onTap: onToggle,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.btnColor.withOpacity(0.06) : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppTheme.btnColor : Colors.transparent,
-            width: 1.5,
-          ),
+          border: Border.all(color: isSelected ? AppTheme.btnColor : Colors.transparent, width: 1.5),
         ),
         child: Row(
           children: [
-            Container(
-              width: 22, height: 22,
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.btnColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isSelected ? AppTheme.btnColor : Colors.grey.shade400,
-                  width: 1.5,
-                ),
+            SizedBox(
+              width: 24, height: 24,
+              child: Checkbox(
+                value: isSelected,
+                onChanged: (_) => onToggle(),
+                activeColor: AppTheme.btnColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                side: BorderSide(color: AppTheme.graySubTitleColor),
               ),
-              child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: (item.profilePhotoUrl != null && item.profilePhotoUrl!.isNotEmpty)
-                  ? Image.network(item.profilePhotoUrl!, height: 52, width: 52, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder())
+              child: photoUrl.isNotEmpty
+                  ? Image.network(photoUrl, height: 60, width: 60, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder())
                   : _placeholder(),
             ),
             const SizedBox(width: 12),
@@ -1374,38 +1509,28 @@ class _CorrectionItemCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Flexible(
-                        child: Text(item.studentName ?? '-',
-                            style: MyStyles.boldText(size: 15, color: AppTheme.black_Color),
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                      if (item.className != null) ...[
+                      Flexible(child: Text(s?.name ?? '', style: MyStyles.boldText(size: 16, color: AppTheme.black_Color), overflow: TextOverflow.ellipsis)),
+                      if (className.isNotEmpty) ...[
                         const SizedBox(width: 5),
-                        Flexible(
-                          child: Text('• ${item.className}',
-                              style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
-                              overflow: TextOverflow.ellipsis),
-                        ),
+                        Flexible(child: Text('• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
+                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor), overflow: TextOverflow.ellipsis)),
                       ],
                     ],
                   ),
-                  if (item.issue != null && item.issue!.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(item.issue!,
-                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                  if (item.createdAt != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
-                        const SizedBox(width: 3),
-                        Text(item.createdAt!,
-                            style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor)),
-                      ],
-                    ),
-                  ],
+                  const SizedBox(height: 3),
+                  if (fatherPhone.isNotEmpty)
+                    Row(children: [
+                      const Icon(Icons.phone, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                    ]),
+                  const SizedBox(height: 2),
+                  if ((s?.fatherName ?? '').isNotEmpty)
+                    Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  if ((s?.motherName ?? '').isNotEmpty)
+                    Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                  if ((s?.address ?? '').isNotEmpty)
+                    Text(s!.address!, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor), overflow: TextOverflow.ellipsis, maxLines: 1),
                 ],
               ),
             ),
@@ -1415,14 +1540,148 @@ class _CorrectionItemCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    height: 52, width: 52,
-    color: Colors.grey.shade200,
-    child: const Icon(Icons.person, color: Colors.grey),
-  );
+  Widget _placeholder() => Container(height: 60, width: 60, color: Colors.grey.shade200, child: const Icon(Icons.person, color: Colors.grey));
 }
 
-// ─── Tab 3: Staff Orders ──────────────────────────────────────────────────────
+class _DownloadChecklistDialog extends StatefulWidget {
+  final String schoolId;
+  const _DownloadChecklistDialog({required this.schoolId});
+
+  @override
+  State<_DownloadChecklistDialog> createState() => _DownloadChecklistDialogState();
+}
+
+class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
+  Set<String> _selectedColumns = {};
+  String _printType = '';
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<CorrectionCubit>().fetchDownloadColumns(schoolId: widget.schoolId);
+  }
+
+  void _toggleColumn(String key) {
+    setState(() {
+      if (_selectedColumns.contains(key)) {
+        _selectedColumns.remove(key);
+      } else {
+        _selectedColumns.add(key);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+          p.downloadLoading != c.downloadLoading ||
+          p.downloadUrl != c.downloadUrl ||
+          p.downloadError != c.downloadError ||
+          (p.columnsLoading && !c.columnsLoading),
+      listener: (ctx, state) async {
+        if (!state.columnsLoading && state.downloadColumns.isNotEmpty && _selectedColumns.isEmpty) {
+          setState(() {
+            _selectedColumns = state.downloadColumns.map((c) => c.key).toSet();
+          });
+        }
+        if (!state.downloadLoading && state.downloadUrl != null && state.downloadUrl!.isNotEmpty) {
+          Navigator.of(context).pop();
+          final uri = Uri.tryParse(state.downloadUrl!);
+          if (uri != null) {
+            try { await launchUrl(uri, mode: LaunchMode.externalApplication); } catch (_) {}
+          }
+        }
+        if (!state.downloadLoading && state.downloadError != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.downloadError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+      builder: (context, state) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Download Checklist', style: MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
+                const SizedBox(height: 16),
+                if (state.columnsLoading)
+                  const Center(child: CircularProgressIndicator(color: AppTheme.btnColor))
+                else if (state.downloadColumns.isEmpty)
+                  Text('No columns available', style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor))
+                else
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: state.downloadColumns.map((col) {
+                          final selected = _selectedColumns.contains(col.key);
+                          return FilterChip(
+                            label: Text(col.label, style: MyStyles.regularText(size: 12, color: selected ? Colors.white : AppTheme.black_Color)),
+                            selected: selected,
+                            onSelected: (_) => _toggleColumn(col.key),
+                            selectedColor: AppTheme.btnColor,
+                            backgroundColor: Colors.grey.shade100,
+                            checkmarkColor: Colors.white,
+                            side: BorderSide.none,
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: state.downloadLoading || _selectedColumns.isEmpty
+                            ? null
+                            : () => context.read<CorrectionCubit>().downloadCorrectionList(
+                                  schoolId: widget.schoolId,
+                                  columns: _selectedColumns.toList(),
+                                  printType: _printType,
+                                ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: state.downloadLoading
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Download'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 
 class _StaffOrdersTab extends StatefulWidget {
   final String schoolId;
