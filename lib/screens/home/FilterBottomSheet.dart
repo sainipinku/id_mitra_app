@@ -142,7 +142,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
                   );
                 }
-                final classes = _sorted(state.availableClasses);
+                final classes = state.availableClasses;
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.35,
