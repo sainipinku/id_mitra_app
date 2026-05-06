@@ -29,6 +29,7 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
+import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
@@ -55,11 +56,14 @@ class StudentListingPage extends StatefulWidget {
 class _StudentListingPageState extends State<StudentListingPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _correctionIsGridView = false;
+  bool _studentsIsGridView = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -70,6 +74,9 @@ class _StudentListingPageState extends State<StudentListingPage>
 
   @override
   Widget build(BuildContext context) {
+    final tabIndex = _tabController.index;
+    final showIdCardBtn = tabIndex != 2;
+    final isGridView = tabIndex == 0 ? _studentsIsGridView : _correctionIsGridView;
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -95,6 +102,53 @@ class _StudentListingPageState extends State<StudentListingPage>
         ),
         centerTitle: true,
         title: Text('Student Listings', style: MyStyles.boldText(size: 20, color: Colors.black)),
+        actions: showIdCardBtn
+            ? [
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (tabIndex == 0) {
+                        setState(() => _studentsIsGridView = !_studentsIsGridView);
+                      } else {
+                        setState(() => _correctionIsGridView = !_correctionIsGridView);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isGridView ? AppTheme.btnColor : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isGridView ? AppTheme.btnColor : Colors.grey.shade300,
+                        ),
+                        boxShadow: isGridView
+                            ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                            : [],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
+                            size: 18,
+                            color: isGridView ? Colors.white : AppTheme.black_Color,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isGridView ? 'List' : 'ID Card',
+                            style: MyStyles.mediumText(
+                              size: 12,
+                              color: isGridView ? Colors.white : AppTheme.black_Color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ]
+            : null,
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppTheme.btnColor,
@@ -110,17 +164,27 @@ class _StudentListingPageState extends State<StudentListingPage>
           ],
         ),
       ),
-      body: TabBarView(
+      body: Column(
+        children: [
+          Expanded(
+            child: TabBarView(
         controller: _tabController,
         children: [
           _StudentsTab(
             schoolId: widget.schoolId,
             schoolDetailsModel: widget.schoolDetailsModel,
+            isGridView: _studentsIsGridView,
           ),
           BlocProvider(
             create: (_) => CorrectionCubit()
               ..fetchCorrectionStudents(schoolId: widget.schoolId),
-            child: _CorrectionListTab(schoolId: widget.schoolId, isSchool: widget.isSchool),
+            child: _CorrectionListTab(
+              schoolId: widget.schoolId,
+              isSchool: widget.isSchool,
+              isGridView: _correctionIsGridView,
+              onToggleGridView: () => setState(() => _correctionIsGridView = !_correctionIsGridView),
+              schoolDetailsModel: widget.schoolDetailsModel,
+            ),
           ),
           // Tab 3: Orders
           BlocProvider(
@@ -130,17 +194,78 @@ class _StudentListingPageState extends State<StudentListingPage>
             child: _OrdersTab(schoolId: widget.schoolId),
           ),
         ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
+class _TotalCountBanner extends StatelessWidget {
+  final TabController tabController;
+  const _TotalCountBanner({required this.tabController});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: tabController,
+      builder: (context, _) {
+        final tab = tabController.index;
+        int total = 0;
+        String label = '';
+
+        if (tab == 0) {
+          total = context.watch<StudentsCubit>().state.total;
+          label = 'Total Students';
+        } else if (tab == 1) {
+          total = context.watch<CorrectionCubit>().state.studentsTotal;
+          label = 'Total Correction';
+        } else {
+          total = context.watch<OrdersCubit>().state.total;
+          label = 'Total Orders';
+        }
+
+        return Container(
+          width: double.infinity,
+          color: AppTheme.btnColor.withOpacity(0.08),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Text(
+            '$label: $total',
+            style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Count Banner (single tab) ─────────────────────────────────────────────────
+class _CountBanner extends StatelessWidget {
+  final int total;
+  final String label;
+  const _CountBanner({required this.total, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppTheme.btnColor.withOpacity(0.08),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Text(
+        '$label: $total',
+        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+      ),
+    );
+  }
+}
 
 class _StudentsTab extends StatefulWidget {
   final String schoolId;
   final SchoolDetailsModel? schoolDetailsModel;
+  final bool isGridView;
 
-  const _StudentsTab({required this.schoolId, this.schoolDetailsModel});
+  const _StudentsTab({required this.schoolId, this.schoolDetailsModel, this.isGridView = false});
 
   @override
   State<_StudentsTab> createState() => _StudentsTabState();
@@ -149,7 +274,10 @@ class _StudentsTab extends StatefulWidget {
 class _StudentsTabState extends State<_StudentsTab> {
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
+
+  bool get _isGridView => widget.isGridView;
 
   void _navigateToAddStudent() {
     Navigator.push(
@@ -190,6 +318,19 @@ class _StudentsTabState extends State<_StudentsTab> {
       search: '',
       schoolId: widget.schoolId,
     );
+    // Fetch imageShape for this school so StudentCard can apply correct shape
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final schoolIntId = widget.schoolDetailsModel?.id;
+        if (schoolIntId != null) {
+          final existing = context.read<SchoolCubit>().state.students
+              .firstWhere((s) => s.id == schoolIntId, orElse: () => SchoolDetailsModel());
+          if (existing.imageShape == null || existing.imageShape!.isEmpty) {
+            context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
+          }
+        }
+      }
+    });
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
@@ -207,6 +348,7 @@ class _StudentsTabState extends State<_StudentsTab> {
   void dispose() {
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
+    _gridScrollCtrl.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -214,13 +356,22 @@ class _StudentsTabState extends State<_StudentsTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _isGridView
+          ? null
+          : FloatingActionButton(
               backgroundColor: AppTheme.btnColor,
               tooltip: 'Add Student',
               onPressed: _navigateToAddStudent,
               child: const Icon(Icons.add, color: Colors.white),
             ),
-      body: RefreshIndicator(
+      body: Column(
+        children: [
+          BlocBuilder<StudentsCubit, StudentsState>(
+            buildWhen: (p, c) => p.total != c.total,
+            builder: (_, s) => _CountBanner(total: s.total, label: 'Total Students'),
+          ),
+          Expanded(
+            child: RefreshIndicator(
         onRefresh: () async => context.read<StudentsCubit>().fetchStudents(
           search: '',
           schoolId: widget.schoolId,
@@ -278,21 +429,66 @@ class _StudentsTabState extends State<_StudentsTab> {
               const SizedBox(height: 15),
               Expanded(
                 child: BlocBuilder<StudentsCubit, StudentsState>(
-                  builder: (context, state) {
+                  builder: (context, studentsState) {
+                    final schoolState = context.watch<SchoolCubit>().state;
+                    final state = studentsState;
                     if (state.loading) return const ShimmerList(expanded: false);
                     if (state.studentsList.isEmpty) {
                       return Center(child: Image.asset('assets/images/no_data.png', height: 200));
                     }
                     final itemCount = state.studentsList.length + (state.hasMore ? 1 : 0);
+                    if (_isGridView) {
+                      return ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        controller: _gridScrollCtrl,
+                        itemCount: itemCount,
+                        itemBuilder: (context, index) {
+                          if (index < state.studentsList.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 300,
+                                  child: StudentIdCardWidget(
+                                    student: state.studentsList[index],
+                                    schoolId: widget.schoolId,
+                                    schoolDetailsModel: widget.schoolDetailsModel,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        },
+                      );
+                    }
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       controller: _scrollCtrl,
                       itemCount: itemCount,
                       itemBuilder: (context, index) {
                         if (index < state.studentsList.length) {
+                          String? imageShape = widget.schoolDetailsModel?.imageShape;
+                          try {
+                            final schoolId = widget.schoolDetailsModel?.id ??
+                                state.studentsList[index].schoolId;
+                            if (schoolId != null) {
+                              final match = schoolState.students.firstWhere(
+                                (s) => s.id == schoolId,
+                                orElse: () => SchoolDetailsModel(),
+                              );
+                              if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                                imageShape = match.imageShape;
+                              }
+                            }
+                          } catch (_) {}
                           return StudentCard(
                             studentData: state.studentsList[index],
                             schoolId: widget.schoolId,
+                            imageShape: imageShape,
                           );
                         }
                         return const Padding(
@@ -307,6 +503,9 @@ class _StudentsTabState extends State<_StudentsTab> {
             ],
           ),
         ),
+      ),
+          ),
+        ],
       ),
     );
   }
@@ -347,7 +546,17 @@ class _CorrectionListTab extends StatefulWidget {
   final String schoolId;
   final bool isSchool;
   final VoidCallback? onOrderSent;
-  const _CorrectionListTab({required this.schoolId, this.isSchool = false, this.onOrderSent});
+  final bool isGridView;
+  final VoidCallback? onToggleGridView;
+  final SchoolDetailsModel? schoolDetailsModel;
+  const _CorrectionListTab({
+    required this.schoolId,
+    this.isSchool = false,
+    this.onOrderSent,
+    this.isGridView = false,
+    this.onToggleGridView,
+    this.schoolDetailsModel,
+  });
 
   @override
   State<_CorrectionListTab> createState() => _CorrectionListTabState();
@@ -357,7 +566,8 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
   final ScrollController _scrollCtrl = ScrollController();
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
-  bool _isGridView = false;
+
+  bool get _isGridView => widget.isGridView;
 
   @override
   void initState() {
@@ -368,6 +578,19 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
           schoolId: widget.schoolId,
           isLoadMore: true,
         );
+      }
+    });
+    // Fetch imageShape for this school
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final schoolIntId = widget.schoolDetailsModel?.id;
+        if (schoolIntId != null) {
+          final existing = context.read<SchoolCubit>().state.students
+              .firstWhere((s) => s.id == schoolIntId, orElse: () => SchoolDetailsModel());
+          if (existing.imageShape == null || existing.imageShape!.isEmpty) {
+            context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
+          }
+        }
       }
     });
   }
@@ -432,46 +655,15 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
       },
       child: Column(
         children: [
+          BlocBuilder<CorrectionCubit, CorrectionState>(
+            buildWhen: (p, c) => p.studentsTotal != c.studentsTotal,
+            builder: (_, s) => _CountBanner(total: s.studentsTotal, label: 'Total Correction'),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Expanded(child: _searchBar()),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => setState(() => _isGridView = !_isGridView),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _isGridView ? AppTheme.btnColor : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
-                      ),
-                      boxShadow: _isGridView
-                          ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
-                          : [],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
-                          size: 18,
-                          color: _isGridView ? Colors.white : AppTheme.black_Color,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _isGridView ? 'List' : 'ID Card',
-                          style: MyStyles.mediumText(
-                            size: 12,
-                            color: _isGridView ? Colors.white : AppTheme.black_Color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () async {
@@ -490,9 +682,18 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                     if (result != null) {
                       _debounce?.cancel();
                       _debounce = Timer(const Duration(milliseconds: 300), () {
+                        final rawClass = result['class'];
+                        final List<String> classIds = rawClass is String && rawClass.isNotEmpty
+                            ? rawClass.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+                            : [];
+                        final List<int> sectionIds = result['section'] is List
+                            ? List<int>.from((result['section'] as List).map((e) => int.tryParse(e.toString()) ?? 0).where((e) => e != 0))
+                            : [];
                         context.read<CorrectionCubit>().fetchCorrectionStudents(
                           schoolId: widget.schoolId,
-                          classFilter: result['class'] ?? '',
+                          classIds: classIds,
+                          sectionIds: sectionIds,
+                          search: _searchCtrl.text.trim(),
                         );
                       });
                     }
@@ -512,6 +713,22 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
           Expanded(
             child: BlocBuilder<CorrectionCubit, CorrectionState>(
               builder: (context, state) {
+                // Watch SchoolCubit so list rebuilds when imageShape changes
+                final schoolState = context.watch<SchoolCubit>().state;
+                // Resolve imageShape for this school
+                String? imageShape = widget.schoolDetailsModel?.imageShape;
+                try {
+                  final schoolId = widget.schoolDetailsModel?.id;
+                  if (schoolId != null) {
+                    final match = schoolState.students.firstWhere(
+                      (s) => s.id == schoolId,
+                      orElse: () => SchoolDetailsModel(),
+                    );
+                    if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                      imageShape = match.imageShape;
+                    }
+                  }
+                } catch (_) {}
                 if (state.studentsLoading && state.students.isEmpty) {
                   return const ShimmerList(expanded: false);
                 }
@@ -615,6 +832,7 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                                           child: StudentIdCardWidget(
                                             student: studentData,
                                             schoolId: widget.schoolId,
+                                            schoolDetailsModel: widget.schoolDetailsModel,
                                           ),
                                         ),
                                       ),
@@ -637,7 +855,44 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                               return _CorrectionCard(
                                 item: item,
                                 isSelected: isSelected,
+                                imageShape: imageShape,
                                 onToggle: () => context.read<CorrectionCubit>().toggleStudentSelection(item.id),
+                                onTapCard: () {
+                                  final s = item.student;
+                                  if (s == null) return;
+                                  final studentData = _correctionToStudentData(s);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => MultiBlocProvider(
+                                        providers: [
+                                          BlocProvider(
+                                            create: (_) => StudentFormCubit()
+                                              ..loadFromSchoolId(
+                                                schoolId: widget.schoolId,
+                                                schoolName: '',
+                                              ),
+                                          ),
+                                          BlocProvider(
+                                            create: (_) => StudentFormDataCubit()
+                                              ..load(widget.schoolId),
+                                          ),
+                                          BlocProvider(
+                                            create: (_) => AddStudentCubit(),
+                                          ),
+                                        ],
+                                        child: AddStudentFormPage(
+                                          schoolId: widget.schoolId,
+                                          editStudent: studentData,
+                                        ),
+                                      ),
+                                    ),
+                                  ).then((_) {
+                                    context.read<CorrectionCubit>().fetchCorrectionStudents(
+                                      schoolId: widget.schoolId,
+                                    );
+                                  });
+                                },
                               );
                             }
                             return const Padding(
@@ -706,8 +961,10 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
       uuid: s.uuid,
       schoolId: s.schoolId,
       name: s.name,
+      email: s.email,
+      phone: s.phone,
       photo: s.photo,
-      profilePhotoUrl: s.photoUrl,
+      profilePhotoUrl: s.profilePhotoUrl ?? s.photoUrl ?? s.photo,
       fatherName: s.fatherName,
       fatherPhone: s.fatherPhone,
       motherName: s.motherName,
@@ -736,7 +993,16 @@ class _CorrectionCard extends StatefulWidget {
   final CorrectionStudentItem item;
   final bool isSelected;
   final VoidCallback onToggle;
-  const _CorrectionCard({required this.item, required this.isSelected, required this.onToggle});
+  final VoidCallback? onTapCard;
+  final String? imageShape;
+
+  const _CorrectionCard({
+    required this.item,
+    required this.isSelected,
+    required this.onToggle,
+    this.onTapCard,
+    this.imageShape,
+  });
 
   @override
   State<_CorrectionCard> createState() => _CorrectionCardState();
@@ -768,7 +1034,13 @@ class _CorrectionCardState extends State<_CorrectionCard> {
       sourcePath: pickedFile.path,
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
-        AndroidUiSettings(toolbarTitle: 'Crop Image', toolbarColor: AppTheme.MainColor, toolbarWidgetColor: Colors.white, lockAspectRatio: true, hideBottomControls: true),
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Image',
+          toolbarColor: AppTheme.MainColor,
+          toolbarWidgetColor: Colors.white,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
         IOSUiSettings(title: 'Crop Image', aspectRatioLockEnabled: true),
       ],
     );
@@ -780,7 +1052,10 @@ class _CorrectionCardState extends State<_CorrectionCard> {
     try {
       File fixed = await FlutterExifRotation.rotateImage(path: path);
       final uuid = widget.item.student?.uuid ?? '';
-      final response = await ApiManager().multiRequestRoute(fixed.path, Config.baseUrl + Routes.updateStudentProfile(uuid));
+      final response = await ApiManager().multiRequestRoute(
+        fixed.path,
+        Config.baseUrl + Routes.updateStudentProfile(uuid),
+      );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         setState(() => _currentPhotoUrl = json['data']['profile_photo_url']);
@@ -795,7 +1070,9 @@ class _CorrectionCardState extends State<_CorrectionCard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.whiteColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -804,13 +1081,35 @@ class _CorrectionCardState extends State<_CorrectionCard> {
             Text("Choose Image", style: MyStyles.boldText(size: 14, color: Colors.black)),
             const SizedBox(height: 15),
             InkWell(
-              onTap: () { Navigator.pop(ctx); _fromCamera(); },
-              child: Row(children: [SvgPicture.asset('assets/icons/camera_single.svg'), const SizedBox(width: 10), Text("Camera", style: MyStyles.regularText(size: 14, color: Colors.black))]),
+              onTap: () {
+                Navigator.pop(ctx);
+                _fromCamera();
+              },
+              child: Row(
+                children: [
+                  SvgPicture.asset('assets/icons/camera_single.svg'),
+                  const SizedBox(width: 10),
+                  Text("Camera", style: MyStyles.regularText(size: 14, color: Colors.black)),
+                ],
+              ),
             ),
-            Container(margin: const EdgeInsets.symmetric(vertical: 10), height: 1, color: Colors.grey.shade300),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              height: 1,
+              color: Colors.grey.shade300,
+            ),
             InkWell(
-              onTap: () { Navigator.pop(ctx); _fromGallery(); },
-              child: Row(children: [SvgPicture.asset('assets/icons/choose_from_gallery.svg'), const SizedBox(width: 10), Text("Gallery", style: MyStyles.regularText(size: 14, color: Colors.black))]),
+              onTap: () {
+                Navigator.pop(ctx);
+                _fromGallery();
+              },
+              child: Row(
+                children: [
+                  SvgPicture.asset('assets/icons/choose_from_gallery.svg'),
+                  const SizedBox(width: 10),
+                  Text("Gallery", style: MyStyles.regularText(size: 14, color: Colors.black)),
+                ],
+              ),
             ),
           ],
         ),
@@ -834,10 +1133,21 @@ class _CorrectionCardState extends State<_CorrectionCard> {
               children: [
                 Flexible(
                   child: InteractiveViewer(
-                    panEnabled: true, minScale: 0.8, maxScale: 4,
-                    child: Image.network(imageUrl, width: double.infinity, fit: BoxFit.contain,
-                      loadingBuilder: (_, child, progress) => progress == null ? child : const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
-                      errorBuilder: (_, __, ___) => Container(height: 300, width: double.infinity, color: Colors.grey.shade300, child: const Icon(Icons.person, size: 80, color: Colors.grey)),
+                    panEnabled: true,
+                    minScale: 0.8,
+                    maxScale: 4,
+                    child: Image.network(
+                      imageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (_, child, progress) =>
+                      progress == null ? child : const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 300,
+                        width: double.infinity,
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
@@ -845,7 +1155,10 @@ class _CorrectionCardState extends State<_CorrectionCard> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () { Navigator.pop(context); _showPicker(); },
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showPicker();
+                    },
                     icon: const Icon(Icons.edit),
                     label: const Text("Edit Profile Image"),
                   ),
@@ -866,92 +1179,197 @@ class _CorrectionCardState extends State<_CorrectionCard> {
     final fatherPhone = s?.fatherPhone ?? '';
     final photoUrl = _currentPhotoUrl ?? '';
 
-    return GestureDetector(
-      onTap: widget.onToggle,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: widget.isSelected ? AppTheme.btnColor.withOpacity(0.06) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: widget.isSelected ? AppTheme.btnColor : Colors.transparent, width: 1.5),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.isSelected ? AppTheme.btnColor.withOpacity(0.06) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: widget.isSelected ? AppTheme.btnColor : Colors.transparent,
+          width: 1.5,
         ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 24, height: 24,
-              child: Checkbox(
-                value: widget.isSelected,
-                onChanged: (_) => widget.onToggle(),
-                activeColor: AppTheme.btnColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                side: BorderSide(color: AppTheme.graySubTitleColor),
+      ),
+      child: Row(
+        children: [
+          // Checkbox - Sirf ispe click karne par select hoga
+          GestureDetector(
+            onTap: widget.onToggle,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 8, 0),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: widget.isSelected,
+                  onChanged: (_) => widget.onToggle(),
+                  activeColor: AppTheme.btnColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  side: BorderSide(color: AppTheme.graySubTitleColor),
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () => photoUrl.isNotEmpty ? _showImagePreview(photoUrl) : _showPicker(),
-              child: Stack(
+          ),
+
+          // Rest of card — tap to open edit form
+          Expanded(
+            child: GestureDetector(
+              onTap: () => widget.onTapCard?.call(),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: _isUploading
-                        ? const SizedBox(height: 60, width: 60, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-                        : photoUrl.isNotEmpty
-                            ? Image.network(photoUrl, height: 60, width: 60, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder())
-                            : _placeholder(),
-                  ),
-                  Positioned(
-                    bottom: 0, right: 0,
-                    child: Container(
-                      height: 22, width: 22,
-                      decoration: BoxDecoration(color: Colors.black, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                      child: Icon(photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt, size: 12, color: Colors.white),
+          // Photo Section
+          GestureDetector(
+            onTap: () {
+              if (photoUrl.isNotEmpty) {
+                _showImagePreview(photoUrl);
+              } else {
+                Future.delayed(Duration.zero, _fromCamera);
+              }
+            },
+            child: Stack(
+              children: [
+                _buildPhoto(photoUrl),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    height: 22,
+                    width: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt,
+                      size: 12,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          ),
+
+          const SizedBox(width: 12),
+
+          // Student Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        s?.name ?? '',
+                        style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (className.isNotEmpty) ...[
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          '• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
+                          style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                if (fatherPhone.isNotEmpty)
                   Row(
                     children: [
-                      Flexible(child: Text(s?.name ?? '', style: MyStyles.boldText(size: 16, color: AppTheme.black_Color), overflow: TextOverflow.ellipsis)),
-                      if (className.isNotEmpty) ...[
-                        const SizedBox(width: 5),
-                        Flexible(child: Text('• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
-                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor), overflow: TextOverflow.ellipsis)),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  if (fatherPhone.isNotEmpty)
-                    Row(children: [
                       const Icon(Icons.phone, size: 12, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                    ]),
-                  const SizedBox(height: 2),
-                  if ((s?.fatherName ?? '').isNotEmpty)
-                    Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                  if ((s?.motherName ?? '').isNotEmpty)
-                    Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                  if ((s?.address ?? '').isNotEmpty)
-                    Text(s!.address!, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor), overflow: TextOverflow.ellipsis, maxLines: 1),
+                      Text(
+                        fatherPhone,
+                        style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 2),
+                if ((s?.fatherName ?? '').isNotEmpty)
+                  Text(
+                    'F: ${s!.fatherName}',
+                    style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                  ),
+                if ((s?.motherName ?? '').isNotEmpty)
+                  Text(
+                    'M: ${s!.motherName}',
+                    style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
+                  ),
+                if ((s?.address ?? '').isNotEmpty)
+                  Text(
+                    s!.address!,
+                    style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+              ],
+            ),
+          ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _placeholder() => Container(height: 60, width: 60, color: Colors.grey.shade200, child: const Icon(Icons.person, color: Colors.grey));
+  Widget _placeholder() => Container(
+    height: 60,
+    width: 60,
+    color: Colors.grey.shade200,
+    child: const Icon(Icons.person, color: Colors.grey),
+  );
+
+  Widget _buildPhoto(String photoUrl) {
+    final shape = widget.imageShape ?? 'rectangle';
+    Widget content;
+    if (_isUploading) {
+      content = const SizedBox(
+        height: 60,
+        width: 60,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    } else if (photoUrl.isNotEmpty) {
+      content = Image.network(
+        photoUrl,
+        height: 60,
+        width: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(),
+      );
+    } else {
+      content = _placeholder();
+    }
+
+    switch (shape) {
+      case 'round':
+      case 'oval':
+        return ClipOval(child: SizedBox(width: 60, height: 60, child: content));
+      case 'square':
+        return ClipRRect(
+          borderRadius: BorderRadius.zero,
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+      case 'rectangle':
+      default:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+    }
+  }
 }
+
 class _DownloadChecklistDialog extends StatefulWidget {
   final String schoolId;
   const _DownloadChecklistDialog({required this.schoolId});
@@ -1319,6 +1737,10 @@ class _OrdersTabState extends State<_OrdersTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        BlocBuilder<OrdersCubit, OrdersState>(
+          buildWhen: (p, c) => p.total != c.total,
+          builder: (_, s) => _CountBanner(total: s.total, label: 'Total Orders'),
+        ),
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -1767,31 +2189,46 @@ class _OrderCardState extends State<_OrderCard> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor),
                     ),
                   )
-                : _currentStatus == 'completed'
-                    ? const SizedBox.shrink()
-                    : PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: Colors.grey),
-                        offset: const Offset(0, 32),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 8,
-                        onSelected: _updateStatus,
-                        itemBuilder: (_) => [
-                          const PopupMenuItem<String>(
-                            value: 'completed',
-                            child: Row(
-                              children: [
-                                Icon(Icons.check_circle_outline, size: 16, color: AppTheme.graySubTitleColor),
-                                SizedBox(width: 10),
-                                Text('Mark as Completed'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                : PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    offset: const Offset(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 8,
+                    onSelected: _updateStatus,
+                    itemBuilder: (_) => _buildStatusMenuItems(),
+                  ),
           ],
         ),
       ),
     );
+  }
+
+  List<PopupMenuEntry<String>> _buildStatusMenuItems() {
+    // Driven by kOrderStatuses from OrderModel — same source as the filter dropdown
+    return kOrderStatuses
+        .where((s) => s.value != _currentStatus)
+        .map((s) => PopupMenuItem<String>(
+              value: s.value,
+              child: Row(
+                children: [
+                  Icon(_statusIcon(s.value), size: 16, color: AppTheme.graySubTitleColor),
+                  const SizedBox(width: 10),
+                  Text(s.label),
+                ],
+              ),
+            ))
+        .toList();
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'completed': return Icons.check_circle_outline;
+      case 'cancelled': return Icons.cancel_outlined;
+      case 're_order': return Icons.refresh_rounded;
+      case 'work_in_process': return Icons.hourglass_top_rounded;
+      case 'order_created': return Icons.add_circle_outline;
+      default: return Icons.circle_outlined;
+    }
   }
 
   Widget _placeholder() => Container(

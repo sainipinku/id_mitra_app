@@ -118,7 +118,11 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     emit(state.copyWith(selectedStudentIds: {}));
   }
 
-  Future<void> processOrder({    
+  void setSelectedClassIds(List<String> classIds) {
+    emit(state.copyWith(selectedClassIds: classIds));
+  }
+
+  Future<void> processOrder({
     required String schoolId,
     String processType = 'create',
     String listType = 'class_wise',
@@ -170,10 +174,16 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     bool isLoadMore = false,
     String search = '',
     String classFilter = '',
+    List<String> classIds = const [],
+    List<int> sectionIds = const [],
   }) async {
     if (isLoadMore && (state.studentsLoading || !state.studentsHasMore)) return;
 
     final currentPage = isLoadMore ? state.studentsPage : 1;
+
+    final effectiveClassFilter = classIds.isNotEmpty
+        ? classIds.join(',')
+        : classFilter;
 
     if (!isLoadMore) {
       emit(state.copyWith(
@@ -182,6 +192,7 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         studentsPage: 1,
         studentsHasMore: true,
         clearStudentsError: true,
+        selectedClassIds: classIds.isNotEmpty ? classIds : (classFilter.isNotEmpty ? classFilter.split(',') : state.selectedClassIds),
       ));
     }
 
@@ -189,7 +200,10 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       String url =
           '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/students?page=$currentPage&per_page=50';
       if (search.isNotEmpty) url += '&search=$search';
-      if (classFilter.isNotEmpty) url += '&class_filter=$classFilter';
+      if (effectiveClassFilter.isNotEmpty) url += '&class_filters=$effectiveClassFilter';
+      for (int i = 0; i < sectionIds.length; i++) {
+        url += '&sectionsIds[$i]=${sectionIds[i]}';
+      }
 
       var response = await _api.getRequest(url);
 
@@ -197,7 +211,10 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         String partnerUrl =
             '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/students?page=$currentPage&per_page=50';
         if (search.isNotEmpty) partnerUrl += '&search=$search';
-        if (classFilter.isNotEmpty) partnerUrl += '&class_filter=$classFilter';
+        if (effectiveClassFilter.isNotEmpty) partnerUrl += '&class_filters=$effectiveClassFilter';
+        for (int i = 0; i < sectionIds.length; i++) {
+          partnerUrl += '&sectionsIds[$i]=${sectionIds[i]}';
+        }
         response = await _api.getRequest(partnerUrl);
       }
 
@@ -215,22 +232,24 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       }
 
       final data = json['data'] as Map<String, dynamic>?;
-      final studentsPage = data?['students'] as Map<String, dynamic>?;
-      final List rawList = studentsPage?['data'] ?? [];
-      final int lastPage = studentsPage?['last_page'] ?? 1;
-      final int respPage = studentsPage?['current_page'] ?? 1;
+      final listPage = (data?['list'] ?? data?['students']) as Map<String, dynamic>?;
+      final List rawList = listPage?['data'] ?? [];
+      final int lastPage = listPage?['last_page'] ?? 1;
+      final int respPage = listPage?['current_page'] ?? 1;
 
       final newItems = rawList
           .map((e) => CorrectionStudentItem.fromJson(e as Map<String, dynamic>))
           .toList();
 
       final updated = isLoadMore ? [...state.students, ...newItems] : newItems;
+      final int total = listPage?['total'] ?? (isLoadMore ? state.studentsTotal : updated.length);
 
       emit(state.copyWith(
         studentsLoading: false,
         students: updated,
         studentsPage: respPage + 1,
         studentsHasMore: respPage < lastPage,
+        studentsTotal: total,
       ));
     } catch (e) {
       emit(state.copyWith(studentsLoading: false, studentsError: e.toString()));

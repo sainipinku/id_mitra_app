@@ -82,7 +82,7 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 2,
+      length: widget.editStudent != null ? 1 : 2,
       vsync: this,
       initialIndex: widget.initialTab,
     );
@@ -1284,6 +1284,7 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
               ),
               body: Column(
                 children: [
+                  if (widget.editStudent == null)
                   Material(
                     color: Colors.white,
                     child: TabBar(
@@ -1313,6 +1314,8 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
                               ),
                             ),
                           )
+                        : widget.editStudent != null
+                        ? _mainInfoTab(currentFields, additionalFields, data)
                         : TabBarView(
                             controller: _tabController,
                             children: [
@@ -1328,7 +1331,7 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
                   AnimatedBuilder(
                     animation: _tabController,
                     builder: (context, _) {
-                      if (_tabController.index == 1) return const SizedBox.shrink();
+                      if (widget.editStudent == null && _tabController.index == 1) return const SizedBox.shrink();
                       return Container(
                     padding: const EdgeInsets.all(16),
                     color: Colors.white,

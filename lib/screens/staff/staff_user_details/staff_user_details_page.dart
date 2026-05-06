@@ -85,7 +85,10 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ImageSettingsScreen(schoolId: schoolId)),
+                  MaterialPageRoute(builder: (context) => ImageSettingsScreen(
+                    schoolId: schoolId,
+                    schoolIntId: schoolDetailsModel?.id,
+                  )),
                 );
               } else if (value == 'student_form') {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';

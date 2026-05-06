@@ -61,8 +61,12 @@ class StaffListCubit extends Cubit<StaffListState> {
         email: s.email, phone: s.phone,
         whatsappPhone: s.whatsappPhone, address: s.address,
         profilePhotoUrl: photoUrl,
-        roleName: s.roleName, status: s.status,
+        roleName: s.roleName, roleId: s.roleId, status: s.status,
         assignedClasses: s.assignedClasses,
+        dob: s.dob, fatherName: s.fatherName, motherName: s.motherName,
+        husbandName: s.husbandName, gender: s.gender, bloodGroup: s.bloodGroup,
+        pincode: s.pincode, employeeId: s.employeeId, nationalCode: s.nationalCode,
+        loginId: s.loginId, dateOfJoining: s.dateOfJoining,
       );
     }).toList();
     emit(state.copyWith(list: updated));
@@ -117,8 +121,12 @@ class StaffListCubit extends Cubit<StaffListState> {
               email: s.email, phone: s.phone,
               whatsappPhone: s.whatsappPhone, address: s.address,
               profilePhotoUrl: overrideUrl,
-              roleName: s.roleName, status: s.status,
+              roleName: s.roleName, roleId: s.roleId, status: s.status,
               assignedClasses: s.assignedClasses,
+              dob: s.dob, fatherName: s.fatherName, motherName: s.motherName,
+              husbandName: s.husbandName, gender: s.gender, bloodGroup: s.bloodGroup,
+              pincode: s.pincode, employeeId: s.employeeId, nationalCode: s.nationalCode,
+              loginId: s.loginId, dateOfJoining: s.dateOfJoining,
             );
           }
           return s;
@@ -247,8 +255,13 @@ class StaffListCubit extends Cubit<StaffListState> {
               address: s.address,
               profilePhotoUrl: s.profilePhotoUrl,
               roleName: s.roleName,
+              roleId: s.roleId,
               status: newStatusInt,
               assignedClasses: s.assignedClasses,
+              dob: s.dob, fatherName: s.fatherName, motherName: s.motherName,
+              husbandName: s.husbandName, gender: s.gender, bloodGroup: s.bloodGroup,
+              pincode: s.pincode, employeeId: s.employeeId, nationalCode: s.nationalCode,
+              loginId: s.loginId, dateOfJoining: s.dateOfJoining,
             );
           }
           return s;

@@ -15,15 +15,19 @@ import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:idmitra/screens/home/student_profile_page.dart';
+import 'package:idmitra/providers/add_student/add_student_cubit.dart';
+import 'package:idmitra/providers/student_form/student_form_cubit.dart';
+import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
+import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import '../../providers/students/students_state.dart';
 
 class StudentCard extends StatefulWidget {
   StudentDetailsData studentData;
   final String schoolId;
+  final String? imageShape;
   final VoidCallback? onEdit;
-  StudentCard({super.key, required this.studentData, required this.schoolId, this.onEdit});
+  StudentCard({super.key, required this.studentData, required this.schoolId, this.imageShape, this.onEdit});
 
   @override
   State<StudentCard> createState() => _StudentCardState();
@@ -172,7 +176,7 @@ class _StudentCardState extends State<StudentCard> {
                 },
               ),
 
-       /*       _divider(),
+             _divider(),
 
               _pickerItem(
                 icon: 'assets/icons/remove_image.svg',
@@ -187,7 +191,7 @@ class _StudentCardState extends State<StudentCard> {
                   });
                   Navigator.pop(context);
                 },
-              ),*/
+              ),
             ],
           ),
         );
@@ -244,10 +248,25 @@ class _StudentCardState extends State<StudentCard> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => StudentProfilePage(
-                student: studentDetailsData,
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  create: (_) => StudentFormCubit()
+                    ..loadFromSchoolId(
+                      schoolId: widget.schoolId,
+                      schoolName: '',
+                    ),
+                ),
+                BlocProvider(
+                  create: (_) => StudentFormDataCubit()..load(widget.schoolId),
+                ),
+                BlocProvider(create: (_) => AddStudentCubit()),
+              ],
+              child: AddStudentFormPage(
                 schoolId: widget.schoolId,
+                editStudent: studentDetailsData,
               ),
+            ),
           ),
         ).then((updated) {
           if (updated is StudentDetailsData && mounted) {
@@ -269,34 +288,17 @@ class _StudentCardState extends State<StudentCard> {
             children: [
               GestureDetector(
                 onTap: () {
-                  final url = studentDetailsData.profilePhotoUrl;
-                  if (url != null && url.isNotEmpty) {
-                    _showImagePreview(context, url);
+                  final url = studentDetailsData.profilePhotoUrl?.trim();
+                  final hasRealPhoto = url != null &&
+                      url.isNotEmpty &&
+                      !url.contains('ui-avatars.com');
+                  if (hasRealPhoto) {
+                    _showImagePreview(context, url!);
                   } else {
-                    showPicker(context);
+                    _fromCamera();
                   }
                 },
-                child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: isUploading
-                    ? const SizedBox(
-                        height: 60,
-                        width: 60,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : (studentDetailsData.profilePhotoUrl != null &&
-                          studentDetailsData.profilePhotoUrl!.isNotEmpty)
-                    ? Image.network(
-                        studentDetailsData.profilePhotoUrl!,
-                        height: 60,
-                        width: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(),
-                      )
-                    : _placeholder(),
-              ),
+                child: _buildPhoto(context),
               ),
 
               /// 📸 Edit Icon
@@ -619,6 +621,49 @@ class _StudentCardState extends State<StudentCard> {
       color: Colors.grey.shade300,
       child: const Icon(Icons.person, color: Colors.grey),
     );
+  }
+
+  Widget _buildPhoto(BuildContext context) {
+    final shape = widget.imageShape ?? 'rectangle';
+    Widget content;
+    if (isUploading) {
+      content = const SizedBox(
+        height: 60,
+        width: 60,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    } else if (studentDetailsData.profilePhotoUrl != null &&
+        studentDetailsData.profilePhotoUrl!.trim().isNotEmpty &&
+        !studentDetailsData.profilePhotoUrl!.contains('ui-avatars.com')) {
+      content = Image.network(
+        studentDetailsData.profilePhotoUrl!.trim(),
+        height: 60,
+        width: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(),
+      );
+    } else {
+      content = _placeholder();
+    }
+
+    switch (shape) {
+      case 'round':
+      case 'oval':
+        return ClipOval(
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+      case 'square':
+        return ClipRRect(
+          borderRadius: BorderRadius.zero,
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+      case 'rectangle':
+      default:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+    }
   }
 
   void _showImagePreview(BuildContext context, String imageUrl) {

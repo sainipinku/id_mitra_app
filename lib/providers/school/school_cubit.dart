@@ -129,4 +129,32 @@ class SchoolCubit extends Cubit<SchoolState> {
       ));
     }
   }
+
+  /// Update imageShape for a specific school after image settings are saved
+  void updateSchoolImageShape(int schoolId, String imageShape) {
+    final updated = state.students.map((s) {
+      if (s.id == schoolId) return s.copyWith(imageShape: imageShape);
+      return s;
+    }).toList();
+    final newMap = Map<int, String>.from(state.imageShapeMap)..[schoolId] = imageShape;
+    emit(state.copyWith(students: updated, imageShapeMap: newMap));
+  }
+
+  /// Fetch image settings for a school and update imageShape in state
+  Future<void> fetchAndApplyImageShape(int schoolId) async {
+    try {
+      final url = Config.baseUrl + Routes.updateImageSettings(schoolId.toString());
+      final response = await apiManager.getRequest(url);
+      if (response == null) return;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        final shape = json["data"]?["image_shape"]?.toString();
+        if (shape != null && shape.isNotEmpty) {
+          updateSchoolImageShape(schoolId, shape);
+        }
+      }
+    } catch (e) {
+      debugPrint('fetchAndApplyImageShape error: $e');
+    }
+  }
 }

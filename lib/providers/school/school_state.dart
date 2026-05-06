@@ -7,6 +7,7 @@ class SchoolState {
   final int page;
   final bool hasMore;
   final String? error;
+  final Map<int, String> imageShapeMap; // schoolId -> imageShape
 
   SchoolState({
     this.loading = false,
@@ -15,6 +16,7 @@ class SchoolState {
     this.page = 1,
     this.hasMore = true,
     this.error,
+    this.imageShapeMap = const {},
   });
 
   SchoolState copyWith({
@@ -24,15 +26,16 @@ class SchoolState {
     int? page,
     bool? hasMore,
     String? error,
+    Map<int, String>? imageShapeMap,
   }) {
     return SchoolState(
       loading: loading ?? this.loading,
-      isPaginationLoading:
-      isPaginationLoading ?? this.isPaginationLoading,
+      isPaginationLoading: isPaginationLoading ?? this.isPaginationLoading,
       students: students ?? this.students,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       error: error ?? this.error,
+      imageShapeMap: imageShapeMap ?? this.imageShapeMap,
     );
   }
 }

@@ -77,7 +77,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
+    _tabController = TabController(length: widget.editStudent != null ? 1 : 2, vsync: this, initialIndex: widget.initialTab);
     if (widget.editStudent != null) {
       _additionalExpanded = _hasAdditionalData(widget.editStudent!);
       WidgetsBinding.instance.addPostFrameCallback(
@@ -1254,6 +1254,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
               ),
               body: Column(
                 children: [
+                  if (widget.editStudent == null)
                   Container(
                     margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     decoration: BoxDecoration(
@@ -1295,6 +1296,8 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                         ),
                       ),
                     )
+                        : widget.editStudent != null
+                        ? _mainInfoTab(currentFields, additionalFields, data)
                         : TabBarView(
                       controller: _tabController,
                       children: [
@@ -1310,7 +1313,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                   AnimatedBuilder(
                     animation: _tabController,
                     builder: (context, _) {
-                      if (_tabController.index == 1) return const SizedBox.shrink();
+                      if (widget.editStudent == null && _tabController.index == 1) return const SizedBox.shrink();
                       return Container(
                         padding: const EdgeInsets.all(16),
                         color: Colors.white,

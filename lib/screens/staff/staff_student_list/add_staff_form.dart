@@ -44,6 +44,8 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
     _initSchoolAndLoad();
   }
 
+  bool _prefilled = false;
+
   Future<void> _initSchoolAndLoad() async {
     String id = widget.schoolId;
     if (id.isEmpty) {
@@ -55,7 +57,8 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       _schoolId = id;
 
       _formFieldsSub = _staffFormCubit.stream.listen((state) {
-        if (!state.loading && state.fields.isNotEmpty) {
+        if (!state.loading && state.fields.isNotEmpty && !_prefilled) {
+          _prefilled = true;
           for (final c in _controllers.values) c.dispose();
           _controllers.clear();
           _selectValues.clear();
@@ -66,7 +69,8 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       await _staffFormCubit.loadFields(id);
 
       final currentState = _staffFormCubit.state;
-      if (!currentState.loading && currentState.fields.isNotEmpty) {
+      if (!currentState.loading && currentState.fields.isNotEmpty && !_prefilled) {
+        _prefilled = true;
         for (final c in _controllers.values) c.dispose();
         _controllers.clear();
         _selectValues.clear();
@@ -104,10 +108,12 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
       'employee_id': e.employeeId ?? '',
       'address': e.address ?? '',
       'date_of_birth': e.dob ?? '',
+      'dob': e.dob ?? '',
       'father_name': e.fatherName ?? '',
       'mother_name': e.motherName ?? '',
       'husband_name': e.husbandName ?? '',
       'whatsapp': e.whatsappPhone ?? '',
+      'whatsapp_phone': e.whatsappPhone ?? '',
       'pincode': e.pincode ?? '',
       'national_code': e.nationalCode ?? '',
       'date_of_joining': e.dateOfJoining ?? '',
@@ -313,6 +319,24 @@ class _AddStaffFormPageState extends State<AddStaffFormPage> {
               }
               return null;
             }
+                : null,
+          ),
+        ],
+      );
+    }
+
+    // ── Textarea ─────────────────────────────────────────────────────────────
+    if (field.type == 'textarea') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label(field.label, required: field.required),
+          AppTextField(
+            controller: _ctrl(field.name),
+            hintText: '${field.label}...',
+            mxLine: 4,
+            validator: field.required
+                ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null
                 : null,
           ),
         ],

@@ -52,6 +52,7 @@ class CorrectionStudentData {
   final int? schoolClassSectionId;
   final String? photo;
   final String? photoUrl;
+  final String? profilePhotoUrl;
   final CorrectionStudentClass? studentClass;
   final CorrectionStudentSection? section;
 
@@ -75,6 +76,7 @@ class CorrectionStudentData {
     this.schoolClassSectionId,
     this.photo,
     this.photoUrl,
+    this.profilePhotoUrl,
     this.studentClass,
     this.section,
   });
@@ -100,6 +102,7 @@ class CorrectionStudentData {
       schoolClassSectionId: json['school_class_section_id'],
       photo: json['photo'],
       photoUrl: json['photo_url'],
+      profilePhotoUrl: json['profile_photo_url'],
       studentClass: json['class'] != null
           ? CorrectionStudentClass.fromJson(json['class'] as Map<String, dynamic>)
           : null,
@@ -126,7 +129,6 @@ class CorrectionStudentItem {
   });
 
   factory CorrectionStudentItem.fromJson(Map<String, dynamic> json) {
-    // student data can be in json['student'] or we build from old_data
     Map<String, dynamic>? studentJson = json['student'] as Map<String, dynamic>?;
     return CorrectionStudentItem(
       id: json['id'] ?? 0,
@@ -138,7 +140,6 @@ class CorrectionStudentItem {
   }
 }
 
-// ─── Original models ──────────────────────────────────────────────────────────
 
 class CorrectionSection {
   final int id;
@@ -195,7 +196,6 @@ class CorrectionItem {
   final CorrectionClass? classData;
   final int? sectionId;
 
-  // kept for backward compat (processOrder uses studentUuid)
   String? get studentUuid => uuid;
 
   const CorrectionItem({
@@ -209,7 +209,6 @@ class CorrectionItem {
     this.sectionId,
   });
 
-  /// Display label: class name + section names
   String get displayLabel {
     if (classData != null) {
       final cls = classData!.nameWithPrefix ?? classData!.name ?? '';

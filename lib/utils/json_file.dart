@@ -2,7 +2,9 @@
 
 List<Map<String, String>>  shapeList = [
   {"slug": "rectangle", "title": "Rectangle"},
-  {"slug": "circle", "title": "Circle"}
+  {"slug": "square", "title": "Square"},
+  {"slug": "round", "title": "Round"},
+  {"slug": "oval", "title": "Oval"},
 ];
 
 List<Map<String, String>> watermarkPositionList = [

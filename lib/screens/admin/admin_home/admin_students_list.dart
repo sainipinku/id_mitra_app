@@ -36,6 +36,9 @@ import 'package:idmitra/screens/home/StudentCard.dart';
 import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../providers/school/school_cubit.dart';
+import '../../orders/order_detail_page.dart';
+
 class AdminStudentsScreen extends StatefulWidget {
   final String? schoolId;
   final bool showAppBar;
@@ -191,7 +194,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
                   tabs: const [
                     Tab(text: 'Students List'),
                     Tab(text: 'Correction List'),
-                    Tab(text: 'Orders'),
+                    Tab(text: 'Orders List'),
                   ],
                 ),
               ),
@@ -423,19 +426,14 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
               const SizedBox(height: 15),
               Expanded(
                 child: BlocBuilder<StudentsCubit, StudentsState>(
-                  builder: (context, state) {
-                    if (state.loading)
-                      return const ShimmerList(expanded: false);
+                  builder: (context, studentsState) {
+                    final schoolState = context.watch<SchoolCubit>().state;
+                    final state = studentsState;
+                    if (state.loading) return const ShimmerList(expanded: false);
                     if (state.studentsList.isEmpty) {
-                      return Center(
-                        child: Image.asset(
-                          'assets/images/no_data.png',
-                          height: 200,
-                        ),
-                      );
+                      return Center(child: Image.asset('assets/images/no_data.png', height: 200));
                     }
-                    final itemCount =
-                        state.studentsList.length + (state.hasMore ? 1 : 0);
+                    final itemCount = state.studentsList.length + (state.hasMore ? 1 : 0);
                     if (_isGridView) {
                       return ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -448,18 +446,10 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
                               child: Center(
                                 child: SizedBox(
                                   width: 300,
-                                  child: Hero(
-                                    tag:
-                                        'student_card_${state.studentsList[index].uuid}',
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: StudentIdCardWidget(
-                                        student: state.studentsList[index],
-                                        schoolId: widget.schoolId,
-                                        schoolDetailsModel:
-                                            widget.schoolDetailsModel,
-                                      ),
-                                    ),
+                                  child: StudentIdCardWidget(
+                                    student: state.studentsList[index],
+                                    schoolId: widget.schoolId,
+                                    schoolDetailsModel: widget.schoolDetailsModel,
                                   ),
                                 ),
                               ),
@@ -478,11 +468,24 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
                       itemCount: itemCount,
                       itemBuilder: (context, index) {
                         if (index < state.studentsList.length) {
-                          final student = state.studentsList[index];
+                          String? imageShape = widget.schoolDetailsModel?.imageShape;
+                          try {
+                            final schoolId = widget.schoolDetailsModel?.id ??
+                                state.studentsList[index].schoolId;
+                            if (schoolId != null) {
+                              final match = schoolState.students.firstWhere(
+                                    (s) => s.id == schoolId,
+                                orElse: () => SchoolDetailsModel(),
+                              );
+                              if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                                imageShape = match.imageShape;
+                              }
+                            }
+                          } catch (_) {}
                           return StudentCard(
-                            key: ValueKey(student.uuid),
-                            studentData: student,
+                            studentData: state.studentsList[index],
                             schoolId: widget.schoolId,
+                            imageShape: imageShape,
                           );
                         }
                         return const Padding(
@@ -1038,6 +1041,7 @@ class _CorrectionStudentCard extends StatefulWidget {
   final CorrectionStudentItem item;
   final bool isSelected;
   final VoidCallback onToggle;
+
   const _CorrectionStudentCard({
     required this.item,
     required this.isSelected,
@@ -1128,16 +1132,26 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
             Text("Choose Image", style: MyStyles.boldText(size: 14, color: Colors.black)),
             const SizedBox(height: 15),
             InkWell(
-              onTap: () { Navigator.pop(ctx); _fromCamera(); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _fromCamera();
+              },
               child: Row(children: [
                 SvgPicture.asset('assets/icons/camera_single.svg'),
                 const SizedBox(width: 10),
                 Text("Camera", style: MyStyles.regularText(size: 14, color: Colors.black)),
               ]),
             ),
-            Container(margin: const EdgeInsets.symmetric(vertical: 10), height: 1, color: Colors.grey.shade300),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              height: 1,
+              color: Colors.grey.shade300,
+            ),
             InkWell(
-              onTap: () { Navigator.pop(ctx); _fromGallery(); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _fromGallery();
+              },
               child: Row(children: [
                 SvgPicture.asset('assets/icons/choose_from_gallery.svg'),
                 const SizedBox(width: 10),
@@ -1214,132 +1228,139 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
     final fatherPhone = s?.fatherPhone ?? '';
     final photoUrl = _currentPhotoUrl ?? '';
 
-    return GestureDetector(
-      onTap: widget.onToggle,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: widget.isSelected
-              ? AppTheme.btnColor.withOpacity(0.06)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: widget.isSelected ? AppTheme.btnColor : Colors.transparent,
-            width: 1.5,
-          ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.isSelected
+            ? AppTheme.btnColor.withOpacity(0.06)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: widget.isSelected ? AppTheme.btnColor : Colors.transparent,
+          width: 1.5,
         ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: Checkbox(
-                value: widget.isSelected,
-                onChanged: (_) => widget.onToggle(),
-                activeColor: AppTheme.btnColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                side: BorderSide(color: AppTheme.graySubTitleColor),
-              ),
+      ),
+      child: Row(
+        children: [
+          // Checkbox - Sirf ispe click karne par select hoga
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Checkbox(
+              value: widget.isSelected,
+              onChanged: (_) => widget.onToggle(),
+              activeColor: AppTheme.btnColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              side: BorderSide(color: AppTheme.graySubTitleColor),
             ),
-            const SizedBox(width: 10),
-            // Photo with tap handler
-            GestureDetector(
-              onTap: () {
-                if (photoUrl.isNotEmpty) {
-                  _showImagePreview(photoUrl);
-                } else {
-                  _showPicker();
-                }
-              },
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: _isUploading
-                        ? const SizedBox(
-                            height: 60,
-                            width: 60,
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                          )
-                        : photoUrl.isNotEmpty
-                            ? Image.network(
-                                photoUrl,
-                                height: 60,
-                                width: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _placeholder(),
-                              )
-                            : _placeholder(),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      height: 22,
-                      width: 22,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Icon(
-                        photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt,
-                        size: 12,
-                        color: Colors.white,
-                      ),
+          ),
+          const SizedBox(width: 10),
+
+          // Photo Section
+          GestureDetector(
+            onTap: () {
+              if (photoUrl.isNotEmpty) {
+                _showImagePreview(photoUrl);
+              } else {
+                _showPicker();
+              }
+            },
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: _isUploading
+                      ? const SizedBox(
+                    height: 60,
+                    width: 60,
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                      : photoUrl.isNotEmpty
+                      ? Image.network(
+                    photoUrl,
+                    height: 60,
+                    width: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _placeholder(),
+                  )
+                      : _placeholder(),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    height: 22,
+                    width: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt,
+                      size: 12,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
+          ),
+
+          const SizedBox(width: 12),
+
+          // Student Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        s?.name ?? '',
+                        style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (className.isNotEmpty) ...[
+                      const SizedBox(width: 5),
                       Flexible(
                         child: Text(
-                          s?.name ?? '',
-                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                          '• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
+                          style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (className.isNotEmpty) ...[
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: Text(
-                            '• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
-                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                if (fatherPhone.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.phone, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  if (fatherPhone.isNotEmpty)
-                    Row(
-                      children: [
-                        const Icon(Icons.phone, size: 12, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                      ],
-                    ),
-                  const SizedBox(height: 2),
-                  if ((s?.fatherName ?? '').isNotEmpty)
-                    Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                  if ((s?.motherName ?? '').isNotEmpty)
-                    Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                  if ((s?.address ?? '').isNotEmpty)
-                    Text(s!.address!, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor), overflow: TextOverflow.ellipsis, maxLines: 1),
-                ],
-              ),
+                const SizedBox(height: 2),
+                if ((s?.fatherName ?? '').isNotEmpty)
+                  Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                if ((s?.motherName ?? '').isNotEmpty)
+                  Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                if ((s?.address ?? '').isNotEmpty)
+                  Text(
+                    s!.address!,
+                    style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1967,9 +1988,7 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
                   itemBuilder: (_, i) {
                     if (i < state.ordersList.length) {
                       return _AdminOrderCard(
-                        order: state.ordersList[i],
-                        schoolId: widget.schoolId,
-                        isSchool: widget.isSchool,
+                          order: state.ordersList[i], schoolId: widget.schoolId
                       );
                     }
                     return const Padding(
@@ -2164,12 +2183,7 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
 class _AdminOrderCard extends StatefulWidget {
   final OrderModel order;
   final String schoolId;
-  final bool isSchool;
-  const _AdminOrderCard({
-    required this.order,
-    this.schoolId = '',
-    this.isSchool = true,
-  });
+  const _AdminOrderCard({required this.order, this.schoolId = ''});
 
   @override
   State<_AdminOrderCard> createState() => _AdminOrderCardState();
@@ -2187,63 +2201,49 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Color get _statusColor {
     switch (_currentStatus) {
-      case 'completed':
-        return const Color(0xFF2DC24E);
-      case 'cancelled':
-        return AppTheme.cancelTextColor;
-      case 'work_in_process':
-        return AppTheme.btnColor;
-      case 're_order':
-        return AppTheme.PendingDotColor;
-      default:
-        return AppTheme.graySubTitleColor;
+      case 'completed': return const Color(0xFF2DC24E);
+      case 'cancelled': return AppTheme.cancelTextColor;
+      case 'work_in_process': return AppTheme.btnColor;
+      case 're_order': return AppTheme.PendingDotColor;
+      default: return AppTheme.graySubTitleColor;
     }
   }
 
   Color get _statusBg {
     switch (_currentStatus) {
-      case 'completed':
-        return const Color(0xFFE8F9ED);
-      case 'cancelled':
-        return AppTheme.lightRedColor;
-      case 'work_in_process':
-        return AppTheme.lightBlueColor;
-      case 're_order':
-        return AppTheme.PendingLightColor;
-      default:
-        return AppTheme.appBackgroundColor;
+      case 'completed': return const Color(0xFFE8F9ED);
+      case 'cancelled': return AppTheme.lightRedColor;
+      case 'work_in_process': return AppTheme.lightBlueColor;
+      case 're_order': return AppTheme.PendingLightColor;
+      default: return AppTheme.appBackgroundColor;
     }
   }
 
   String get _statusLabel => kOrderStatuses
       .firstWhere(
         (s) => s.value == _currentStatus,
-        orElse: () => OrderStatusOption(
-          _currentStatus,
-          _currentStatus.replaceAll('_', ' '),
-        ),
-      )
+    orElse: () => OrderStatusOption(_currentStatus, _currentStatus.replaceAll('_', ' ')),
+  )
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
     setState(() => _updating = true);
-    final success = await context.read<OrdersCubit>().updateOrderStatus(
-      widget.order.uuid,
-      newStatus,
-    );
-    if (!mounted) return;
-    setState(() {
-      _updating = false;
-      if (success) _currentStatus = newStatus;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? 'Status updated successfully' : 'Failed to update status',
+    final success = await context.read<OrdersCubit>().updateOrderStatus(widget.order.uuid, newStatus);
+    if (mounted) {
+      setState(() {
+        _updating = false;
+        if (success) _currentStatus = newStatus;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Status updated successfully' : 'Failed to update status'),
+          backgroundColor: success ? AppTheme.btnColor : Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
         ),
-        backgroundColor: success ? AppTheme.btnColor : Colors.red,
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -2254,35 +2254,25 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => AdminOrderDetailPage(
-            uuid: widget.order.uuid,
-            schoolId: widget.schoolId,
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => OrderDetailPage(uuid: widget.order.uuid)),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child:
-                  (student?.profilePhotoUrl != null &&
-                      student!.profilePhotoUrl!.isNotEmpty)
+              child: (student?.profilePhotoUrl != null && student!.profilePhotoUrl!.isNotEmpty)
                   ? Image.network(
-                      student.profilePhotoUrl!,
-                      height: 60,
-                      width: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
-                    )
+                student.profilePhotoUrl!,
+                height: 60,
+                width: 60,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _placeholder(),
+              )
                   : _placeholder(),
             ),
             const SizedBox(width: 12),
@@ -2295,10 +2285,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                       Flexible(
                         child: Text(
                           student?.name ?? '-',
-                          style: MyStyles.boldText(
-                            size: 16,
-                            color: AppTheme.black_Color,
-                          ),
+                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2307,10 +2294,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                         Flexible(
                           child: Text(
                             '• ${student!.className!}',
-                            style: MyStyles.boldText(
-                              size: 14,
-                              color: AppTheme.btnColor,
-                            ),
+                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -2321,28 +2305,14 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                   if (school?.name != null)
                     Text(
                       school!.name,
-                      style: MyStyles.regularText(
-                        size: 12,
-                        color: AppTheme.graySubTitleColor,
-                      ),
+                      style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor),
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '#${widget.order.id} • ${widget.order.typeLabel}',
-                    style: MyStyles.regularText(
-                      size: 12,
-                      color: AppTheme.graySubTitleColor,
-                    ),
-                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: _statusBg,
                           borderRadius: BorderRadius.circular(20),
@@ -2353,35 +2323,19 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                             Container(
                               width: 5,
                               height: 5,
-                              decoration: BoxDecoration(
-                                color: _statusColor,
-                                shape: BoxShape.circle,
-                              ),
+                              decoration: BoxDecoration(color: _statusColor, shape: BoxShape.circle),
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              _statusLabel,
-                              style: MyStyles.mediumText(
-                                size: 11,
-                                color: _statusColor,
-                              ),
-                            ),
+                            Text(_statusLabel, style: MyStyles.mediumText(size: 11, color: _statusColor)),
                           ],
                         ),
                       ),
                       const Spacer(),
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 11,
-                        color: AppTheme.graySubTitleColor,
-                      ),
+                      Icon(Icons.calendar_today_outlined, size: 11, color: AppTheme.graySubTitleColor),
                       const SizedBox(width: 3),
                       Text(
                         widget.order.orderedAt,
-                        style: MyStyles.regularText(
-                          size: 11,
-                          color: AppTheme.graySubTitleColor,
-                        ),
+                        style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
                       ),
                     ],
                   ),
@@ -2390,47 +2344,53 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
             ),
             _updating
                 ? const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.btnColor,
-                      ),
-                    ),
-                  )
-                : _currentStatus == 'completed'
-                ? const SizedBox.shrink()
+              padding: EdgeInsets.all(4),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor),
+              ),
+            )
                 : PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.grey),
-                    offset: const Offset(0, 32),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 8,
-                    onSelected: _updateStatus,
-                    itemBuilder: (_) => [
-                      const PopupMenuItem<String>(
-                        value: 'completed',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline,
-                              size: 16,
-                              color: AppTheme.graySubTitleColor,
-                            ),
-                            SizedBox(width: 10),
-                            Text('Mark as Completed'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              offset: const Offset(0, 32),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 8,
+              onSelected: _updateStatus,
+              itemBuilder: (_) => _buildStatusMenuItems(),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  List<PopupMenuEntry<String>> _buildStatusMenuItems() {
+    // Driven by kOrderStatuses from OrderModel — same source as the filter dropdown
+    return kOrderStatuses
+        .where((s) => s.value != _currentStatus)
+        .map((s) => PopupMenuItem<String>(
+      value: s.value,
+      child: Row(
+        children: [
+          Icon(_statusIcon(s.value), size: 16, color: AppTheme.graySubTitleColor),
+          const SizedBox(width: 10),
+          Text(s.label),
+        ],
+      ),
+    ))
+        .toList();
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'completed': return Icons.check_circle_outline;
+      case 'cancelled': return Icons.cancel_outlined;
+      case 're_order': return Icons.refresh_rounded;
+      case 'work_in_process': return Icons.hourglass_top_rounded;
+      case 'order_created': return Icons.add_circle_outline;
+      default: return Icons.circle_outlined;
+    }
   }
 
   Widget _placeholder() => Container(
