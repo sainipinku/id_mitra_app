@@ -126,6 +126,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     required String schoolId,
     String processType = 'create',
     String listType = 'class_wise',
+    String cardType = '',
+    List<String> cardFor = const [],
   }) async {
     if (state.selectedStudentIds.isEmpty) return;
     final selectedUuids = state.students
@@ -141,10 +143,12 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     emit(state.copyWith(sendOrderLoading: true, clearSendOrderError: true, sendOrderSuccess: false));
     try {
       final url = '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/process';
-      final body = {
+      final body = <String, dynamic>{
         'processType': processType,
         'listType': listType,
         'students': selectedUuids,
+        if (cardType.isNotEmpty) 'card_type': cardType,
+        if (cardFor.isNotEmpty) 'card_for': cardFor,
       };
       final response = await _api.postRequest(body, url);
       if (response == null) {

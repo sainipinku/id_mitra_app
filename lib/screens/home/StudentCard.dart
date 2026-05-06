@@ -47,18 +47,19 @@ class _StudentCardState extends State<StudentCard> {
       imageQuality: 100,
     );
 
-    if (pickedFile != null) {
+    if (pickedFile != null && mounted) {
       File rotatedImage = await FlutterExifRotation.rotateImage(
         path: pickedFile.path,
       );
 
-      await _uploadImage(rotatedImage.path);
+      if (mounted) await _uploadImage(rotatedImage.path);
     }
   }
+
   /// 🖼 Gallery — crop then upload
   Future<void> _fromGallery() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    if (pickedFile != null && mounted) {
       studentProfileImageFile = File(pickedFile.path);
       await _cropAndUpload();
     }
@@ -66,7 +67,7 @@ class _StudentCardState extends State<StudentCard> {
 
   /// ✂️ Crop (gallery only)
   Future<void> _cropAndUpload() async {
-    if (studentProfileImageFile == null) return;
+    if (studentProfileImageFile == null || !mounted) return;
 
     CroppedFile? croppedFile = await ImageCropper().cropImage(
       sourcePath: studentProfileImageFile!.path,
@@ -83,7 +84,7 @@ class _StudentCardState extends State<StudentCard> {
       ],
     );
 
-    if (croppedFile != null) {
+    if (croppedFile != null && mounted) {
       await _uploadImage(croppedFile.path);
     }
   }
@@ -108,6 +109,7 @@ class _StudentCardState extends State<StudentCard> {
 
   /// ⬆️ Upload image
   Future<void> _uploadImage(String path) async {
+    if (!mounted) return;
     setState(() => isUploading = true);
 
     try {
@@ -118,6 +120,8 @@ class _StudentCardState extends State<StudentCard> {
         Config.baseUrl +
             Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
       );
+
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
@@ -132,6 +136,7 @@ class _StudentCardState extends State<StudentCard> {
       debugPrint("Upload error: $e");
     }
 
+    if (!mounted) return;
     setState(() => isUploading = false);
   }
 

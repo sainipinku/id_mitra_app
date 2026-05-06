@@ -34,6 +34,10 @@ class StaffCorrectionState {
   final bool hasMore;
   final int total;
   final String? error;
+  final Set<int> selectedIds;
+  final bool sendOrderLoading;
+  final bool sendOrderSuccess;
+  final String? sendOrderError;
 
   const StaffCorrectionState({
     this.loading = false,
@@ -42,6 +46,10 @@ class StaffCorrectionState {
     this.hasMore = true,
     this.total = 0,
     this.error,
+    this.selectedIds = const {},
+    this.sendOrderLoading = false,
+    this.sendOrderSuccess = false,
+    this.sendOrderError,
   });
 
   StaffCorrectionState copyWith({
@@ -52,6 +60,11 @@ class StaffCorrectionState {
     int? total,
     String? error,
     bool? clearError,
+    Set<int>? selectedIds,
+    bool? sendOrderLoading,
+    bool? sendOrderSuccess,
+    String? sendOrderError,
+    bool? clearSendOrderError,
   }) {
     return StaffCorrectionState(
       loading: loading ?? this.loading,
@@ -60,6 +73,10 @@ class StaffCorrectionState {
       hasMore: hasMore ?? this.hasMore,
       total: total ?? this.total,
       error: clearError == true ? null : (error ?? this.error),
+      selectedIds: selectedIds ?? this.selectedIds,
+      sendOrderLoading: sendOrderLoading ?? this.sendOrderLoading,
+      sendOrderSuccess: sendOrderSuccess ?? this.sendOrderSuccess,
+      sendOrderError: clearSendOrderError == true ? null : (sendOrderError ?? this.sendOrderError),
     );
   }
 }

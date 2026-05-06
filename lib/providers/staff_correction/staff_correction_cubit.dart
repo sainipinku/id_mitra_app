@@ -82,4 +82,71 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
       emit(state.copyWith(loading: false, error: e.toString()));
     }
   }
+
+  void toggleSelection(int id) {
+    final current = Set<int>.from(state.selectedIds);
+    if (current.contains(id)) {
+      current.remove(id);
+    } else {
+      current.add(id);
+    }
+    emit(state.copyWith(selectedIds: current));
+  }
+
+  void selectAll() {
+    emit(state.copyWith(selectedIds: state.items.map((e) => e.id).toSet()));
+  }
+
+  void clearSelection() {
+    emit(state.copyWith(selectedIds: {}));
+  }
+
+  Future<void> processOrder({
+    required String schoolId,
+    String cardType = '',
+    List<String> cardFor = const [],
+  }) async {
+    if (state.selectedIds.isEmpty) return;
+
+    final selectedUuids = state.items
+        .where((s) => state.selectedIds.contains(s.id) && s.uuid != null)
+        .map((s) => s.uuid!)
+        .toList();
+
+    if (selectedUuids.isEmpty) {
+      emit(state.copyWith(sendOrderError: 'No valid items found for selected entries'));
+      return;
+    }
+
+    emit(state.copyWith(sendOrderLoading: true, clearSendOrderError: true, sendOrderSuccess: false));
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/staff/correction-lists/process';
+      final body = <String, dynamic>{
+        'processType': 'create',
+        'staff': selectedUuids,
+        if (cardType.isNotEmpty) 'card_type': cardType,
+        if (cardFor.isNotEmpty) 'card_for': cardFor,
+      };
+      final response = await _api.postRequest(body, url);
+      if (response == null) {
+        emit(state.copyWith(sendOrderLoading: false, sendOrderError: 'Failed to process order'));
+        return;
+      }
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderSuccess: true,
+          selectedIds: {},
+        ));
+      } else {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderError: json['message'] ?? 'Failed to process order',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(sendOrderLoading: false, sendOrderError: e.toString()));
+    }
+  }
 }

@@ -93,5 +93,13 @@ class Routes {
       "auth/school/$schoolId/students/$studentUuid/move-to-extra";
   static String assignStudent(String schoolId, String studentUuid) =>
       "auth/school/$schoolId/students/$studentUuid/assign";
+  static String getHolidays(String schoolId, {int? year, String search = ''}) {
+    String url = "auth/school/$schoolId/holidays?per_page=100";
+    if (year != null) url += "&year=$year";
+    if (search.isNotEmpty) url += "&search=$search";
+    return url;
+  }
+  static String addHoliday(String schoolId) => "auth/school/$schoolId/holidays";
+  static String deleteHoliday(String schoolId, int holidayId) => "auth/school/$schoolId/holidays/$holidayId";
 }
 

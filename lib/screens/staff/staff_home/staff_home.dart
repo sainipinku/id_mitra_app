@@ -110,13 +110,13 @@ class _StaffHomeView extends StatelessWidget {
                       color: Colors.orange,
                       button: onStudentsTap ?? () {},
                     ),
-                    StatCard(
-                      title: "Total Staff",
-                      value: '${data?.summary.staff ?? 0}',
-                      icon: Icons.group,
-                      color: Colors.blue,
-                      button: onStaffTap ?? () {},
-                    ),
+                    // StatCard(
+                    //   title: "Total Staff",
+                    //   value: '${data?.summary.staff ?? 0}',
+                    //   icon: Icons.group,
+                    //   color: Colors.blue,
+                    //   button: onStaffTap ?? () {},
+                    // ),
                     StatCard(
                       title: "Total Orders",
                       value: '${data?.summary.orders.total ?? 0}',
@@ -336,16 +336,16 @@ class _QuickActions extends StatelessWidget {
             onTap: () => _navigateToAddStudent(context),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ActionTile(
-            label: "Add Staff",
-            icon: Icons.group_add_outlined,
-            color: AppTheme.btnColor,
-            width: width,
-            onTap: () => _navigateToAddStaff(context),
-          ),
-        ),
+        // const SizedBox(width: 12),
+        // Expanded(
+        //   child: _ActionTile(
+        //     label: "Add Staff",
+        //     icon: Icons.group_add_outlined,
+        //     color: AppTheme.btnColor,
+        //     width: width,
+        //     onTap: () => _navigateToAddStaff(context),
+        //   ),
+        // ),
       ],
     );
   }

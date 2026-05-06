@@ -240,7 +240,6 @@ class _TotalCountBanner extends StatelessWidget {
   }
 }
 
-// ── Count Banner (single tab) ─────────────────────────────────────────────────
 class _CountBanner extends StatelessWidget {
   final int total;
   final String label;
@@ -318,7 +317,6 @@ class _StudentsTabState extends State<_StudentsTab> {
       search: '',
       schoolId: widget.schoolId,
     );
-    // Fetch imageShape for this school so StudentCard can apply correct shape
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
@@ -486,6 +484,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                             }
                           } catch (_) {}
                           return StudentCard(
+                            key: ValueKey(state.studentsList[index].uuid),
                             studentData: state.studentsList[index],
                             schoolId: widget.schoolId,
                             imageShape: imageShape,
@@ -713,9 +712,7 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
           Expanded(
             child: BlocBuilder<CorrectionCubit, CorrectionState>(
               builder: (context, state) {
-                // Watch SchoolCubit so list rebuilds when imageShape changes
                 final schoolState = context.watch<SchoolCubit>().state;
-                // Resolve imageShape for this school
                 String? imageShape = widget.schoolDetailsModel?.imageShape;
                 try {
                   final schoolId = widget.schoolDetailsModel?.id;
@@ -794,8 +791,7 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                               state.sendOrderLoading
                                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.btnColor))
                                   : GestureDetector(
-                                      onTap: (){},
-                                      //=> context.read<CorrectionCubit>().processOrder(schoolId: widget.schoolId),
+                                      onTap: () => _showCreateOrderDialog(context),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                                         decoration: BoxDecoration(color: AppTheme.btnColor, borderRadius: BorderRadius.circular(20)),
@@ -804,7 +800,7 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                                           children: [
                                             const Icon(Icons.send_rounded, size: 13, color: Colors.white),
                                             const SizedBox(width: 5),
-                                            Text('Send Order', style: MyStyles.mediumText(size: 12, color: Colors.white)),
+                                            Text('Create Order', style: MyStyles.mediumText(size: 12, color: Colors.white)),
                                           ],
                                         ),
                                       ),
@@ -951,6 +947,17 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
       builder: (_) => BlocProvider.value(
         value: ctx.read<CorrectionCubit>(),
         child: _DownloadChecklistDialog(schoolId: widget.schoolId),
+      ),
+    );
+  }
+
+  void _showCreateOrderDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider.value(
+        value: ctx.read<CorrectionCubit>(),
+        child: _CreateOrderDialog(schoolId: widget.schoolId),
       ),
     );
   }
@@ -1367,6 +1374,243 @@ class _CorrectionCardState extends State<_CorrectionCard> {
           child: SizedBox(width: 60, height: 60, child: content),
         );
     }
+  }
+}
+
+class _CreateOrderDialog extends StatefulWidget {
+  final String schoolId;
+  const _CreateOrderDialog({required this.schoolId});
+
+  @override
+  State<_CreateOrderDialog> createState() => _CreateOrderDialogState();
+}
+
+class _CreateOrderDialogState extends State<_CreateOrderDialog> {
+  static const _cardTypes = [
+    {'value': '', 'label': '-Select card Type-'},
+    {'value': 'pvc_card', 'label': 'Pvc Card'},
+    {'value': 'rfid_card', 'label': 'RFID Card'},
+    {'value': 'pasting_card', 'label': 'Pasting card'},
+    {'value': 'acrylic_card', 'label': 'Acrylic Card'},
+    {'value': 'nfc_card', 'label': 'NFC Card'},
+    {'value': 'my_fair_card', 'label': 'My Fair Card'},
+  ];
+
+  static const _cardForOptions = [
+    {'value': 'student_card', 'label': 'Student Card'},
+    {'value': 'parent_card', 'label': 'Parent Card'},
+    {'value': 'admit_card', 'label': 'Admit Card'},
+  ];
+
+  String _selectedCardType = '';
+  final Set<String> _selectedCardFor = {'student_card', 'parent_card'};
+
+  void _toggleCardFor(String value) {
+    setState(() {
+      if (_selectedCardFor.contains(value)) {
+        _selectedCardFor.remove(value);
+      } else {
+        _selectedCardFor.add(value);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+          p.sendOrderLoading != c.sendOrderLoading ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
+      listener: (ctx, state) {
+        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+          Navigator.of(context).pop();
+        }
+        if (!state.sendOrderLoading && state.sendOrderError != null) {
+          Navigator.of(context).pop();
+        }
+      },
+      builder: (context, state) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              Row(
+                children: [
+                  Text('Create Order', style: MyStyles.boldText(size: 18, color: AppTheme.black_Color)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading ? null : () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+
+              // Card Type Dropdown
+              Text('Create Card Order For', style: MyStyles.mediumText(size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedCardType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+                    items: _cardTypes.map((t) => DropdownMenuItem<String>(
+                      value: t['value']!,
+                      child: Text(
+                        t['label']!,
+                        style: MyStyles.regularText(
+                          size: 14,
+                          color: t['value']!.isEmpty
+                              ? AppTheme.graySubTitleColor
+                              : AppTheme.black_Color,
+                        ),
+                      ),
+                    )).toList(),
+                    onChanged: (v) => setState(() => _selectedCardType = v ?? ''),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              ..._cardForOptions.map((opt) {
+                final isSelected = _selectedCardFor.contains(opt['value']);
+                return GestureDetector(
+                  onTap: () => _toggleCardFor(opt['value']!),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.btnColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: isSelected ? AppTheme.btnColor : Colors.grey.shade400,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check, size: 14, color: Colors.white)
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(opt['label']!, style: MyStyles.regularText(size: 14, color: AppTheme.black_Color)),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 20),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: state.sendOrderLoading ? null : () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B6B),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.refresh, size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text('Cancel', style: MyStyles.mediumText(size: 14, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () {
+                            if (_selectedCardType.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: const Text('Please select a card type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            if (_selectedCardFor.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: const Text('Please select at least one card option'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            context.read<CorrectionCubit>().processOrder(
+                              schoolId: widget.schoolId,
+                              cardType: _selectedCardType,
+                              cardFor: _selectedCardFor.toList(),
+                            );
+                          },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: state.sendOrderLoading ? Colors.grey : const Color(0xFF6C63FF),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: state.sendOrderLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.add_circle_outline, size: 14, color: Colors.white),
+                                const SizedBox(width: 6),
+                                Text('Create', style: MyStyles.mediumText(size: 14, color: Colors.white)),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

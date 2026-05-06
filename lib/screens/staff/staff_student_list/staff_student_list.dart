@@ -262,7 +262,6 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
             schoolDetailsModel: widget.schoolDetailsModel,
             isGridView: _studentsIsGridView,
           ),
-          // Tab 2: Correction List (isSchool = true for staff)
           BlocProvider(
             create: (_) =>
                 CorrectionCubit()..fetchCorrectionStudents(schoolId: _schoolId),
@@ -288,7 +287,6 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
   }
 }
 
-// ── Staff Count Banner ───────────────────────────────────────────────────────
 class _StaffCountRow extends StatelessWidget {
   final int total;
   final String label;
@@ -324,7 +322,6 @@ class _StaffCountBanner extends StatelessWidget {
           total = context.watch<StudentsCubit>().state.total;
           label = 'Total Students';
         }
-        // Tab 1 & 2 counts are shown inside each tab's own banner
         return tab == 0
             ? _StaffCountRow(total: total, label: label)
             : const SizedBox.shrink();
@@ -576,7 +573,7 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
                             }
                           } catch (_) {}
                           return StudentCard(
-                            key: ValueKey(student.uuid),
+                            key: ValueKey(state.studentsList[index].uuid),
                             studentData: student,
                             schoolId: widget.schoolId,
                             imageShape: imageShape,
@@ -995,7 +992,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                                             ),
                                             const SizedBox(width: 5),
                                             Text(
-                                              'Send Order',
+                                              'Create order',
                                               style: MyStyles.mediumText(
                                                 size: 12,
                                                 color: Colors.white,
@@ -1412,7 +1409,6 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
             ),
           ),
 
-          // Rest of card — tap to open edit form
           Expanded(
             child: GestureDetector(
               onTap: () => widget.onTapCard?.call(),
@@ -1455,7 +1451,6 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
 
           const SizedBox(width: 12),
 
-          // Student Details Section
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

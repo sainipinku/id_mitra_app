@@ -16,6 +16,7 @@ import 'package:idmitra/utils/MyStyles.dart';
 
 import '../../../models/schools/SchoolListModel.dart';
 import '../../staff/staff_student_list/add_staff_form.dart';
+import '../holidays/holidays_screen.dart';
 
 class AdminHome extends StatelessWidget {
   final VoidCallback? onStudentAdded;
@@ -134,7 +135,8 @@ class _AdminHomeView extends StatelessWidget {
 
                 if (data != null) _AttendanceCard(attendance: data.attendance),
                 const SizedBox(height: 20),
-
+                _HolidaysTile(),
+                const SizedBox(height: 20),
                 Text(
                   "Quick Actions",
                   style: MyStyles.boldTxt(AppTheme.black_Color, 16),
@@ -286,15 +288,6 @@ class _AttendanceCard extends StatelessWidget {
               '${attendance.attendancePercentage.toStringAsFixed(1)}% attendance',
               style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _AttStat('Present', attendance.present, Colors.green),
-                _AttStat('Absent', attendance.absent, Colors.red),
-                _AttStat('Late', attendance.late, Colors.orange),
-                _AttStat('Leave', attendance.leave, Colors.blue),
-              ],
-            ),
           ],
         ],
       ),
@@ -438,6 +431,57 @@ class _ActionTile extends StatelessWidget {
               label,
               style: MyStyles.regularTxt(AppTheme.black_Color, width * 0.033),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class _HolidaysTile extends StatelessWidget {
+  const _HolidaysTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final school = await UserLocal.getSchool();
+        final schoolId = school['schoolId']?.toString() ?? '';
+        if (!context.mounted || schoolId.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => HolidaysScreen(schoolId: schoolId)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppTheme.btnColor.withOpacity(0.12),
+              child: Icon(Icons.calendar_month, color: AppTheme.btnColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Holidays', style: MyStyles.boldTxt(AppTheme.black_Color, 15)),
+                  Text(
+                    'View & manage school holidays',
+                    style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.graySubTitleColor),
           ],
         ),
       ),

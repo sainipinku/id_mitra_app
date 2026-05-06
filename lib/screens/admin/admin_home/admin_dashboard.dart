@@ -93,7 +93,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _profileImage = user['profileImage'] ?? '';
         _schoolId = newSchoolId;
       });
-      // Trigger staff fetch once we have a valid schoolId
       if (newSchoolId.isNotEmpty) {
         _staffCubit.fetchStaff(schoolId: newSchoolId);
       }

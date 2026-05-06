@@ -41,7 +41,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
   final StudentsCubit _studentsCubit = StudentsCubit();
   final StaffCubit _staffCubit = StaffCubit();
 
-  List<Widget> _getWidgets(String schoolId,SchoolDetailsModel? schoolDetailsModel) {
+  List<Widget> _getWidgets(String schoolId, SchoolDetailsModel? schoolDetailsModel) {
     return [
       StaffHome(
         onStudentAdded: _onStudentAdded,
@@ -51,12 +51,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
       ),
       BlocProvider.value(
         value: _studentsCubit,
-        child: StaffStudentsScreen(schoolId: schoolId,
-          schoolDetailsModel: schoolDetailsModel,),
+        child: StaffStudentsScreen(
+          schoolId: schoolId,
+          schoolDetailsModel: schoolDetailsModel,
+        ),
       ),
       BlocProvider.value(
         value: _staffCubit,
-        child: StaffListingPage(schoolId: schoolId, showAppBar: false,),
+        child: StaffListingPage(schoolId: schoolId, showAppBar: false),
       ),
     ];
   }
@@ -210,15 +212,15 @@ class _StaffDashboardState extends State<StaffDashboard> {
                             ),
                             label: "Students",
                           ),
-                          BottomNavigationBarItem(
-                            icon: Icon(
-                              Icons.group_outlined,
-                              color: _selectedIndex == 2
-                                  ? AppTheme.btnColor
-                                  : AppTheme.black_Color,
-                            ),
-                            label: "Staff",
-                          ),
+                          // BottomNavigationBarItem(
+                          //   icon: Icon(
+                          //     Icons.group_outlined,
+                          //     color: _selectedIndex == 2
+                          //         ? AppTheme.btnColor
+                          //         : AppTheme.black_Color,
+                          //   ),
+                          //   label: "Staff",
+                          // ),
                         ],
                       ),
                     ),
