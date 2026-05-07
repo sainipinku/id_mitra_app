@@ -41,12 +41,14 @@ class StaffStudentsScreen extends StatefulWidget {
   final String? schoolId;
   final bool showAppBar;
   final SchoolDetailsModel? schoolDetailsModel;
+  final List<int> assignedClassIds;
 
   const StaffStudentsScreen({
     super.key,
     this.schoolId,
     this.showAppBar = false,
     this.schoolDetailsModel,
+    this.assignedClassIds = const [],
   });
 
   @override
@@ -71,9 +73,14 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
       _schoolLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          // Agar staff ko assigned classes hain to pehli class se filter karo
+          final classId = widget.assignedClassIds.isNotEmpty
+              ? widget.assignedClassIds.first.toString()
+              : '';
           context.read<StudentsCubit>().fetchStudents(
             search: '',
             schoolId: _schoolId,
+            classId: classId,
           );
         }
       });
@@ -91,9 +98,13 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          final classId = widget.assignedClassIds.isNotEmpty
+              ? widget.assignedClassIds.first.toString()
+              : '';
           context.read<StudentsCubit>().fetchStudents(
             search: '',
             schoolId: _schoolId,
+            classId: classId,
           );
         }
       });
@@ -261,6 +272,7 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
             schoolId: _schoolId,
             schoolDetailsModel: widget.schoolDetailsModel,
             isGridView: _studentsIsGridView,
+            assignedClassIds: widget.assignedClassIds,
           ),
           BlocProvider(
             create: (_) =>
@@ -334,7 +346,13 @@ class _StaffStudentsTab extends StatefulWidget {
   final String schoolId;
   final SchoolDetailsModel? schoolDetailsModel;
   final bool isGridView;
-  const _StaffStudentsTab({required this.schoolId, this.schoolDetailsModel, this.isGridView = false});
+  final List<int> assignedClassIds;
+  const _StaffStudentsTab({
+    required this.schoolId,
+    this.schoolDetailsModel,
+    this.isGridView = false,
+    this.assignedClassIds = const [],
+  });
 
   @override
   State<_StaffStudentsTab> createState() => _StaffStudentsTabState();
@@ -358,12 +376,21 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
           search: _searchCtrl.text.trim(),
           schoolId: widget.schoolId,
           gender: '',
-          classId: '',
+          classId: widget.assignedClassIds.isNotEmpty
+              ? widget.assignedClassIds.first.toString()
+              : '',
         );
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        // Agar assigned classes hain to filter apply karo
+        if (widget.assignedClassIds.isNotEmpty) {
+          context.read<StudentsCubit>().applyFilters(
+            classId: widget.assignedClassIds.first.toString(),
+            schoolId: widget.schoolId,
+          );
+        }
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
           final existing = context.read<SchoolCubit>().state.students
@@ -415,6 +442,23 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.assignedClassIds.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/images/no_data.png', height: 200),
+              const SizedBox(height: 12),
+              Text(
+                'No classes assigned',
+                style: MyStyles.mediumText(size: 16, color: AppTheme.graySubTitleColor),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       floatingActionButton: _isGridView
           ? null
@@ -1553,31 +1597,10 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
   String _printType = '';
 
   List<Map<String, String>> _buildPrintTypes(List<CorrectionItem> items) {
-    final types = items
-        .map((e) => e.listType ?? '')
-        .where((t) => t.isNotEmpty)
-        .toSet()
-        .toList();
     return [
       {'value': '', 'label': '-Select Print Type-'},
-      ...types.map(
-        (t) => {
-          'value': t,
-          'label': t == 'class_wise'
-              ? 'Class Wise'
-              : t == 'section_wise'
-              ? 'Section Wise'
-              : t
-                    .replaceAll('_', ' ')
-                    .split(' ')
-                    .map(
-                      (w) => w.isNotEmpty
-                          ? '${w[0].toUpperCase()}${w.substring(1)}'
-                          : '',
-                    )
-                    .join(' '),
-        },
-      ),
+      {'value': 'class_wise', 'label': 'Class Wise'},
+      {'value': 'section_wise', 'label': 'Section Wise'},
     ];
   }
 

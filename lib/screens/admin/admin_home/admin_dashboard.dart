@@ -27,7 +27,7 @@ import 'admin_students_list.dart';
 class AdminDashboard extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
 
-   AdminDashboard({super.key,this.schoolDetailsModel});
+  AdminDashboard({super.key,this.schoolDetailsModel});
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
@@ -153,14 +153,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             final summary = dashState.dashboard?.data.summary;
             final schoolDetailsModel = dashSchool != null
                 ? SchoolDetailsModel(
-                    id: dashSchool.id,
-                    name: dashSchool.name,
-                    schoolPrefix: dashSchool.schoolPrefix,
-                    logoUrl: dashSchool.logoUrl,
-                    studentCount: summary?.students,
-                    staffCount: summary?.staff,
-                    orderCount: summary?.orders.total,
-                  )
+              id: dashSchool.id,
+              name: dashSchool.name,
+              schoolPrefix: dashSchool.schoolPrefix,
+              logoUrl: dashSchool.logoUrl,
+              studentCount: summary?.students,
+              staffCount: summary?.staff,
+              orderCount: summary?.orders.total,
+            )
                 : null;
             return Scaffold(
               appBar: _appBar(context, dashSchool, dashState),

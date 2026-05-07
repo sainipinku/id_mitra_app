@@ -16,6 +16,7 @@ import 'package:idmitra/utils/MyStyles.dart';
 
 import '../../../models/schools/SchoolListModel.dart';
 import '../../staff/staff_student_list/add_staff_form.dart';
+import '../attendance/attendance_screen.dart';
 import '../holidays/holidays_screen.dart';
 
 class AdminHome extends StatelessWidget {
@@ -23,7 +24,7 @@ class AdminHome extends StatelessWidget {
   final VoidCallback? onStudentsTap;
   final VoidCallback? onStaffTap;
   SchoolDetailsModel? schoolDetailsModel;
-   AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
+  AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +38,7 @@ class _AdminHomeView extends StatelessWidget {
   final VoidCallback? onStaffTap;
   SchoolDetailsModel? schoolDetailsModel;
 
-   _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
+  _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +137,8 @@ class _AdminHomeView extends StatelessWidget {
                 if (data != null) _AttendanceCard(attendance: data.attendance),
                 const SizedBox(height: 20),
                 _HolidaysTile(),
+                const SizedBox(height: 12),
+                _AttendanceTile(),
                 const SizedBox(height: 20),
                 Text(
                   "Quick Actions",
@@ -332,8 +335,8 @@ class _QuickActions extends StatelessWidget {
           providers: [
             BlocProvider(
               create: (_) =>
-                  StudentFormCubit()
-                    ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
+              StudentFormCubit()
+                ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
             ),
             BlocProvider(create: (_) => StudentFormDataCubit()..load(schoolId)),
             BlocProvider(create: (_) => AddStudentCubit()),
@@ -476,6 +479,58 @@ class _HolidaysTile extends StatelessWidget {
                   Text('Holidays', style: MyStyles.boldTxt(AppTheme.black_Color, 15)),
                   Text(
                     'View & manage school holidays',
+                    style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.graySubTitleColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttendanceTile extends StatelessWidget {
+  const _AttendanceTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final school = await UserLocal.getSchool();
+        final schoolId = school['schoolId']?.toString() ?? '';
+        if (!context.mounted || schoolId.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => AttendanceScreen(schoolId: schoolId)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppTheme.btnColor.withOpacity(0.12),
+              child: Icon(Icons.how_to_reg_outlined, color: AppTheme.btnColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Attendance', style: MyStyles.boldTxt(AppTheme.black_Color, 15)),
+                  Text(
+                    'View & mark student attendance',
                     style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
                   ),
                 ],

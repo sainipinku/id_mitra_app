@@ -20,7 +20,9 @@ import '../staff_student_list/staff_student_list.dart';
 
 class StaffUserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
-  StaffUserDetailsPage({super.key, this.schoolDetailsModel});
+  final List<int> assignedClassIds;
+
+  StaffUserDetailsPage({super.key, this.schoolDetailsModel, this.assignedClassIds = const [],});
 
   @override
   State<StaffUserDetailsPage> createState() => _StaffUserDetailsPageState();
@@ -46,12 +48,15 @@ class _StaffUserDetailsContent extends StatefulWidget {
   final List<String> tabs;
   final int selectedIndex;
   final void Function(int) onTabChanged;
+  final List<int> assignedClassIds;
 
   const _StaffUserDetailsContent({
     this.schoolDetailsModel,
     required this.tabs,
     required this.selectedIndex,
     required this.onTabChanged,
+    this.assignedClassIds = const [],
+
   });
 
   @override
@@ -115,10 +120,10 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                 value: 'image_settings',
                 child: Row(children: [Icon(Icons.image), SizedBox(width: 10), Text('Image Settings')]),
               ),
-              PopupMenuItem(
-                value: 'profile_settings',
-                child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
-              ),
+              // PopupMenuItem(
+              //   value: 'profile_settings',
+              //   child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
+              // ),
               PopupMenuItem(
                 value: 'student_form',
                 child: Row(children: [Icon(Icons.assignment), SizedBox(width: 10), Text('Student Form')]),
@@ -265,9 +270,10 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                       page: BlocProvider(
                         create: (_) => StudentsCubit(),
                         child: StaffStudentsScreen(
-                          schoolId: schoolDetailsModel?.id.toString() ?? '',
-                          showAppBar: true,
+                          schoolId: schoolDetailsModel?.id?.toString() ?? '',
                           schoolDetailsModel: schoolDetailsModel,
+                          showAppBar: true,
+                          assignedClassIds: widget.assignedClassIds,
                         ),
                       ),
                     ),

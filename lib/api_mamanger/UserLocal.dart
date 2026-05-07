@@ -1,4 +1,5 @@
 
+import 'dart:convert';
 import 'package:idmitra/models/LoginModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,6 +16,11 @@ class UserLocal {
     prefs.setString("designation", user.designation ?? "");
     if (user.schoolId != null) {
       prefs.setString("schoolId", user.schoolId.toString());
+    }
+    // Save assigned_classes as JSON string
+    if (user.assignedClasses != null) {
+      final encoded = jsonEncode(user.assignedClasses!.map((c) => c.toJson()).toList());
+      prefs.setString("assignedClasses", encoded);
     }
   }
 
@@ -45,6 +51,18 @@ class UserLocal {
       "userId": prefs.getString("userId"),
       "designation": prefs.getString("designation"),
     };
+  }
+
+  static Future<List<AssignedClass>> getAssignedClasses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString("assignedClasses");
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final List decoded = jsonDecode(raw);
+      return decoded.map((e) => AssignedClass.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   static Future clearUser() async {

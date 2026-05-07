@@ -15,7 +15,9 @@ import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/add_student/add_student_cubit.dart';
+import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
@@ -26,8 +28,9 @@ class StudentCard extends StatefulWidget {
   StudentDetailsData studentData;
   final String schoolId;
   final String? imageShape;
+  final int? schoolIntId; // for live imageShape lookup from SchoolCubit
   final VoidCallback? onEdit;
-  StudentCard({super.key, required this.studentData, required this.schoolId, this.imageShape, this.onEdit});
+  StudentCard({super.key, required this.studentData, required this.schoolId, this.imageShape, this.schoolIntId, this.onEdit});
 
   @override
   State<StudentCard> createState() => _StudentCardState();
@@ -248,6 +251,26 @@ class _StudentCardState extends State<StudentCard> {
 
   @override
   Widget build(BuildContext context) {
+    // Resolve imageShape live from SchoolCubit so it reacts to updates
+    String? resolvedShape = widget.imageShape;
+    try {
+      final schoolState = context.watch<SchoolCubit>().state;
+      final schoolId = widget.schoolIntId ?? int.tryParse(widget.schoolId);
+      if (schoolId != null) {
+        if (schoolState.imageShapeMap.containsKey(schoolId)) {
+          resolvedShape = schoolState.imageShapeMap[schoolId];
+        } else {
+          final match = schoolState.students.firstWhere(
+            (s) => s.id == schoolId,
+            orElse: () => SchoolDetailsModel(),
+          );
+          if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+            resolvedShape = match.imageShape;
+          }
+        }
+      }
+    } catch (_) {}
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -303,7 +326,7 @@ class _StudentCardState extends State<StudentCard> {
                     _fromCamera();
                   }
                 },
-                child: _buildPhoto(context),
+                child: _buildPhoto(context, resolvedShape: resolvedShape),
               ),
 
               /// 📸 Edit Icon
@@ -628,8 +651,8 @@ class _StudentCardState extends State<StudentCard> {
     );
   }
 
-  Widget _buildPhoto(BuildContext context) {
-    final shape = widget.imageShape ?? 'rectangle';
+  Widget _buildPhoto(BuildContext context, {String? resolvedShape}) {
+    final shape = resolvedShape ?? widget.imageShape ?? 'rectangle';
     Widget content;
     if (isUploading) {
       content = const SizedBox(

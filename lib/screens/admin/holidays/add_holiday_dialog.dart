@@ -919,14 +919,14 @@ class _AddHolidayDialogState extends State<AddHolidayDialog> {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Expanded(
-            child: AppButton(
-              title: 'Back',
-              color: Colors.grey.shade400,
-              height: 48,
-              onTap: () => setState(() => _step = 1),
-            ),
-          ),
+          // Expanded(
+          //   child: AppButton(
+          //     title: 'Back',
+          //     color: Colors.grey.shade400,
+          //     height: 48,
+          //     onTap: () => setState(() => _step = 1),
+          //   ),
+          // ),
           const SizedBox(width: 8),
           Expanded(
             child: AppButton(

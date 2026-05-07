@@ -186,7 +186,6 @@ class _StudentListingPageState extends State<StudentListingPage>
               schoolDetailsModel: widget.schoolDetailsModel,
             ),
           ),
-          // Tab 3: Orders
           BlocProvider(
             create: (_) => OrdersCubit()
               ..fetchOrders(schoolId: widget.schoolId, isSchool: false)
@@ -321,11 +320,8 @@ class _StudentsTabState extends State<_StudentsTab> {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
-          final existing = context.read<SchoolCubit>().state.students
-              .firstWhere((s) => s.id == schoolIntId, orElse: () => SchoolDetailsModel());
-          if (existing.imageShape == null || existing.imageShape!.isEmpty) {
-            context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
-          }
+          // Always fetch latest imageShape from API
+          context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
         }
       }
     });
@@ -487,6 +483,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                             key: ValueKey(state.studentsList[index].uuid),
                             studentData: state.studentsList[index],
                             schoolId: widget.schoolId,
+                            schoolIntId: widget.schoolDetailsModel?.id ?? state.studentsList[index].schoolId,
                             imageShape: imageShape,
                           );
                         }
@@ -579,16 +576,11 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
         );
       }
     });
-    // Fetch imageShape for this school
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
-          final existing = context.read<SchoolCubit>().state.students
-              .firstWhere((s) => s.id == schoolIntId, orElse: () => SchoolDetailsModel());
-          if (existing.imageShape == null || existing.imageShape!.isEmpty) {
-            context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
-          }
+          context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
         }
       }
     });
@@ -1627,13 +1619,10 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
   String _printType = '';
 
   List<Map<String, String>> _buildPrintTypes(List<CorrectionItem> items) {
-    final types = items.map((e) => e.listType ?? '').where((t) => t.isNotEmpty).toSet().toList();
     return [
       {'value': '', 'label': '-Select Print Type-'},
-      ...types.map((t) => {
-        'value': t,
-        'label': t == 'class_wise' ? 'Class Wise' : t == 'section_wise' ? 'Section Wise' : t.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' '),
-      }),
+      {'value': 'class_wise', 'label': 'Class Wise'},
+      {'value': 'section_wise', 'label': 'Section Wise'},
     ];
   }
 

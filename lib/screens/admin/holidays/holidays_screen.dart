@@ -142,18 +142,17 @@ class _HolidaysViewState extends State<_HolidaysView> {
                         final error = await ctx
                             .read<HolidaysCubit>()
                             .deleteHoliday(
-                              schoolId: widget.schoolId,
-                              holidayId: h.id!,
-                            );
+                          schoolId: widget.schoolId,
+                          holidayId: h.id!,
+                        );
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
                             SnackBar(
                               content: Text(
                                 error ?? 'Holiday deleted successfully',
                               ),
-                              backgroundColor: error == null
-                                  ? Colors.green
-                                  : Colors.red,
+                              backgroundColor:
+                              error == null ? Colors.green : Colors.red,
                             ),
                           );
                         }
@@ -283,7 +282,7 @@ class _HolidaysViewState extends State<_HolidaysView> {
   }
 
   Widget _yearDropdown() {
-    final years = [2024, 2025, 2026, 2027,2028,2029,2030];
+    final years = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
@@ -311,7 +310,7 @@ class _HolidaysViewState extends State<_HolidaysView> {
     return GestureDetector(
       onTap: () => setState(() => _isTableView = !_isTableView),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: _isTableView ? AppTheme.btnColor : Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -425,7 +424,7 @@ class _HolidaysViewState extends State<_HolidaysView> {
                 Row(
                   children: List.generate(
                     7,
-                    (_) => Expanded(
+                        (_) => Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
                         child: shimmerBox(height: 12),
@@ -451,7 +450,6 @@ class _HolidaysViewState extends State<_HolidaysView> {
             ),
           ),
           const SizedBox(height: 16),
-          // Summary panel shimmer
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -465,7 +463,7 @@ class _HolidaysViewState extends State<_HolidaysView> {
                 const SizedBox(height: 12),
                 ...List.generate(
                   3,
-                  (_) => Padding(
+                      (_) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
                       children: [
@@ -482,7 +480,7 @@ class _HolidaysViewState extends State<_HolidaysView> {
                 Row(
                   children: List.generate(
                     4,
-                    (i) => Expanded(
+                        (i) => Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(right: i < 3 ? 8 : 0),
                         child: shimmerBox(height: 48, radius: 10),
@@ -511,7 +509,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.05), blurRadius: 6),
               ],
             ),
             child: Column(
@@ -536,10 +535,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
       children: [
         GestureDetector(
           onTap: () => setState(() {
-            _focusedMonth = DateTime(
-              _focusedMonth.year,
-              _focusedMonth.month - 1,
-            );
+            _focusedMonth =
+                DateTime(_focusedMonth.year, _focusedMonth.month - 1);
           }),
           child: Container(
             padding: const EdgeInsets.all(6),
@@ -559,7 +556,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
         ),
         GestureDetector(
           onTap: () => setState(() {
-            _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+            _focusedMonth =
+                DateTime(DateTime.now().year, DateTime.now().month);
           }),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -580,10 +578,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
         const SizedBox(width: 10),
         GestureDetector(
           onTap: () => setState(() {
-            _focusedMonth = DateTime(
-              _focusedMonth.year,
-              _focusedMonth.month + 1,
-            );
+            _focusedMonth =
+                DateTime(_focusedMonth.year, _focusedMonth.month + 1);
           }),
           child: Container(
             padding: const EdgeInsets.all(6),
@@ -601,17 +597,15 @@ class _HolidaysViewState extends State<_HolidaysView> {
   Widget _calendarGrid(List<HolidayModel> holidays) {
     final today = DateTime.now();
     final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
-    final daysInMonth = DateTime(
-      _focusedMonth.year,
-      _focusedMonth.month + 1,
-      0,
-    ).day;
+    final daysInMonth =
+        DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
     final startWeekday = firstDay.weekday % 7;
 
     final Map<int, HolidayModel> holidayMap = {};
     for (final h in _monthHolidays(holidays)) {
       for (final dt in h.dateTimes) {
-        if (dt.month == _focusedMonth.month && dt.year == _focusedMonth.year) {
+        if (dt.month == _focusedMonth.month &&
+            dt.year == _focusedMonth.year) {
           holidayMap[dt.day] = h;
         }
       }
@@ -623,14 +617,15 @@ class _HolidaysViewState extends State<_HolidaysView> {
           children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
               .map(
                 (d) => Expanded(
-                  child: Center(
-                    child: Text(
-                      d,
-                      style: MyStyles.mediumTxt(AppTheme.graySubTitleColor, 12),
-                    ),
-                  ),
+              child: Center(
+                child: Text(
+                  d,
+                  style:
+                  MyStyles.mediumTxt(AppTheme.graySubTitleColor, 12),
                 ),
-              )
+              ),
+            ),
+          )
               .toList(),
         ),
         const SizedBox(height: 8),
@@ -645,9 +640,9 @@ class _HolidaysViewState extends State<_HolidaysView> {
           itemBuilder: (context, index) {
             if (index < startWeekday) return const SizedBox();
             final day = index - startWeekday + 1;
-            final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
-            final isToday =
-                date.year == today.year &&
+            final date =
+            DateTime(_focusedMonth.year, _focusedMonth.month, day);
+            final isToday = date.year == today.year &&
                 date.month == today.month &&
                 date.day == today.day;
             final holiday = holidayMap[day];
@@ -658,8 +653,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
                 color: isToday
                     ? AppTheme.btnColor.withOpacity(0.08)
                     : holiday != null
-                        ? _typeColor(holiday.type ?? '').withOpacity(0.08)
-                        : Colors.transparent,
+                    ? _typeColor(holiday.type ?? '').withOpacity(0.08)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: isToday
                     ? Border.all(color: AppTheme.btnColor, width: 1.5)
@@ -674,8 +669,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
                       isToday
                           ? AppTheme.btnColor
                           : holiday != null
-                              ? _typeColor(holiday.type ?? '')
-                              : AppTheme.black_Color,
+                          ? _typeColor(holiday.type ?? '')
+                          : AppTheme.black_Color,
                       13,
                     ),
                   ),
@@ -706,9 +701,9 @@ class _HolidaysViewState extends State<_HolidaysView> {
   }
 
   Widget _monthSummaryPanel(
-    List<HolidayModel> all,
-    List<HolidayModel> monthList,
-  ) {
+      List<HolidayModel> all,
+      List<HolidayModel> monthList,
+      ) {
     final monthName = _monthNames[_focusedMonth.month - 1];
     final total = all.length;
     final superAdmin = all.where((h) => h.type == 'super_admin').length;
@@ -745,18 +740,13 @@ class _HolidaysViewState extends State<_HolidaysView> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 40,
-                      color: Colors.grey.shade300,
-                    ),
+                    Icon(Icons.calendar_today,
+                        size: 40, color: Colors.grey.shade300),
                     const SizedBox(height: 8),
                     Text(
                       'No holidays this month',
-                      style: MyStyles.regularTxt(
-                        AppTheme.graySubTitleColor,
-                        13,
-                      ),
+                      style:
+                      MyStyles.regularTxt(AppTheme.graySubTitleColor, 13),
                     ),
                   ],
                 ),
@@ -782,16 +772,15 @@ class _HolidaysViewState extends State<_HolidaysView> {
                       Expanded(
                         child: Text(
                           h.name ?? '',
-                          style: MyStyles.regularTxt(AppTheme.black_Color, 13),
+                          style:
+                          MyStyles.regularTxt(AppTheme.black_Color, 13),
                         ),
                       ),
                       if (dt != null)
                         Text(
                           '${dt.day} ${_monthNames[dt.month - 1].substring(0, 3)}',
                           style: MyStyles.regularTxt(
-                            AppTheme.graySubTitleColor,
-                            12,
-                          ),
+                              AppTheme.graySubTitleColor, 12),
                         ),
                     ],
                   ),
@@ -829,7 +818,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
             const SizedBox(height: 2),
             Text(
               label,
-              style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 10),
+              style:
+              MyStyles.regularTxt(AppTheme.graySubTitleColor, 10),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -856,203 +846,220 @@ class _HolidaysViewState extends State<_HolidaysView> {
         final firstDt = dts.isNotEmpty ? dts.first : null;
         final lastDt = dts.length > 1 ? dts.last : null;
         final dayCount = dts.length;
+        final typeColor = _typeColor(h.type ?? '');
 
         return GestureDetector(
           onTap: () => _showEditDialog(ctx, h),
           child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (firstDt != null)
-                Container(
-                  width: 44,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.btnColor.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    children: [
-                      Text(
-                        _monthNames[firstDt.month - 1]
-                            .substring(0, 3)
-                            .toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: AppTheme.btnColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${firstDt.day}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: AppTheme.btnColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            h.name ?? '',
-                            style: MyStyles.boldTxt(AppTheme.black_Color, 15),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _typeColor(h.type ?? '').withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _typeLabel(h.type ?? ''),
-                            style: MyStyles.mediumTxt(
-                              _typeColor(h.type ?? ''),
-                              11,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-
-                    if (firstDt != null)
-                      Text(
-                        lastDt != null
-                            ? '${_weekdayShort(firstDt)}, ${_monthNames[firstDt.month - 1].substring(0, 3)} ${firstDt.day} – ${_weekdayShort(lastDt)}, ${_monthNames[lastDt.month - 1].substring(0, 3)} ${lastDt.day}, ${lastDt.year}'
-                            : '${_weekdayShort(firstDt)}, ${_monthNames[firstDt.month - 1].substring(0, 3)} ${firstDt.day}, ${firstDt.year}',
-                        style: MyStyles.regularTxt(
-                          AppTheme.graySubTitleColor,
-                          12,
-                        ),
+              ],
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 58,
+                    decoration: BoxDecoration(
+                      color: typeColor.withOpacity(0.08),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(14),
+                        bottomLeft: Radius.circular(14),
                       ),
-                    const SizedBox(height: 6),
-
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: dts
-                          .map(
-                            (d) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.btnColor.withOpacity(0.07),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppTheme.btnColor.withOpacity(0.2),
-                                ),
-                              ),
-                              child: Text(
-                                '${_weekdayShort(d)}, ${_monthNames[d.month - 1].substring(0, 3)} ${d.day}, ${d.year}',
-                                style: MyStyles.mediumTxt(
-                                  AppTheme.btnColor,
-                                  11,
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
                     ),
-
-                    if (dayCount > 1) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '$dayCount days',
-                        style: MyStyles.regularTxt(
-                          AppTheme.graySubTitleColor,
-                          11,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 6),
-                    Row(
+                    child: firstDt != null
+                        ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 12,
-                          color: AppTheme.graySubTitleColor,
-                        ),
-                        const SizedBox(width: 4),
                         Text(
-                          '${h.year ?? firstDt?.year ?? ''}',
-                          style: MyStyles.regularTxt(
-                            AppTheme.graySubTitleColor,
-                            12,
+                          _monthNames[firstDt.month - 1]
+                              .substring(0, 3)
+                              .toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: typeColor,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'Active',
-                            style: MyStyles.mediumTxt(Colors.green, 11),
+                        Text(
+                          '${firstDt.day}',
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: typeColor,
+                            fontWeight: FontWeight.bold,
+                            height: 1.1,
                           ),
                         ),
+                        if (dayCount > 1)
+                          Text(
+                            '+${dayCount - 1}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: typeColor.withOpacity(0.7),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
+                    )
+                        : const SizedBox(),
+                  ),
 
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.grey),
-                onSelected: (value) {
-                  if (value == 'delete') _confirmDelete(ctx, h);
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 18, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Delete'),
-                      ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  h.name ?? '',
+                                  style: MyStyles.boldTxt(
+                                      AppTheme.black_Color, 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: typeColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _typeLabel(h.type ?? ''),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: typeColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: PopupMenuButton<String>(
+                                  padding: EdgeInsets.zero,
+                                  icon: Icon(
+                                    Icons.more_vert,
+                                    size: 16,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  onSelected: (value) {
+                                    if (value == 'delete') {
+                                      _confirmDelete(ctx, h);
+                                    }
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete,
+                                              size: 16, color: Colors.red),
+                                          SizedBox(width: 8),
+                                          Text('Delete',
+                                              style:
+                                              TextStyle(fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 5),
+
+                          if (firstDt != null)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 11,
+                                  color: AppTheme.graySubTitleColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    lastDt != null
+                                        ? '${_weekdayShort(firstDt)}, ${_monthNames[firstDt.month - 1].substring(0, 3)} ${firstDt.day} – ${_weekdayShort(lastDt)}, ${_monthNames[lastDt.month - 1].substring(0, 3)} ${lastDt.day}, ${lastDt.year}'
+                                        : '${_weekdayShort(firstDt)}, ${_monthNames[firstDt.month - 1].substring(0, 3)} ${firstDt.day}, ${firstDt.year}',
+                                    style: MyStyles.regularTxt(
+                                        AppTheme.graySubTitleColor, 11),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                          const SizedBox(height: 5),
+
+                          Row(
+                            children: [
+                              Text(
+                                '${h.year ?? firstDt?.year ?? ''}',
+                                style: MyStyles.regularTxt(
+                                    AppTheme.graySubTitleColor, 11),
+                              ),
+                              if (dayCount > 1) ...[
+                                Text(
+                                  '  ·  ',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                Text(
+                                  '$dayCount days',
+                                  style: MyStyles.regularTxt(
+                                      AppTheme.graySubTitleColor, 11),
+                                ),
+                              ],
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Active',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
         );
       },
     );
@@ -1068,7 +1075,8 @@ class _HolidaysViewState extends State<_HolidaysView> {
       context: context,
       builder: (dialogCtx) => BlocProvider.value(
         value: context.read<HolidaysCubit>(),
-        child: AddHolidayDialog(schoolId: widget.schoolId, onAdded: _refresh),
+        child: AddHolidayDialog(
+            schoolId: widget.schoolId, onAdded: _refresh),
       ),
     );
   }
@@ -1245,13 +1253,13 @@ class _AddHolidaySheetState extends State<_AddHolidaySheet> {
             style: MyStyles.boldTxt(AppTheme.black_Color, 18),
           ),
           const SizedBox(height: 16),
-
           TextField(
             controller: _nameCtrl,
             style: MyStyles.regularTxt(AppTheme.black_Color, 14),
             decoration: InputDecoration(
               hintText: 'Holiday name',
-              hintStyle: MyStyles.regularTxt(AppTheme.graySubTitleColor, 14),
+              hintStyle:
+              MyStyles.regularTxt(AppTheme.graySubTitleColor, 14),
               filled: true,
               fillColor: AppTheme.appBackgroundColor,
               border: OutlineInputBorder(
@@ -1259,9 +1267,7 @@ class _AddHolidaySheetState extends State<_AddHolidaySheet> {
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+                  horizontal: 16, vertical: 14),
             ),
           ),
           const SizedBox(height: 12),
@@ -1276,18 +1282,16 @@ class _AddHolidaySheetState extends State<_AddHolidaySheet> {
               if (picked != null) setState(() => _selectedDate = picked);
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: AppTheme.appBackgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 18,
-                    color: AppTheme.btnColor,
-                  ),
+                  Icon(Icons.calendar_today,
+                      size: 18, color: AppTheme.btnColor),
                   const SizedBox(width: 10),
                   Text(
                     _selectedDate == null
@@ -1319,9 +1323,7 @@ class _AddHolidaySheetState extends State<_AddHolidaySheet> {
                 items: const [
                   DropdownMenuItem(value: 'school', child: Text('School')),
                   DropdownMenuItem(
-                    value: 'super_admin',
-                    child: Text('Super Admin'),
-                  ),
+                      value: 'super_admin', child: Text('Super Admin')),
                   DropdownMenuItem(value: 'hidden', child: Text('Hidden')),
                 ],
                 onChanged: (v) {
@@ -1344,17 +1346,17 @@ class _AddHolidaySheetState extends State<_AddHolidaySheet> {
               onPressed: _saving ? null : _save,
               child: _saving
                   ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
                   : Text(
-                      'Save Holiday',
-                      style: MyStyles.mediumTxt(Colors.white, 14),
-                    ),
+                'Save Holiday',
+                style: MyStyles.mediumTxt(Colors.white, 14),
+              ),
             ),
           ),
         ],

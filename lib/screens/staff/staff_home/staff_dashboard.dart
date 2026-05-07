@@ -38,6 +38,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
   String _userName = 'Staff';
   String _profileImage = '';
   String _schoolId = '';
+  List<int> _assignedClassIds = [];
   final StudentsCubit _studentsCubit = StudentsCubit();
   final StaffCubit _staffCubit = StaffCubit();
 
@@ -54,6 +55,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         child: StaffStudentsScreen(
           schoolId: schoolId,
           schoolDetailsModel: schoolDetailsModel,
+          assignedClassIds: _assignedClassIds,
         ),
       ),
       BlocProvider.value(
@@ -83,12 +85,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
   Future<void> _loadUser() async {
     final user = await UserLocal.getUser();
     final school = await UserLocal.getSchool();
+    final assignedClasses = await UserLocal.getAssignedClasses();
     if (mounted) {
       final newSchoolId = school['schoolId'] ?? '';
       setState(() {
         _userName = user['name'] ?? 'Staff';
         _profileImage = user['profileImage'] ?? '';
         _schoolId = newSchoolId;
+        _assignedClassIds = assignedClasses.map((c) => c.id).toList();
       });
       if (newSchoolId.isNotEmpty) {
         _staffCubit.fetchStaff(schoolId: newSchoolId);
