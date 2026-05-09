@@ -8,7 +8,6 @@ import 'package:idmitra/providers/image_settings/image_settings_cubit.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/common_widgets/drop_down/drop_down.dart';
-import 'package:idmitra/utils/json_file.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 
 class AdminImageSettingsScreen extends StatefulWidget {
@@ -42,6 +41,19 @@ class _AdminImageSettingsScreenState extends State<AdminImageSettingsScreen> {
   int? widthPx;
   int? heightPx;
 
+  // Dynamic lists populated from API response
+  List<Map<String, String>> dynamicShapeList = [];
+  List<Map<String, String>> dynamicWatermarkPositionList = [];
+  List<Map<String, String>> dynamicGradientDirectionList = [];
+
+  String _slugToTitle(String slug) {
+    return slug
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+        .join(' ');
+  }
+
   void _populateFromData(Map<String, dynamic> data) {
     widthController.text = (data['width_mm'] ?? '').toString();
     heightController.text = (data['height_mm'] ?? '').toString();
@@ -52,9 +64,32 @@ class _AdminImageSettingsScreenState extends State<AdminImageSettingsScreen> {
     bgColorController.text = bgColor;
     selectedBgColor = _hexToColor(bgColor);
 
-    selectedShape = data['image_shape']?.toString();
-    selectedWatermarkPosition = data['watermark_position']?.toString();
-    selectedGradientDirection = data['gradient_direction']?.toString();
+    final shapeSlug = data['image_shape']?.toString();
+    if (shapeSlug != null && shapeSlug.isNotEmpty) {
+      dynamicShapeList = [{"slug": shapeSlug, "title": _slugToTitle(shapeSlug)}];
+      selectedShape = shapeSlug;
+    } else {
+      dynamicShapeList = [];
+      selectedShape = null;
+    }
+
+    final positionSlug = data['watermark_position']?.toString();
+    if (positionSlug != null && positionSlug.isNotEmpty) {
+      dynamicWatermarkPositionList = [{"slug": positionSlug, "title": _slugToTitle(positionSlug)}];
+      selectedWatermarkPosition = positionSlug;
+    } else {
+      dynamicWatermarkPositionList = [];
+      selectedWatermarkPosition = null;
+    }
+
+    final gradientSlug = data['gradient_direction']?.toString();
+    if (gradientSlug != null && gradientSlug.isNotEmpty) {
+      dynamicGradientDirectionList = [{"slug": gradientSlug, "title": _slugToTitle(gradientSlug)}];
+      selectedGradientDirection = gradientSlug;
+    } else {
+      dynamicGradientDirectionList = [];
+      selectedGradientDirection = null;
+    }
 
     watermarkTextController.text =
         (data['water_mark_text'] != null && data['water_mark_text'].toString() != 'null')
@@ -221,7 +256,7 @@ class _AdminImageSettingsScreenState extends State<AdminImageSettingsScreen> {
                       style: MyStyles.mediumText(size: 14, color: Colors.grey),
                     ),
                   const SizedBox(height: 20),
-                  _buildDropdown("Shape", shapeList, selectedShape,
+                  _buildDropdown("Shape", dynamicShapeList, selectedShape,
                       (val) => setState(() => selectedShape = val)),
                   const SizedBox(height: 20),
                   Text("Background Color",
@@ -279,7 +314,7 @@ class _AdminImageSettingsScreenState extends State<AdminImageSettingsScreen> {
                       Expanded(
                         child: _buildDropdown(
                             "Position",
-                            watermarkPositionList,
+                            dynamicWatermarkPositionList,
                             selectedWatermarkPosition,
                             (val) => setState(() => selectedWatermarkPosition = val)),
                       ),
@@ -302,7 +337,7 @@ class _AdminImageSettingsScreenState extends State<AdminImageSettingsScreen> {
                   const SizedBox(height: 10),
                   _buildTextField("End Color", gradientEndController),
                   const SizedBox(height: 10),
-                  _buildDropdown("Direction", gradientDirectionList,
+                  _buildDropdown("Direction", dynamicGradientDirectionList,
                       selectedGradientDirection,
                       (val) => setState(() => selectedGradientDirection = val)),
                   const SizedBox(height: 30),

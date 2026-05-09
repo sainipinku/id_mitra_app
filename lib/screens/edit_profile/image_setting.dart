@@ -8,7 +8,6 @@ import 'package:idmitra/providers/image_settings/image_settings_cubit.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import 'package:idmitra/utils/common_widgets/drop_down/drop_down.dart';
-import 'package:idmitra/utils/json_file.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 
 class ImageSettingsScreen extends StatefulWidget {
@@ -41,6 +40,20 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
   int? widthPx;
   int? heightPx;
 
+  // Dynamic lists populated from API response
+  List<Map<String, String>> dynamicShapeList = [];
+  List<Map<String, String>> dynamicWatermarkPositionList = [];
+  List<Map<String, String>> dynamicGradientDirectionList = [];
+
+  /// Converts a slug like "bottom_right" or "to right" into a readable title
+  String _slugToTitle(String slug) {
+    return slug
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+        .join(' ');
+  }
+
   void _populateFromData(Map<String, dynamic> data) {
     widthController.text = (data['width_mm'] ?? '').toString();
     heightController.text = (data['height_mm'] ?? '').toString();
@@ -51,9 +64,33 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
     bgColorController.text = bgColor;
     selectedBgColor = _hexToColor(bgColor);
 
-    selectedShape = data['image_shape']?.toString();
-    selectedWatermarkPosition = data['watermark_position']?.toString();
-    selectedGradientDirection = data['gradient_direction']?.toString();
+    // Build dynamic lists from API values (only the value returned by API)
+    final shapeSlug = data['image_shape']?.toString();
+    if (shapeSlug != null && shapeSlug.isNotEmpty) {
+      dynamicShapeList = [{"slug": shapeSlug, "title": _slugToTitle(shapeSlug)}];
+      selectedShape = shapeSlug;
+    } else {
+      dynamicShapeList = [];
+      selectedShape = null;
+    }
+
+    final positionSlug = data['watermark_position']?.toString();
+    if (positionSlug != null && positionSlug.isNotEmpty) {
+      dynamicWatermarkPositionList = [{"slug": positionSlug, "title": _slugToTitle(positionSlug)}];
+      selectedWatermarkPosition = positionSlug;
+    } else {
+      dynamicWatermarkPositionList = [];
+      selectedWatermarkPosition = null;
+    }
+
+    final gradientSlug = data['gradient_direction']?.toString();
+    if (gradientSlug != null && gradientSlug.isNotEmpty) {
+      dynamicGradientDirectionList = [{"slug": gradientSlug, "title": _slugToTitle(gradientSlug)}];
+      selectedGradientDirection = gradientSlug;
+    } else {
+      dynamicGradientDirectionList = [];
+      selectedGradientDirection = null;
+    }
 
     watermarkTextController.text = (data['water_mark_text'] != null && data['water_mark_text'].toString() != 'null') ? data['water_mark_text'].toString() : '';
     watermarkColorController.text = (data['water_mark_text_color'] != null && data['water_mark_text_color'].toString() != 'null') ? data['water_mark_text_color'].toString() : '';
@@ -204,7 +241,7 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
                       style: MyStyles.mediumText(size: 14, color: Colors.grey),
                     ),
                   const SizedBox(height: 20),
-                  _buildDropdown("Shape", shapeList, selectedShape, (val) {
+                  _buildDropdown("Shape", dynamicShapeList, selectedShape, (val) {
                     setState(() => selectedShape = val);
                   }),
                   const SizedBox(height: 20),
@@ -262,7 +299,7 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _buildDropdown(
-                            "Position", watermarkPositionList, selectedWatermarkPosition,
+                            "Position", dynamicWatermarkPositionList, selectedWatermarkPosition,
                             (val) => setState(() => selectedWatermarkPosition = val)),
                       ),
                     ],
@@ -284,7 +321,7 @@ class _ImageSettingsScreenState extends State<ImageSettingsScreen> {
                   const SizedBox(height: 10),
                   _buildTextField("End Color", gradientEndController),
                   const SizedBox(height: 10),
-                  _buildDropdown("Direction", gradientDirectionList, selectedGradientDirection,
+                  _buildDropdown("Direction", dynamicGradientDirectionList, selectedGradientDirection,
                       (val) => setState(() => selectedGradientDirection = val)),
                   const SizedBox(height: 30),
                   SizedBox(

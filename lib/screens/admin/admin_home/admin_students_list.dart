@@ -350,7 +350,6 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
   @override
   void initState() {
     super.initState();
-    // Fetch imageShape from SchoolCubit (ported from StudentListingPage)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
@@ -846,7 +845,6 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
                         _debounce?.cancel();
                         _debounce = Timer(
                             const Duration(milliseconds: 300), () {
-                          // Proper classIds + sectionIds (ported from StudentListingPage)
                           final rawClass = result['class'];
                           final List<String> classIds =
                           rawClass is String && rawClass.isNotEmpty
@@ -1417,6 +1415,7 @@ class _AdminCorrectionCardState extends State<_AdminCorrectionCard> {
   }
 
   void _showImagePreview(String imageUrl) {
+    final shape = widget.imageShape ?? 'rectangle';
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -1435,39 +1434,60 @@ class _AdminCorrectionCardState extends State<_AdminCorrectionCard> {
                     panEnabled: true,
                     minScale: 0.8,
                     maxScale: 4,
-                    child: Image.network(
-                      imageUrl,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (_, child, progress) =>
-                      progress == null
-                          ? child
-                          : const SizedBox(
-                          height: 300,
-                          child: Center(
-                              child:
-                              CircularProgressIndicator())),
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 300,
-                        width: double.infinity,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.person,
-                            size: 80, color: Colors.grey),
-                      ),
-                    ),
+                    child: _buildShapedPreview(imageUrl, shape),
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showPicker();
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Edit Profile Image"),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromCamera();
+                        },
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text("Camera"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromGallery();
+                        },
+                        icon: const Icon(Icons.photo_library, size: 18),
+                        label: const Text("Gallery"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() => _currentPhotoUrl = '');
+                        },
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text("Retake"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1640,6 +1660,33 @@ class _AdminCorrectionCardState extends State<_AdminCorrectionCard> {
         ],
       ),
     );
+  }
+
+  Widget _buildShapedPreview(String imageUrl, String shape) {
+    final imageWidget = Image.network(
+      imageUrl,
+      width: double.infinity,
+      fit: BoxFit.contain,
+      loadingBuilder: (_, child, progress) => progress == null
+          ? child
+          : const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
+      errorBuilder: (_, __, ___) => Container(
+        height: 300,
+        width: double.infinity,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.person, size: 80, color: Colors.grey),
+      ),
+    );
+    switch (shape) {
+      case 'round':
+      case 'oval':
+        return ClipOval(child: imageWidget);
+      case 'square':
+        return ClipRRect(borderRadius: BorderRadius.zero, child: imageWidget);
+      case 'rectangle':
+      default:
+        return ClipRRect(borderRadius: BorderRadius.circular(12), child: imageWidget);
+    }
   }
 
   Widget _placeholder() => Container(

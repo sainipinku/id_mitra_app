@@ -393,11 +393,7 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
         }
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
-          final existing = context.read<SchoolCubit>().state.students
-              .firstWhere((s) => s.id == schoolIntId, orElse: () => SchoolDetailsModel());
-          if (existing.imageShape == null || existing.imageShape!.isEmpty) {
-            context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
-          }
+          context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
         }
       }
     });
@@ -603,23 +599,29 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
                       itemBuilder: (context, index) {
                         if (index < state.studentsList.length) {
                           final student = state.studentsList[index];
-                          String? imageShape = widget.schoolDetailsModel?.imageShape;
+                          final schoolIntId = widget.schoolDetailsModel?.id ?? student.schoolId;
+                          String? imageShape;
                           try {
-                            final schoolId = widget.schoolDetailsModel?.id ?? student.schoolId;
-                            if (schoolId != null) {
-                              final match = schoolState.students.firstWhere(
-                                (s) => s.id == schoolId,
-                                orElse: () => SchoolDetailsModel(),
-                              );
-                              if (match.imageShape != null && match.imageShape!.isNotEmpty) {
-                                imageShape = match.imageShape;
+                            if (schoolIntId != null && schoolState.imageShapeMap.containsKey(schoolIntId)) {
+                              imageShape = schoolState.imageShapeMap[schoolIntId];
+                            } else {
+                              if (schoolIntId != null) {
+                                final match = schoolState.students.firstWhere(
+                                  (s) => s.id == schoolIntId,
+                                  orElse: () => SchoolDetailsModel(),
+                                );
+                                if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                                  imageShape = match.imageShape;
+                                }
                               }
+                              imageShape ??= widget.schoolDetailsModel?.imageShape;
                             }
                           } catch (_) {}
                           return StudentCard(
                             key: ValueKey(state.studentsList[index].uuid),
                             studentData: student,
                             schoolId: widget.schoolId,
+                            schoolIntId: schoolIntId,
                             imageShape: imageShape,
                           );
                         }
@@ -713,16 +715,10 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        try {
-          final schools = context.read<SchoolCubit>().state.students;
-          final match = schools.firstWhere(
-            (s) => s.id?.toString() == widget.schoolId || s.uuid == widget.schoolId,
-            orElse: () => SchoolDetailsModel(),
-          );
-          if (match.id != null && (match.imageShape == null || match.imageShape!.isEmpty)) {
-            context.read<SchoolCubit>().fetchAndApplyImageShape(match.id!);
-          }
-        } catch (_) {}
+        final schoolIntId = widget.schoolDetailsModel?.id;
+        if (schoolIntId != null) {
+          context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
+        }
       }
     });
   }
@@ -878,19 +874,24 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
             child: BlocBuilder<CorrectionCubit, CorrectionState>(
               builder: (context, state) {
                 final schoolState = context.watch<SchoolCubit>().state;
-                String? imageShape = widget.schoolDetailsModel?.imageShape;
-                try {
-                  final schoolId = widget.schoolDetailsModel?.id;
-                  if (schoolId != null) {
-                    final match = schoolState.students.firstWhere(
-                      (s) => s.id == schoolId,
-                      orElse: () => SchoolDetailsModel(),
-                    );
-                    if (match.imageShape != null && match.imageShape!.isNotEmpty) {
-                      imageShape = match.imageShape;
+                final schoolId = widget.schoolDetailsModel?.id;
+                String? imageShape;
+                if (schoolId != null && schoolState.imageShapeMap.containsKey(schoolId)) {
+                  imageShape = schoolState.imageShapeMap[schoolId];
+                } else {
+                  try {
+                    if (schoolId != null) {
+                      final match = schoolState.students.firstWhere(
+                        (s) => s.id == schoolId,
+                        orElse: () => SchoolDetailsModel(),
+                      );
+                      if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                        imageShape = match.imageShape;
+                      }
                     }
-                  }
-                } catch (_) {}
+                  } catch (_) {}
+                  imageShape ??= widget.schoolDetailsModel?.imageShape;
+                }
                 if (state.studentsLoading && state.students.isEmpty) {
                   return const ShimmerList(expanded: false);
                 }
@@ -1356,6 +1357,7 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
   }
 
   void _showImagePreview(String imageUrl) {
+    final shape = widget.imageShape ?? 'rectangle';
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -1374,34 +1376,60 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
                     panEnabled: true,
                     minScale: 0.8,
                     maxScale: 4,
-                    child: Image.network(
-                      imageUrl,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
-                      },
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 300,
-                        width: double.infinity,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.person, size: 80, color: Colors.grey),
-                      ),
-                    ),
+                    child: _buildShapedPreview(imageUrl, shape),
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showPicker();
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Edit Profile Image"),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromCamera();
+                        },
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text("Camera"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromGallery();
+                        },
+                        icon: const Icon(Icons.photo_library, size: 18),
+                        label: const Text("Gallery"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() => _currentPhotoUrl = '');
+                        },
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text("Retake"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1553,6 +1581,33 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
     );
   }
 
+  Widget _buildShapedPreview(String imageUrl, String shape) {
+    final imageWidget = Image.network(
+      imageUrl,
+      width: double.infinity,
+      fit: BoxFit.contain,
+      loadingBuilder: (_, child, progress) => progress == null
+          ? child
+          : const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
+      errorBuilder: (_, __, ___) => Container(
+        height: 300,
+        width: double.infinity,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.person, size: 80, color: Colors.grey),
+      ),
+    );
+    switch (shape) {
+      case 'round':
+      case 'oval':
+        return ClipOval(child: imageWidget);
+      case 'square':
+        return ClipRRect(borderRadius: BorderRadius.zero, child: imageWidget);
+      case 'rectangle':
+      default:
+        return ClipRRect(borderRadius: BorderRadius.circular(12), child: imageWidget);
+    }
+  }
+
   Widget _placeholder() => Container(
     height: 60,
     width: 60,
@@ -1564,21 +1619,40 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
     final shape = widget.imageShape ?? 'rectangle';
     Widget content;
     if (_isUploading) {
-      content = const SizedBox(height: 60, width: 60, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+      content = const SizedBox(
+        height: 60,
+        width: 60,
+        child: Center(
+            child: CircularProgressIndicator(strokeWidth: 2)),
+      );
     } else if (photoUrl.isNotEmpty) {
-      content = Image.network(photoUrl, height: 60, width: 60, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
+      content = Image.network(
+        photoUrl,
+        height: 60,
+        width: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(),
+      );
     } else {
       content = _placeholder();
     }
+
     switch (shape) {
       case 'round':
       case 'oval':
-        return ClipOval(child: SizedBox(width: 60, height: 60, child: content));
+        return ClipOval(
+            child: SizedBox(width: 60, height: 60, child: content));
       case 'square':
-        return ClipRRect(borderRadius: BorderRadius.zero, child: SizedBox(width: 60, height: 60, child: content));
+        return ClipRRect(
+          borderRadius: BorderRadius.zero,
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
       case 'rectangle':
       default:
-        return ClipRRect(borderRadius: BorderRadius.circular(6), child: SizedBox(width: 60, height: 60, child: content));
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
     }
   }
 }

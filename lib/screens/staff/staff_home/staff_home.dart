@@ -16,6 +16,7 @@ import 'package:idmitra/utils/MyStyles.dart';
 
 import '../../../models/schools/SchoolListModel.dart';
 import '../staff_student_list/add_staff_form.dart';
+import '../../admin/attendance/attendance_screen.dart';
 
 class StaffHome extends StatelessWidget {
   final VoidCallback? onStudentAdded;
@@ -178,84 +179,93 @@ class _StaffHomeView extends StatelessWidget {
   }
 }
 
+
 class _AttendanceCard extends StatelessWidget {
   final DashAttendance attendance;
   const _AttendanceCard({required this.attendance});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.how_to_reg_outlined, color: AppTheme.btnColor, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                "Today's Attendance",
-                style: MyStyles.boldTxt(AppTheme.black_Color, 15),
-              ),
-              const Spacer(),
-              if (attendance.attendanceDate.isNotEmpty)
-                Text(
-                  attendance.attendanceDate,
-                  style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (!attendance.hasAttendance)
+    return GestureDetector(
+      onTap: () async {
+        final school = await UserLocal.getSchool();
+        final schoolId = school['schoolId']?.toString() ?? '';
+        if (!context.mounted || schoolId.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => AttendanceScreen(schoolId: schoolId)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                const Icon(Icons.info_outline, size: 16, color: Colors.orange),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    attendance.message,
-                    style: MyStyles.regularTxt(Colors.orange, 13),
+                Icon(
+                  Icons.how_to_reg_outlined,
+                  color: AppTheme.btnColor,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Today's Attendance",
+                  style: MyStyles.boldTxt(AppTheme.black_Color, 15),
+                ),
+                const Spacer(),
+                if (attendance.attendanceDate.isNotEmpty)
+                  Text(
+                    attendance.attendanceDate,
+                    style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11),
                   ),
-                ),
+                const SizedBox(width: 6),
+                Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.graySubTitleColor),
               ],
-            )
-          else ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: attendance.attendancePercentage / 100,
-                minHeight: 8,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  attendance.attendancePercentage >= 75
-                      ? Colors.green
-                      : Colors.orange,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${attendance.attendancePercentage.toStringAsFixed(1)}% attendance',
-              style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                _AttStat('Present', attendance.present, Colors.green),
-                _AttStat('Absent', attendance.absent, Colors.red),
-                _AttStat('Late', attendance.late, Colors.orange),
-                _AttStat('Leave', attendance.leave, Colors.blue),
-              ],
-            ),
+            if (!attendance.hasAttendance)
+              Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      attendance.message,
+                      style: MyStyles.regularTxt(Colors.orange, 13),
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: attendance.attendancePercentage / 100,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    attendance.attendancePercentage >= 75
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${attendance.attendancePercentage.toStringAsFixed(1)}% attendance',
+                style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -273,7 +283,10 @@ class _AttStat extends StatelessWidget {
       child: Column(
         children: [
           Text('$count', style: MyStyles.boldTxt(color, 18)),
-          Text(label, style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11)),
+          Text(
+            label,
+            style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11),
+          ),
         ],
       ),
     );

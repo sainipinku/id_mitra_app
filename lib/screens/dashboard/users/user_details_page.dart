@@ -251,7 +251,9 @@ class _UserDetailsContent extends StatelessWidget {
                     value: "${schoolDetailsModel?.staffCount ?? ''}",
                     callBtn: () => navigateWithTransition(
                       context: context,
-                      page: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                      page: StaffListingPage(
+                        schoolId: schoolDetailsModel?.id.toString() ?? '',
+                        schoolDetailsModel: schoolDetailsModel,),
                     ),
                   ),
                   // statCard(

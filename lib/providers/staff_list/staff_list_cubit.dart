@@ -47,8 +47,6 @@ class StaffListState {
 class StaffListCubit extends Cubit<StaffListState> {
   StaffListCubit() : super(const StaffListState());
 
-  // Stores manually uploaded photo URLs by staff UUID
-  // Persists across list refreshes since server doesn't return uploaded URL correctly
   final Map<String, String> _uploadedPhotos = {};
 
   void updateStaffPhoto(String uuid, String photoUrl) {
@@ -296,7 +294,7 @@ class StaffListCubit extends Cubit<StaffListState> {
         if (rawData is Map) {
           rawData.forEach((key, value) {
             final item = Map<String, dynamic>.from(value as Map);
-            item['assigned_uuid'] = key; // store map key as uuid for delete
+            item['assigned_uuid'] = key;
             result.add(item);
           });
         } else if (rawData is List) {
@@ -356,6 +354,46 @@ class StaffListCubit extends Cubit<StaffListState> {
       print('removeAssignedClass error: $e');
       return false;
     }
+  }
+
+  Future<String?> uploadStaffPhoto({
+    required String schoolId,
+    required String uuid,
+    required String imagePath,
+  }) async {
+    try {
+      final token = await UserSecureStorage.fetchToken();
+      final url = '${Config.baseUrl}${Routes.uploadStaffPhoto(schoolId, uuid)}';
+      print('uploadStaffPhoto URL: $url');
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+      request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      print('uploadStaffPhoto status: ${response.statusCode}');
+      print('uploadStaffPhoto body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        String? newUrl = json['data']?['profile_photo_url'] as String?;
+        if (newUrl != null) {
+          final regex = RegExp(r'https?://');
+          final matches = regex.allMatches(newUrl).toList();
+          if (matches.length > 1) newUrl = newUrl.substring(matches.last.start);
+          newUrl = newUrl
+              .replaceAll('http://127.0.0.1:8000', 'https://idmitra.com')
+              .replaceAll('http://localhost:8000', 'https://idmitra.com')
+              .replaceAll('http://localhost', 'https://idmitra.com');
+        }
+        if (newUrl != null) {
+          updateStaffPhoto(uuid, newUrl);
+        }
+        return newUrl;
+      }
+    } catch (e) {
+      print('uploadStaffPhoto error: $e');
+    }
+    return null;
   }
 
   Future<String?> uploadStaffSignature({

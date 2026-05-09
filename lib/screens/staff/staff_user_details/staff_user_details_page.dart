@@ -285,7 +285,10 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                       context: context,
                       page: BlocProvider(
                         create: (_) => StaffCubit(),
-                        child: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                        child: StaffListingPage(
+                            schoolId: schoolDetailsModel?.id.toString() ?? '',
+                          schoolDetailsModel: schoolDetailsModel,
+                        ),
                       ),
                     ),
                   ),

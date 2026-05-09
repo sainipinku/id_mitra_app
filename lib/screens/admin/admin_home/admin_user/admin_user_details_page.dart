@@ -300,7 +300,9 @@ class _AdminUserDetailsContent extends StatelessWidget {
                     page: BlocProvider(
                       create: (_) => StaffCubit(),
                       child: StaffListingPage(
-                          schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                          schoolId: schoolDetailsModel?.id.toString() ?? '',
+                        schoolDetailsModel: schoolDetailsModel,
+                      ),
                     ),
                   ),
                 ),
