@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -167,7 +168,6 @@ class _StudentsTabState extends State<_StudentsTab> {
       } else {
         context.read<StudentsCubit>().fetchStudents(
           search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
           gender: '',
           classId: '',
         );
@@ -180,11 +180,12 @@ class _StudentsTabState extends State<_StudentsTab> {
     super.initState();
     final cubit = context.read<StudentsCubit>();
 
-    /// 🔥 1. Show local data
-    cubit.fetchStudents(schoolId: widget.schoolId);
+
 
     /// 🔥 2. Background sync (no UI block)
     cubit.syncAllStudents(schoolId: widget.schoolId);
+
+
 
   }
 
@@ -210,7 +211,6 @@ class _StudentsTabState extends State<_StudentsTab> {
       body: RefreshIndicator(
         onRefresh: () async => context.read<StudentsCubit>().fetchStudents(
           search: '',
-          schoolId: widget.schoolId,
           gender: '',
           classId: '',
         ),
@@ -243,7 +243,6 @@ class _StudentsTabState extends State<_StudentsTab> {
                         _debounce = Timer(const Duration(milliseconds: 500), () {
                           context.read<StudentsCubit>().fetchStudents(
                             search: '',
-                            schoolId: widget.schoolId,
                             classId: classId ?? '',
                             gender: gender ?? '',
                             sectionIds: result['section'] ?? [],
@@ -301,7 +300,7 @@ class _StudentsTabState extends State<_StudentsTab> {
               Expanded(
                 child: BlocBuilder<StudentsCubit, StudentsState>(
                   builder: (context, state) {
-                    if (state.loading) return const ShimmerList(expanded: false);
+                    if (state.isSyncing) return const ShimmerList(expanded: false);
                     if (state.studentsList.isEmpty) {
                       return Center(child: Image.asset('assets/images/no_data.png', height: 200));
                     }
@@ -341,11 +340,13 @@ class _StudentsTabState extends State<_StudentsTab> {
                         },
                       );
                     }
+
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       controller: _scrollCtrl,
                       itemCount: itemCount,
                       itemBuilder: (context, index) {
+                        print(jsonEncode("singledata-----${state.studentsList[0].toJson()}"));
                         if (index < state.studentsList.length) {
                           return StudentCard(
                             studentData: state.studentsList[index],
@@ -376,7 +377,7 @@ class _StudentsTabState extends State<_StudentsTab> {
       _debounce = Timer(const Duration(milliseconds: 500), () {
         context.read<StudentsCubit>().fetchStudents(
           search: value.trim(),
-          schoolId: widget.schoolId,
+
         );
       });
     },

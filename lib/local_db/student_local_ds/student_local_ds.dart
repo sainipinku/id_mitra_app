@@ -24,7 +24,7 @@ class StudentLocalDS {
         "school_class_id": e.schoolClassId,
         "school_class_section_id": e.schoolClassSectionId,
 
-        "father_name": e.fatherName,
+        "father_name": e.fatherName ?? "",
         "father_phone": e.fatherPhone,
         "mother_name": e.motherName,
         "mother_phone": e.motherPhone,
@@ -58,8 +58,12 @@ class StudentLocalDS {
         {
           "id": e.id,
           "name": e.name,
+          "father_name": e.fatherName ?? "",
           "school_class_id": e.schoolClassId,
           "school_class_section_id": e.schoolClassSectionId,
+
+
+          /// full backup
           "raw_data": jsonEncode(e.toJson()),
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -71,23 +75,19 @@ class StudentLocalDS {
 
   /// 🔍 FETCH WITH FILTER + PAGINATION
   Future<List<StudentDetailsData>> getStudents({
-    int page = 1,
-    int limit = 10,
     String search = "",
     String gender = "",
     String classId = "",
     List<int> sectionIds = const [],
+    bool isPagination = false,
   }) async {
     final db = await DBHelper.db;
-
-    int offset = (page - 1) * limit;
-
     String where = "1=1";
     List<dynamic> args = [];
 
     if (search.isNotEmpty) {
       where += " AND name LIKE ?";
-      args.add('%$search%');
+      args.add("%$search%");
     }
 
     if (gender.isNotEmpty) {
@@ -96,32 +96,21 @@ class StudentLocalDS {
     }
 
     if (classId.isNotEmpty) {
-      where += " AND school_class_id = ?";
-      args.add(int.parse(classId));
+      where += " AND class_id = ?";
+      args.add(classId);
     }
 
-    if (sectionIds.isNotEmpty) {
-      where +=
-      " AND school_class_section_id IN (${sectionIds.map((e) => '?').join(',')})";
-      args.addAll(sectionIds);
-    }
-
-    final result = await db.query(
-      'students',
+    final data = await db.query(
+      "students",
       where: where,
       whereArgs: args,
-      limit: limit,
-      offset: offset,
-      orderBy: "id DESC",
+      /// 🔥 IMPORTANT: alphabetical order
+      orderBy: "name COLLATE NOCASE ASC",
+      // ❌ NO LIMIT
+      // ❌ NO OFFSET
     );
 
-    return result.map((e) {
-      final rawString = e['raw_data'] as String?; // 👈 cast to String
-
-      final raw = jsonDecode(rawString ?? '{}');
-
-      return StudentDetailsData.fromJson(raw);
-    }).toList();
+    return data.map((e) => StudentDetailsData.fromJson(e)).toList();
   }
 
   /// 🔢 COUNT

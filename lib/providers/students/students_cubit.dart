@@ -42,48 +42,43 @@ class StudentsCubit extends Cubit<StudentsState> {
     ));
 
     fetchStudents(
-      schoolId: schoolId,
       classId: classId,
       sectionIds: sectionIds,
       gender: gender,
     );
   }
   Future<void> fetchStudents({
-    bool isLoadMore = false,
     String search = "",
-    String schoolId = "",
     String gender = "",
     String classId = "",
     List<int> sectionIds = const [],
   }) async {
 
-    if (state.isPaginationLoading) return;
+    emit(state.copyWith(loading: true));
 
-    int currentPage = isLoadMore ? state.page : 1;
+    try {
+      final localList = await localDS.getStudents(
+        search: search,
+        gender: gender,
+        classId: classId,
+        sectionIds: sectionIds,
+        isPagination: false, // 👈 important
+      );
 
-    if (!isLoadMore) {
-      emit(state.copyWith(loading: true, page: 1));
-    } else {
-      emit(state.copyWith(isPaginationLoading: true));
+      print("FULL LOCAL DATA: ${localList.length}");
+
+      emit(state.copyWith(
+        loading: false,
+        studentsList: localList,
+        hasMore: false, // ❌ no pagination
+        page: 1,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        loading: false,
+        error: e.toString(),
+      ));
     }
-
-    final localList = await localDS.getStudents(
-      page: currentPage,
-      search: search,
-      gender: gender,
-      classId: classId,
-      sectionIds: sectionIds,
-    );
-
-    emit(state.copyWith(
-      loading: false,
-      isPaginationLoading: false,
-      studentsList: isLoadMore
-          ? [...state.studentsList, ...localList]
-          : localList,
-      page: currentPage + 1,
-      hasMore: localList.length == 10,
-    ));
   }
   Future<void> syncAllStudents({
     required String schoolId,
@@ -92,14 +87,16 @@ class StudentsCubit extends Cubit<StudentsState> {
     String classId = "",
     List<int> sectionIds = const [],
   }) async {
-
+    /// 🔥 START LOADING
+    emit(state.copyWith(isSyncing: true));
+    await localDS.clearStudents(); // 🔥 MUST
     int page = 1;
     bool hasMore = true;
 
     while (hasMore) {
       String url =
           "${Config.baseUrl}auth/school/$schoolId"
-          "?perPage=510"
+          "?perPage=50"
           "&search=$search"
           "&page=$page"
           "&gender=$gender"
@@ -129,13 +126,19 @@ class StudentsCubit extends Cubit<StudentsState> {
 
         hasMore = count < total;
         page++;
-
+        print("Sync count: $count");
+        print("Sync total: $total");
+        print("Sync stopped: $page");
       } catch (e) {
         print("Sync stopped: $e");
         break;
       }
     }
+    /// 🔥 STOP LOADING
+    emit(state.copyWith(isSyncing: false));
 
+    /// 🔥 refresh UI after sync
+    await fetchStudents();
     print("✅ FULL DATA SYNC DONE");
   }
 

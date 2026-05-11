@@ -58,7 +58,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
       _schoolLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.read<StudentsCubit>().fetchStudents(search: '', schoolId: _schoolId);
+          context.read<StudentsCubit>().fetchStudents(search: '',);
         }
       });
     }
@@ -75,7 +75,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.read<StudentsCubit>().fetchStudents(search: '', schoolId: _schoolId);
+          context.read<StudentsCubit>().fetchStudents(search: '', );
         }
       });
     }
@@ -215,9 +215,7 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
-          isLoadMore: true,
           search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
           gender: '',
           classId: '',
         );
@@ -253,7 +251,6 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
     ).then((_) {
       context.read<StudentsCubit>().fetchStudents(
         search: _searchCtrl.text.trim(),
-        schoolId: widget.schoolId,
         gender: '',
         classId: '',
       );
@@ -274,7 +271,6 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
       body: RefreshIndicator(
         onRefresh: () async => context.read<StudentsCubit>().fetchStudents(
           search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
           gender: '',
           classId: '',
         ),
@@ -440,7 +436,6 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
       _debounce = Timer(const Duration(milliseconds: 500), () {
         context.read<StudentsCubit>().fetchStudents(
           search: value.trim(),
-          schoolId: widget.schoolId,
         );
       });
     },
