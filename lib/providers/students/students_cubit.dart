@@ -124,6 +124,7 @@ class StudentsCubit extends Cubit<StudentsState> {
         studentsList: updatedList,
         page: currentPage + 1,
         hasMore: updatedList.length < total,
+        total: isLoadMore ? state.total : (total as int),
       ));
     } catch (e) {
       emit(state.copyWith(

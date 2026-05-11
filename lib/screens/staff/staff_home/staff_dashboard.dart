@@ -21,6 +21,7 @@ import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/screens/admin/admin_edit_profile/admin_profile_page.dart';
 import 'package:idmitra/screens/staff/staff_student_list/staff_student_list.dart';
+import 'package:idmitra/screens/parent/parent_dashboard.dart';
 import '../staff_student_list/staff_list.dart';
 import 'staff_home.dart';
 
@@ -38,10 +39,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
   String _userName = 'Staff';
   String _profileImage = '';
   String _schoolId = '';
+  List<int> _assignedClassIds = [];
   final StudentsCubit _studentsCubit = StudentsCubit();
   final StaffCubit _staffCubit = StaffCubit();
 
-  List<Widget> _getWidgets(String schoolId,SchoolDetailsModel? schoolDetailsModel) {
+  List<Widget> _getWidgets(String schoolId, SchoolDetailsModel? schoolDetailsModel) {
     return [
       StaffHome(
         onStudentAdded: _onStudentAdded,
@@ -51,12 +53,15 @@ class _StaffDashboardState extends State<StaffDashboard> {
       ),
       BlocProvider.value(
         value: _studentsCubit,
-        child: StaffStudentsScreen(schoolId: schoolId,
-          schoolDetailsModel: schoolDetailsModel,),
+        child: StaffStudentsScreen(
+          schoolId: schoolId,
+          schoolDetailsModel: schoolDetailsModel,
+          assignedClassIds: _assignedClassIds,
+        ),
       ),
       BlocProvider.value(
         value: _staffCubit,
-        child: StaffListingPage(schoolId: schoolId, showAppBar: false,),
+        child: StaffListingPage(schoolId: schoolId, showAppBar: false),
       ),
     ];
   }
@@ -81,12 +86,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
   Future<void> _loadUser() async {
     final user = await UserLocal.getUser();
     final school = await UserLocal.getSchool();
+    final assignedClasses = await UserLocal.getAssignedClasses();
     if (mounted) {
       final newSchoolId = school['schoolId'] ?? '';
       setState(() {
         _userName = user['name'] ?? 'Staff';
         _profileImage = user['profileImage'] ?? '';
         _schoolId = newSchoolId;
+        _assignedClassIds = assignedClasses.map((c) => c.id).toList();
       });
       if (newSchoolId.isNotEmpty) {
         _staffCubit.fetchStaff(schoolId: newSchoolId);
@@ -210,15 +217,15 @@ class _StaffDashboardState extends State<StaffDashboard> {
                             ),
                             label: "Students",
                           ),
-                          BottomNavigationBarItem(
-                            icon: Icon(
-                              Icons.group_outlined,
-                              color: _selectedIndex == 2
-                                  ? AppTheme.btnColor
-                                  : AppTheme.black_Color,
-                            ),
-                            label: "Staff",
-                          ),
+                          // BottomNavigationBarItem(
+                          //   icon: Icon(
+                          //     Icons.group_outlined,
+                          //     color: _selectedIndex == 2
+                          //         ? AppTheme.btnColor
+                          //         : AppTheme.black_Color,
+                          //   ),
+                          //   label: "Staff",
+                          // ),
                         ],
                       ),
                     ),
@@ -317,7 +324,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
                             ),
                           ),
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) => const ParentDashboard(),
+                          //   ),
+                          // );
+                        },
                       ),
                       Positioned(
                         right: 8,
@@ -329,7 +343,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
                             shape: BoxShape.circle,
                           ),
                           child: const Text(
-                            "1",
+                            "2",
                             style: TextStyle(color: Colors.white, fontSize: 10),
                           ),
                         ),

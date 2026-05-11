@@ -5,6 +5,7 @@ import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/models/correction/CorrectionListModel.dart';
 import 'package:idmitra/providers/correction/correction_state.dart';
+
 class CorrectionCubit extends Cubit<CorrectionState> {
   CorrectionCubit() : super(const CorrectionState());
 
@@ -33,7 +34,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     }
 
     try {
-      String url = '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists?page=$currentPage&per_page=50';
+      String url =
+          '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists?page=$currentPage&per_page=50';
       if (search.isNotEmpty) url += '&search=$search';
       if (classId.isNotEmpty) url += '&class_id=$classId';
       if (gender.isNotEmpty) url += '&gender=$gender';
@@ -41,18 +43,25 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       var response = await _api.getRequest(url);
 
       if (response != null && response.statusCode == 403) {
-        final partnerUrl = '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists?page=$currentPage&per_page=50${search.isNotEmpty ? '&search=$search' : ''}${classId.isNotEmpty ? '&class_id=$classId' : ''}${gender.isNotEmpty ? '&gender=$gender' : ''}';
+        final partnerUrl =
+            '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists?page=$currentPage&per_page=50'
+            '${search.isNotEmpty ? '&search=$search' : ''}'
+            '${classId.isNotEmpty ? '&class_id=$classId' : ''}'
+            '${gender.isNotEmpty ? '&gender=$gender' : ''}';
         response = await _api.getRequest(partnerUrl);
       }
 
       if (response == null) {
-        emit(state.copyWith(loading: false, error: 'Failed to load correction list'));
+        emit(state.copyWith(
+            loading: false, error: 'Failed to load correction list'));
         return;
       }
 
       final json = jsonDecode(response.body);
       if (json['success'] != true) {
-        emit(state.copyWith(loading: false, error: json['message'] ?? 'Something went wrong'));
+        emit(state.copyWith(
+            loading: false,
+            error: json['message'] ?? 'Something went wrong'));
         return;
       }
 
@@ -66,7 +75,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
           .map((e) => CorrectionItem.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      final updatedList = isLoadMore ? [...state.items, ...newItems] : newItems;
+      final updatedList =
+      isLoadMore ? [...state.items, ...newItems] : newItems;
 
       emit(state.copyWith(
         loading: false,
@@ -98,7 +108,6 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     emit(state.copyWith(selectedIds: {}));
   }
 
-
   void toggleStudentSelection(int id) {
     final current = Set<int>.from(state.selectedStudentIds);
     if (current.contains(id)) {
@@ -118,33 +127,58 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     emit(state.copyWith(selectedStudentIds: {}));
   }
 
-  Future<void> processOrder({    
+  void setSelectedClassIds(List<String> classIds) {
+    emit(state.copyWith(selectedClassIds: classIds));
+  }
+
+  Future<void> processOrder({
     required String schoolId,
     String processType = 'create',
     String listType = 'class_wise',
+    String cardType = '',
+    List<String> cardFor = const [],
+    List<String>? studentUuids, // optional: pass directly from Students tab
   }) async {
-    if (state.selectedStudentIds.isEmpty) return;
-    final selectedUuids = state.students
-        .where((s) => state.selectedStudentIds.contains(s.id) && s.uuid != null)
-        .map((s) => s.uuid!)
-        .toList();
+    List<String> selectedUuids;
+
+    if (studentUuids != null && studentUuids.isNotEmpty) {
+      selectedUuids = studentUuids;
+    } else {
+      if (state.selectedStudentIds.isEmpty) return;
+      selectedUuids = state.students
+          .where((s) =>
+      state.selectedStudentIds.contains(s.id) &&
+          s.student?.uuid != null &&
+          s.student!.uuid!.isNotEmpty)
+          .map((s) => s.student!.uuid!)
+          .toList();
+    }
 
     if (selectedUuids.isEmpty) {
-      emit(state.copyWith(sendOrderError: 'No valid items found for selected entries'));
+      emit(state.copyWith(
+          sendOrderError: 'No valid items found for selected entries'));
       return;
     }
 
-    emit(state.copyWith(sendOrderLoading: true, clearSendOrderError: true, sendOrderSuccess: false));
+    emit(state.copyWith(
+        sendOrderLoading: true,
+        clearSendOrderError: true,
+        sendOrderSuccess: false));
     try {
-      final url = '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/process';
-      final body = {
+      final url =
+          '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/process';
+      final body = <String, dynamic>{
         'processType': processType,
         'listType': listType,
         'students': selectedUuids,
+        if (cardType.isNotEmpty) 'card_type': cardType,
+        if (cardFor.isNotEmpty) 'card_for': cardFor,
       };
       final response = await _api.postRequest(body, url);
       if (response == null) {
-        emit(state.copyWith(sendOrderLoading: false, sendOrderError: 'Failed to process order'));
+        emit(state.copyWith(
+            sendOrderLoading: false,
+            sendOrderError: 'Failed to process order'));
         return;
       }
       final json = jsonDecode(response.body);
@@ -161,7 +195,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         ));
       }
     } catch (e) {
-      emit(state.copyWith(sendOrderLoading: false, sendOrderError: e.toString()));
+      emit(state.copyWith(
+          sendOrderLoading: false, sendOrderError: e.toString()));
     }
   }
 
@@ -170,10 +205,15 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     bool isLoadMore = false,
     String search = '',
     String classFilter = '',
+    List<String> classIds = const [],
+    List<int> sectionIds = const [],
   }) async {
     if (isLoadMore && (state.studentsLoading || !state.studentsHasMore)) return;
 
     final currentPage = isLoadMore ? state.studentsPage : 1;
+
+    final effectiveClassFilter =
+    classIds.isNotEmpty ? classIds.join(',') : classFilter;
 
     if (!isLoadMore) {
       emit(state.copyWith(
@@ -182,6 +222,11 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         studentsPage: 1,
         studentsHasMore: true,
         clearStudentsError: true,
+        selectedClassIds: classIds.isNotEmpty
+            ? classIds
+            : (classFilter.isNotEmpty
+            ? classFilter.split(',')
+            : state.selectedClassIds),
       ));
     }
 
@@ -189,7 +234,11 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       String url =
           '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/students?page=$currentPage&per_page=50';
       if (search.isNotEmpty) url += '&search=$search';
-      if (classFilter.isNotEmpty) url += '&class_filter=$classFilter';
+      if (effectiveClassFilter.isNotEmpty)
+        url += '&class_filters=$effectiveClassFilter';
+      for (int i = 0; i < sectionIds.length; i++) {
+        url += '&sectionsIds[$i]=${sectionIds[i]}';
+      }
 
       var response = await _api.getRequest(url);
 
@@ -197,12 +246,18 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         String partnerUrl =
             '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/students?page=$currentPage&per_page=50';
         if (search.isNotEmpty) partnerUrl += '&search=$search';
-        if (classFilter.isNotEmpty) partnerUrl += '&class_filter=$classFilter';
+        if (effectiveClassFilter.isNotEmpty)
+          partnerUrl += '&class_filters=$effectiveClassFilter';
+        for (int i = 0; i < sectionIds.length; i++) {
+          partnerUrl += '&sectionsIds[$i]=${sectionIds[i]}';
+        }
         response = await _api.getRequest(partnerUrl);
       }
 
       if (response == null) {
-        emit(state.copyWith(studentsLoading: false, studentsError: 'Failed to load students'));
+        emit(state.copyWith(
+            studentsLoading: false,
+            studentsError: 'Failed to load students'));
         return;
       }
 
@@ -215,28 +270,34 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       }
 
       final data = json['data'] as Map<String, dynamic>?;
-      final studentsPage = data?['students'] as Map<String, dynamic>?;
-      final List rawList = studentsPage?['data'] ?? [];
-      final int lastPage = studentsPage?['last_page'] ?? 1;
-      final int respPage = studentsPage?['current_page'] ?? 1;
+      final listPage =
+      (data?['list'] ?? data?['students']) as Map<String, dynamic>?;
+      final List rawList = listPage?['data'] ?? [];
+      final int lastPage = listPage?['last_page'] ?? 1;
+      final int respPage = listPage?['current_page'] ?? 1;
 
       final newItems = rawList
-          .map((e) => CorrectionStudentItem.fromJson(e as Map<String, dynamic>))
+          .map((e) =>
+          CorrectionStudentItem.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      final updated = isLoadMore ? [...state.students, ...newItems] : newItems;
+      final updated =
+      isLoadMore ? [...state.students, ...newItems] : newItems;
+      final int total = listPage?['total'] ??
+          (isLoadMore ? state.studentsTotal : updated.length);
 
       emit(state.copyWith(
         studentsLoading: false,
         students: updated,
         studentsPage: respPage + 1,
         studentsHasMore: respPage < lastPage,
+        studentsTotal: total,
       ));
     } catch (e) {
-      emit(state.copyWith(studentsLoading: false, studentsError: e.toString()));
+      emit(state.copyWith(
+          studentsLoading: false, studentsError: e.toString()));
     }
   }
-
 
   Future<void> fetchDownloadColumns({
     required String schoolId,
@@ -248,7 +309,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       var response = await _api.getRequest(url);
 
       if (response != null && response.statusCode == 403) {
-        url = '${Config.baseUrl}auth/partner/school/$schoolId/student-form-fields';
+        url =
+        '${Config.baseUrl}auth/partner/school/$schoolId/student-form-fields';
         response = await _api.getRequest(url);
       }
 
@@ -258,7 +320,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       }
 
       final json = jsonDecode(response.body);
-      final data = json['data'] ?? json['props']?['school'] ?? {};
+      final data =
+          json['data'] ?? json['props']?['school'] ?? {};
 
       List rawFields = [];
       if (data['student_form_fields'] is List) {
@@ -272,9 +335,9 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       final columns = rawFields
           .where((e) => e['name'] != null && e['label'] != null)
           .map((e) => DownloadColumn(
-                key: e['name'].toString(),
-                label: e['label'].toString(),
-              ))
+        key: e['name'].toString(),
+        label: e['label'].toString(),
+      ))
           .toList();
 
       emit(state.copyWith(columnsLoading: false, downloadColumns: columns));
@@ -288,9 +351,13 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     required List<String> columns,
     required String printType,
   }) async {
-    emit(state.copyWith(downloadLoading: true, clearDownloadError: true, clearDownloadUrl: true));
+    emit(state.copyWith(
+        downloadLoading: true,
+        clearDownloadError: true,
+        clearDownloadUrl: true));
     try {
-      String url = '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/download';
+      String url =
+          '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/download';
       final body = {
         'columns': columns,
         'print_type': printType,
@@ -298,19 +365,26 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       var response = await _api.postRequest(body, url);
 
       if (response != null && response.statusCode == 403) {
-        final partnerUrl = '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/download';
+        final partnerUrl =
+            '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/download';
         response = await _api.postRequest(body, partnerUrl);
       }
 
       if (response == null) {
-        emit(state.copyWith(downloadLoading: false, downloadError: 'Failed to download. Please try again.'));
+        emit(state.copyWith(
+            downloadLoading: false,
+            downloadError: 'Failed to download. Please try again.'));
         return;
       }
 
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
-        final fileUrl = json['data']?['url'] ?? json['data']?['file_url'] ?? json['url'] ?? '';
-        emit(state.copyWith(downloadLoading: false, downloadUrl: fileUrl.toString()));
+        final fileUrl = json['data']?['url'] ??
+            json['data']?['file_url'] ??
+            json['url'] ??
+            '';
+        emit(state.copyWith(
+            downloadLoading: false, downloadUrl: fileUrl.toString()));
       } else {
         emit(state.copyWith(
           downloadLoading: false,
@@ -318,7 +392,8 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         ));
       }
     } catch (e) {
-      emit(state.copyWith(downloadLoading: false, downloadError: e.toString()));
+      emit(state.copyWith(
+          downloadLoading: false, downloadError: e.toString()));
     }
   }
 }
