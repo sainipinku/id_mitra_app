@@ -124,6 +124,7 @@ class AttendanceCubit extends Cubit<AttendanceState> {
       motherName: student.motherName,
       photo: student.photo,
       section: student.section,
+      className: student.className,
       status: newStatus,
     );
 
@@ -175,7 +176,6 @@ class AttendanceCubit extends Cubit<AttendanceState> {
     }
   }
 
-  // ── Fetch fresh stats from API ──────────────────────────────────────────
   Future<void> _refreshStats(String schoolId) async {
     try {
       final classId = state.selectedClass?.id ?? 0;
@@ -276,6 +276,7 @@ class AttendanceCubit extends Cubit<AttendanceState> {
             motherName: s.motherName,
             photo: s.photo,
             section: s.section,
+            className: s.className,
             status: status,
           );
         }

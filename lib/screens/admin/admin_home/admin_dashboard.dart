@@ -19,6 +19,7 @@ import 'package:page_transition/page_transition.dart';
 
 import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
+import '../../parent/parent_dashboard.dart';
 import '../../staff/staff_student_list/staff_list.dart';
 import '../admin_edit_profile/admin_profile_page.dart';
 import 'admin_home.dart';
@@ -271,7 +272,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: svgIcon(icon: 'assets/icons/home/notification.svg', clr: AppTheme.btnColor),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => const ParentDashboard(),
+                    //   ),
+                    // );
+                  },
                 ),
                 Positioned(
                   right: 8, top: 8,

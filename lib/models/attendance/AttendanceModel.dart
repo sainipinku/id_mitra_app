@@ -36,6 +36,7 @@ class AttendanceStudent {
   final String? motherName;
   final String? photo;
   final String? section;
+  final String? className;
   final String status;
 
   const AttendanceStudent({
@@ -46,6 +47,7 @@ class AttendanceStudent {
     this.motherName,
     this.photo,
     this.section,
+    this.className,
     required this.status,
   });
 
@@ -57,24 +59,20 @@ class AttendanceStudent {
 
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-  /// Fix broken ui-avatars URLs from the API
   String? get fixedPhoto {
     if (photo == null || photo!.isEmpty) return null;
     if (!photo!.contains('ui-avatars.com')) return photo;
 
     String url = photo!;
 
-    // Fix missing & between background value and size param
-    // e.g. background=11111size=128 → background=%2311111&size=128
     url = url.replaceFirstMapped(
       RegExp(r'background=([0-9a-fA-F]{5,6})(size=)'),
-      (m) => 'background=%23${m[1]}&${m[2]}',
+          (m) => 'background=%23${m[1]}&${m[2]}',
     );
 
-    // Fix background=XXXXXX (without #) when & is already present
     url = url.replaceFirstMapped(
       RegExp(r'background=([0-9a-fA-F]{5,6})(?=&|$)'),
-      (m) => 'background=%23${m[1]}',
+          (m) => 'background=%23${m[1]}',
     );
 
     return url;
@@ -88,11 +86,14 @@ class AttendanceStudent {
         name: json['name']?.toString() ?? '',
         rollNo: json['roll_no']?.toString() ?? json['rollNo']?.toString(),
         fatherName:
-            json['father_name']?.toString() ?? json['fatherName']?.toString(),
+        json['father_name']?.toString() ?? json['fatherName']?.toString(),
         motherName:
-            json['mother_name']?.toString() ?? json['motherName']?.toString(),
+        json['mother_name']?.toString() ?? json['motherName']?.toString(),
         photo: json['photo']?.toString(),
         section: json['section']?.toString(),
+        className: json['class_name']?.toString() ??
+            json['className']?.toString() ??
+            json['class']?.toString(),
         status: (json['status']?.toString() ?? '').toLowerCase().trim(),
       );
 }

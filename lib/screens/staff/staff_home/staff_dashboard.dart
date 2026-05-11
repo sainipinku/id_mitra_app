@@ -21,6 +21,7 @@ import 'package:idmitra/providers/staff/staff_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/screens/admin/admin_edit_profile/admin_profile_page.dart';
 import 'package:idmitra/screens/staff/staff_student_list/staff_student_list.dart';
+import 'package:idmitra/screens/parent/parent_dashboard.dart';
 import '../staff_student_list/staff_list.dart';
 import 'staff_home.dart';
 
@@ -323,7 +324,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
                             ),
                           ),
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) => const ParentDashboard(),
+                          //   ),
+                          // );
+                        },
                       ),
                       Positioned(
                         right: 8,
@@ -335,7 +343,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
                             shape: BoxShape.circle,
                           ),
                           child: const Text(
-                            "1",
+                            "2",
                             style: TextStyle(color: Colors.white, fontSize: 10),
                           ),
                         ),

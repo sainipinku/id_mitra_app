@@ -191,10 +191,10 @@ class _AttendanceCard extends StatelessWidget {
         final school = await UserLocal.getSchool();
         final schoolId = school['schoolId']?.toString() ?? '';
         if (!context.mounted || schoolId.isEmpty) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => AttendanceScreen(schoolId: schoolId)),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(builder: (_) => AttendanceScreen(schoolId: schoolId,)),
+        // );
       },
       child: Container(
         padding: const EdgeInsets.all(16),

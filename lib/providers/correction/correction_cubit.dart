@@ -137,16 +137,22 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     String listType = 'class_wise',
     String cardType = '',
     List<String> cardFor = const [],
+    List<String>? studentUuids, // optional: pass directly from Students tab
   }) async {
-    if (state.selectedStudentIds.isEmpty) return;
+    List<String> selectedUuids;
 
-    final selectedUuids = state.students
-        .where((s) =>
-    state.selectedStudentIds.contains(s.id) &&
-        s.student?.uuid != null &&
-        s.student!.uuid!.isNotEmpty)
-        .map((s) => s.student!.uuid!)
-        .toList();
+    if (studentUuids != null && studentUuids.isNotEmpty) {
+      selectedUuids = studentUuids;
+    } else {
+      if (state.selectedStudentIds.isEmpty) return;
+      selectedUuids = state.students
+          .where((s) =>
+      state.selectedStudentIds.contains(s.id) &&
+          s.student?.uuid != null &&
+          s.student!.uuid!.isNotEmpty)
+          .map((s) => s.student!.uuid!)
+          .toList();
+    }
 
     if (selectedUuids.isEmpty) {
       emit(state.copyWith(

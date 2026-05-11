@@ -278,20 +278,20 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                       ),
                     ),
                   ),
-                  statCard(
-                    title: "STAFF",
-                    value: "${schoolDetailsModel?.staffCount ?? ''}",
-                    callBtn: () => navigateWithTransition(
-                      context: context,
-                      page: BlocProvider(
-                        create: (_) => StaffCubit(),
-                        child: StaffListingPage(
-                            schoolId: schoolDetailsModel?.id.toString() ?? '',
-                          schoolDetailsModel: schoolDetailsModel,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // statCard(
+                  //   title: "STAFF",
+                  //   value: "${schoolDetailsModel?.staffCount ?? ''}",
+                  //   callBtn: () => navigateWithTransition(
+                  //     context: context,
+                  //     page: BlocProvider(
+                  //       create: (_) => StaffCubit(),
+                  //       child: StaffListingPage(
+                  //           schoolId: schoolDetailsModel?.id.toString() ?? '',
+                  //         schoolDetailsModel: schoolDetailsModel,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                   // statCard(
                   //   title: "TOTAL ORDERS",
                   //   value: "${schoolDetailsModel?.orderCount ?? 0}",

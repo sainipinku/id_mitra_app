@@ -20,5 +20,4 @@ samples, guidance on mobile development, and a full API reference.
 # Atul: 9001789889  partner login 
 # Atul: 9784476758  admin login 
 # Atul: 9928083468  school login  
-# Atul: atul@gmail.com  staff login 
-
+# Atul: atul@gmail.com  staff login  

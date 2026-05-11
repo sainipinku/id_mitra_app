@@ -364,7 +364,60 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
   final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
 
+  final Set<int> _selectedIds = {};
+  final Map<int, String> _idToUuid = {};
+
   bool get _isGridView => widget.isGridView;
+
+  void _toggleSelect(StudentDetailsData student) {
+    if (student.id == null) return;
+    setState(() {
+      if (_selectedIds.contains(student.id)) {
+        _selectedIds.remove(student.id);
+      } else {
+        _selectedIds.add(student.id!);
+        if (student.uuid != null) _idToUuid[student.id!] = student.uuid!;
+      }
+    });
+  }
+
+  void _selectAll(List<StudentDetailsData> students) {
+    setState(() {
+      for (final s in students) {
+        if (s.id != null) {
+          _selectedIds.add(s.id!);
+          if (s.uuid != null) _idToUuid[s.id!] = s.uuid!;
+        }
+      }
+    });
+  }
+
+  void _clearSelection() => setState(() => _selectedIds.clear());
+
+  void _showProcessChecklistDialog(BuildContext ctx) {
+    final uuids = _selectedIds
+        .where((id) => _idToUuid.containsKey(id))
+        .map((id) => _idToUuid[id]!)
+        .toList();
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider(
+        create: (_) => CorrectionCubit(),
+        child: _StaffStudentsProcessChecklistDialog(
+          schoolId: widget.schoolId,
+          studentUuids: uuids,
+          onSuccess: () {
+            _clearSelection();
+            context.read<StudentsCubit>().fetchStudents(
+              search: _searchCtrl.text.trim(),
+              schoolId: widget.schoolId,
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -482,6 +535,62 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              if (_selectedIds.isNotEmpty)
+                BlocBuilder<StudentsCubit, StudentsState>(
+                  builder: (_, studState) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.btnColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${_selectedIds.length} selected',
+                          style: MyStyles.mediumText(
+                              size: 13, color: AppTheme.btnColor),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () =>
+                              _selectAll(studState.studentsList),
+                          child: Text('Select All',
+                              style: MyStyles.mediumText(
+                                  size: 12, color: AppTheme.btnColor)),
+                        ),
+                        TextButton(
+                          onPressed: _clearSelection,
+                          child: Text('Clear',
+                              style: MyStyles.mediumText(
+                                  size: 12, color: Colors.grey)),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () =>
+                              _showProcessChecklistDialog(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppTheme.btnColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Process Checklist',
+                                    style: MyStyles.mediumText(
+                                        size: 12, color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(child: _searchBar()),
@@ -617,12 +726,42 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
                               imageShape ??= widget.schoolDetailsModel?.imageShape;
                             }
                           } catch (_) {}
-                          return StudentCard(
-                            key: ValueKey(state.studentsList[index].uuid),
-                            studentData: student,
-                            schoolId: widget.schoolId,
-                            schoolIntId: schoolIntId,
-                            imageShape: imageShape,
+                          final isSelected = student.id != null &&
+                              _selectedIds.contains(student.id);
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _toggleSelect(student),
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      0, 0, 4, 0),
+                                  child: Checkbox(
+                                    value: isSelected,
+                                    onChanged: (_) =>
+                                        _toggleSelect(student),
+                                    activeColor: AppTheme.btnColor,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(4)),
+                                    side: BorderSide(
+                                        color:
+                                        AppTheme.graySubTitleColor),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: StudentCard(
+                                  key: ValueKey(
+                                      state.studentsList[index].uuid),
+                                  studentData: student,
+                                  schoolId: widget.schoolId,
+                                  schoolIntId: schoolIntId,
+                                  imageShape: imageShape,
+                                ),
+                              ),
+                            ],
                           );
                         }
                         return const Padding(
@@ -2734,6 +2873,289 @@ class _StaffDotDateFormatter extends TextInputFormatter {
     return newValue.copyWith(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+// ── Staff Students Process Checklist Dialog ───────────────────────────────────
+
+class _StaffStudentsProcessChecklistDialog extends StatefulWidget {
+  final String schoolId;
+  final List<String> studentUuids;
+  final VoidCallback? onSuccess;
+
+  const _StaffStudentsProcessChecklistDialog({
+    required this.schoolId,
+    required this.studentUuids,
+    this.onSuccess,
+  });
+
+  @override
+  State<_StaffStudentsProcessChecklistDialog> createState() =>
+      _StaffStudentsProcessChecklistDialogState();
+}
+
+class _StaffStudentsProcessChecklistDialogState
+    extends State<_StaffStudentsProcessChecklistDialog> {
+  static const _listTypes = [
+    {'value': '', 'label': '- Select List Type -'},
+    {'value': 'selected_class_wise', 'label': 'Selected Data - Class Wise'},
+    {'value': 'selected_section_wise', 'label': 'Selected Data - Section Wise'},
+    {'value': 'complete_class_wise', 'label': 'Complete School Class Wise'},
+    {
+      'value': 'complete_section_wise',
+      'label': 'Complete School Class Sections Wise'
+    },
+  ];
+
+  static const _processTypes = [
+    {'value': '', 'label': '- Select Process Type -'},
+    {'value': 'create', 'label': 'Create Correction List'},
+  ];
+
+  String _selectedListType = '';
+  String _selectedProcessType = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+          p.sendOrderLoading != c.sendOrderLoading ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
+      listener: (ctx, state) {
+        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+          Navigator.of(context).pop();
+          widget.onSuccess?.call();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Correction list created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+        if (!state.sendOrderLoading && state.sendOrderError != null) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.sendOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+      builder: (context, state) => Dialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Process Checklist Or Orders',
+                        style: MyStyles.boldText(
+                            size: 16, color: AppTheme.black_Color)),
+                  ),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [
+                          Color(0xFFFF6B6B),
+                          Color(0xFFFF8E53)
+                        ]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Text('List Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedListType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedListType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedListType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _listTypes
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['value']!,
+                              child: Text(t['label']!,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: t['value']!.isEmpty
+                                        ? AppTheme.graySubTitleColor
+                                        : AppTheme.black_Color,
+                                  )),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedListType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Select Process Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedProcessType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedProcessType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedProcessType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _processTypes
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['value']!,
+                              child: Text(t['label']!,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: t['value']!.isEmpty
+                                        ? AppTheme.graySubTitleColor
+                                        : AppTheme.black_Color,
+                                  )),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedProcessType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B6B),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text('Cancel',
+                          style: MyStyles.mediumText(
+                              size: 14, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () {
+                            if (_selectedListType.isEmpty) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: const Text(
+                                    'Please select a list type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            if (_selectedProcessType.isEmpty) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: const Text(
+                                    'Please select a process type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            context.read<CorrectionCubit>().processOrder(
+                                  schoolId: widget.schoolId,
+                                  processType: _selectedProcessType,
+                                  listType: _selectedListType,
+                                  studentUuids: widget.studentUuids,
+                                );
+                          },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: state.sendOrderLoading
+                            ? Colors.grey
+                            : AppTheme.btnColor,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: state.sendOrderLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text('Confirm',
+                              style: MyStyles.mediumText(
+                                  size: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

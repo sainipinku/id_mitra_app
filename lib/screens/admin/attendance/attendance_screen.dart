@@ -5,24 +5,42 @@ import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/models/attendance/AttendanceModel.dart';
 import 'package:idmitra/providers/attendance/attendance_cubit.dart';
 import 'package:idmitra/providers/attendance/attendance_state.dart';
+import 'package:idmitra/Widgets/shimmer_loader.dart';
 
 class AttendanceScreen extends StatelessWidget {
   final String schoolId;
+  /// When true, date is locked to today and date-picker is hidden.
+  /// Pass true for school_admin / super_admin roles.
+  final bool todayOnly;
 
-  const AttendanceScreen({super.key, required this.schoolId});
+  const AttendanceScreen({
+    super.key,
+    required this.schoolId,
+    this.todayOnly = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AttendanceCubit()..fetchAttendance(schoolId: schoolId),
-      child: _AttendanceView(schoolId: schoolId),
+      create: (_) => AttendanceCubit()
+        ..fetchAttendance(
+          schoolId: schoolId,
+          date: todayOnly ? _todayStr() : null,
+        ),
+      child: _AttendanceView(schoolId: schoolId, todayOnly: todayOnly),
     );
+  }
+
+  static String _todayStr() {
+    final t = DateTime.now();
+    return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
   }
 }
 
 class _AttendanceView extends StatefulWidget {
   final String schoolId;
-  const _AttendanceView({required this.schoolId});
+  final bool todayOnly;
+  const _AttendanceView({required this.schoolId, this.todayOnly = false});
 
   @override
   State<_AttendanceView> createState() => _AttendanceViewState();
@@ -33,11 +51,6 @@ class _AttendanceViewState extends State<_AttendanceView>
   late TabController _tabController;
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
-
-  String _todayStr() {
-    final t = DateTime.now();
-    return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
-  }
 
   @override
   void initState() {
@@ -57,11 +70,9 @@ class _AttendanceViewState extends State<_AttendanceView>
     if (_searchQuery.isEmpty) return list;
     final q = _searchQuery.toLowerCase();
     return list
-        .where(
-          (s) =>
-              s.name.toLowerCase().contains(q) ||
-              (s.rollNo?.toLowerCase().contains(q) ?? false),
-        )
+        .where((s) =>
+    s.name.toLowerCase().contains(q) ||
+        (s.rollNo?.toLowerCase().contains(q) ?? false))
         .toList();
   }
 
@@ -70,18 +81,18 @@ class _AttendanceViewState extends State<_AttendanceView>
     return BlocBuilder<AttendanceCubit, AttendanceState>(
       builder: (context, state) {
         final students = state.students;
-        final stats = state.stats;
-        final present = students.where((s) => s.isPresent).toList();
-        final absent = students.where((s) => s.isAbsent).toList();
+        final stats    = state.stats;
+        final present  = students.where((s) => s.isPresent).toList();
+        final absent   = students.where((s) => s.isAbsent).toList();
 
+        // current tab's visible list (for select-all)
         final currentList = _tabController.index == 0
             ? _filter(students)
             : _tabController.index == 1
             ? _filter(present)
             : _filter(absent);
 
-        final allSelected =
-            currentList.isNotEmpty &&
+        final allSelected = currentList.isNotEmpty &&
             currentList.every((s) => state.selectedStudentIds.contains(s.id));
 
         return Scaffold(
@@ -93,42 +104,38 @@ class _AttendanceViewState extends State<_AttendanceView>
             automaticallyImplyLeading: false,
             leading: state.bulkMode
                 ? IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black87),
-                    onPressed: () =>
-                        context.read<AttendanceCubit>().toggleBulkMode(),
-                  )
+              icon: const Icon(Icons.close, color: Colors.black87),
+              onPressed: () =>
+                  context.read<AttendanceCubit>().toggleBulkMode(),
+            )
                 : Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppTheme.titleHintColor),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(5),
-                          child: Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 18,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                    ),
+              padding: const EdgeInsets.all(10),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.titleHintColor),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(5),
+                    child: Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 18, color: Colors.black87),
+                  ),
+                ),
+              ),
+            ),
             centerTitle: true,
             title: state.bulkMode
                 ? Text(
-                    '${state.selectedStudentIds.length} Selected',
-                    style: MyStyles.boldText(size: 18, color: Colors.black),
-                  )
-                : Text(
-                    'Attendance',
-                    style: MyStyles.boldText(size: 20, color: Colors.black),
-                  ),
+              '${state.selectedStudentIds.length} Selected',
+              style: MyStyles.boldText(size: 18, color: Colors.black),
+            )
+                : Text('Attendance',
+                style: MyStyles.boldText(size: 20, color: Colors.black)),
             actions: [
               if (state.bulkMode) ...[
+                // Select all toggle
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
@@ -137,18 +144,14 @@ class _AttendanceViewState extends State<_AttendanceView>
                         .selectAllStudents(currentList),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: allSelected
                             ? AppTheme.btnColor.withOpacity(0.1)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: AppTheme.btnColor,
-                          width: 1.5,
-                        ),
+                            color: AppTheme.btnColor, width: 1.5),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -164,9 +167,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                           Text(
                             allSelected ? 'Deselect' : 'Select All',
                             style: MyStyles.mediumText(
-                              size: 12,
-                              color: AppTheme.btnColor,
-                            ),
+                                size: 12, color: AppTheme.btnColor),
                           ),
                         ],
                       ),
@@ -177,13 +178,9 @@ class _AttendanceViewState extends State<_AttendanceView>
                 TextButton(
                   onPressed: () =>
                       context.read<AttendanceCubit>().toggleBulkMode(),
-                  child: Text(
-                    'Bulk',
-                    style: MyStyles.mediumText(
-                      size: 13,
-                      color: AppTheme.btnColor,
-                    ),
-                  ),
+                  child: Text('Bulk',
+                      style: MyStyles.mediumText(
+                          size: 13, color: AppTheme.btnColor)),
                 ),
               ],
             ],
@@ -194,10 +191,8 @@ class _AttendanceViewState extends State<_AttendanceView>
               indicatorColor: AppTheme.btnColor,
               indicatorWeight: 2.5,
               labelStyle: MyStyles.mediumText(size: 13, color: Colors.white),
-              unselectedLabelStyle: MyStyles.regularText(
-                size: 13,
-                color: Colors.white,
-              ),
+              unselectedLabelStyle:
+              MyStyles.regularText(size: 13, color: Colors.white),
               tabs: [
                 Tab(text: 'All (${stats.total})'),
                 Tab(text: 'Present (${stats.present})'),
@@ -205,48 +200,67 @@ class _AttendanceViewState extends State<_AttendanceView>
               ],
             ),
           ),
+          // ── Bulk bottom action bar ──────────────────────────────────────
           bottomNavigationBar: state.bulkMode
               ? _bulkBottomBar(context, state)
               : null,
           body: state.loading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
+              ? Column(
+            children: [
+              const AttendanceStatsShimmer(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
                   children: [
-                    if (state.error != null)
-                      _errorBanner(context, state.error!)
-                    else if (state.selectedClass == null &&
-                        state.classes.isEmpty)
-                      Expanded(child: _emptyClasses())
-                    else ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                        child: Row(
-                          children: [
-                            Expanded(child: _searchBar()),
-                            const SizedBox(width: 8),
-                            _classDropdown(context, state),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _list(_filter(students), context, state),
-                            _list(_filter(present), context, state),
-                            _list(_filter(absent), context, state),
-                          ],
-                        ),
-                      ),
-                    ],
+                    Expanded(
+                      child: shimmerBox(height: 48, radius: 15),
+                    ),
+                    const SizedBox(width: 8),
+                    shimmerBox(width: 100, height: 48, radius: 12),
                   ],
                 ),
+              ),
+              const AttendanceCardShimmer(),
+            ],
+          )
+              : Column(
+            children: [
+              if (state.error != null)
+                _errorBanner(context, state.error!)
+              else if (state.selectedClass == null &&
+                  state.classes.isEmpty)
+                Expanded(child: _emptyClasses())
+              else ...[
+                  //_statsRow(stats),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
+                      children: [
+                        Expanded(child: _searchBar()),
+                        const SizedBox(width: 8),
+                        _classDropdown(context, state),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _list(_filter(students), context, state),
+                        _list(_filter(present), context, state),
+                        _list(_filter(absent), context, state),
+                      ],
+                    ),
+                  ),
+                ],
+            ],
+          ),
         );
       },
     );
   }
 
-
+  // ── Bulk bottom bar ─────────────────────────────────────────────────────
   Widget _bulkBottomBar(BuildContext context, AttendanceState state) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -254,75 +268,64 @@ class _AttendanceViewState extends State<_AttendanceView>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, -3),
-          ),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, -3)),
         ],
       ),
       child: state.bulkSubmitting
-          ? const Center(child: CircularProgressIndicator())
+          ? const AttendanceBulkBottomShimmer()
           : Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: state.selectedStudentIds.isEmpty
-                        ? null
-                        : () => context
-                              .read<AttendanceCubit>()
-                              .bulkMarkAttendance(
-                                schoolId: widget.schoolId,
-                                status: 'absent',
-                              ),
-                    icon: const Icon(
-                      Icons.cancel_outlined,
-                      color: Colors.red,
-                      size: 18,
-                    ),
-                    label: Text(
-                      'Mark Absent',
-                      style: MyStyles.mediumText(size: 13, color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: state.selectedStudentIds.isEmpty
-                        ? null
-                        : () => context
-                              .read<AttendanceCubit>()
-                              .bulkMarkAttendance(
-                                schoolId: widget.schoolId,
-                                status: 'present',
-                              ),
-                    icon: const Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    label: Text(
-                      'Mark Present',
-                      style: MyStyles.mediumText(size: 13, color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: state.selectedStudentIds.isEmpty
+                  ? null
+                  : () => context
+                  .read<AttendanceCubit>()
+                  .bulkMarkAttendance(
+                schoolId: widget.schoolId,
+                status: 'absent',
+              ),
+              icon: const Icon(Icons.cancel_outlined,
+                  color: Colors.red, size: 18),
+              label: Text('Mark Absent',
+                  style: MyStyles.mediumText(
+                      size: 13, color: Colors.red)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: state.selectedStudentIds.isEmpty
+                  ? null
+                  : () => context
+                  .read<AttendanceCubit>()
+                  .bulkMarkAttendance(
+                schoolId: widget.schoolId,
+                status: 'present',
+              ),
+              icon: const Icon(Icons.check_circle_outline,
+                  color: Colors.white, size: 18),
+              label: Text('Mark Present',
+                  style: MyStyles.mediumText(
+                      size: 13, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -345,9 +348,7 @@ class _AttendanceViewState extends State<_AttendanceView>
         borderRadius: BorderRadius.circular(15),
       ),
       hintStyle: MyStyles.regularText(
-        size: 14,
-        color: AppTheme.graySubTitleColor,
-      ),
+          size: 14, color: AppTheme.graySubTitleColor),
     ),
   );
 
@@ -362,13 +363,9 @@ class _AttendanceViewState extends State<_AttendanceView>
           color: Colors.white,
         ),
         child: Center(
-          child: Text(
-            'No class',
-            style: MyStyles.regularText(
-              size: 12,
-              color: AppTheme.graySubTitleColor,
-            ),
-          ),
+          child: Text('No class',
+              style: MyStyles.regularText(
+                  size: 12, color: AppTheme.graySubTitleColor)),
         ),
       );
     }
@@ -384,47 +381,65 @@ class _AttendanceViewState extends State<_AttendanceView>
       child: DropdownButtonHideUnderline(
         child: DropdownButton<AttendanceClassItem>(
           value: state.selectedClass,
-          hint: Text(
-            'Class',
-            style: MyStyles.regularText(
-              size: 12,
-              color: AppTheme.graySubTitleColor,
-            ),
-          ),
-          icon: Icon(
-            Icons.arrow_drop_down,
-            color: AppTheme.graySubTitleColor,
-            size: 20,
-          ),
+          hint: Text('Class',
+              style: MyStyles.regularText(
+                  size: 12, color: AppTheme.graySubTitleColor)),
+          icon: Icon(Icons.arrow_drop_down,
+              color: AppTheme.graySubTitleColor, size: 20),
           items: state.classes
-              .map(
-                (c) => DropdownMenuItem(
-                  value: c,
-                  child: Text(
-                    c.displayName,
-                    style: MyStyles.regularText(
-                      size: 13,
-                      color: AppTheme.black_Color,
-                    ),
-                  ),
-                ),
-              )
+              .map((c) => DropdownMenuItem(
+            value: c,
+            child: Text(c.displayName,
+                style: MyStyles.regularText(
+                    size: 13, color: AppTheme.black_Color)),
+          ))
               .toList(),
           onChanged: (val) {
             if (val == null) return;
+            final date = widget.todayOnly
+                ? AttendanceScreen._todayStr()
+                : (context.read<AttendanceCubit>().state.selectedDate.isNotEmpty
+                ? context.read<AttendanceCubit>().state.selectedDate
+                : AttendanceScreen._todayStr());
             context.read<AttendanceCubit>().selectClassAndFetch(
               schoolId: widget.schoolId,
               cls: val,
-              date:
-                  context.read<AttendanceCubit>().state.selectedDate.isNotEmpty
-                  ? context.read<AttendanceCubit>().state.selectedDate
-                  : _todayStr(),
+              date: date,
             );
           },
         ),
       ),
     );
   }
+
+  // Widget _statsRow(AttendanceStats stats) {
+  //   return Container(
+  //     color: Colors.white,
+  //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+  //     child: Row(
+  //       children: [
+  //         _statChip('Total', stats.total, AppTheme.btnColor),
+  //         _statChip('Present', stats.present, Colors.green),
+  //         _statChip('Absent', stats.absent, Colors.red),
+  //         _statChip('Late', stats.late, Colors.orange),
+  //         _statChip('Leave', stats.leave, Colors.blue),
+  //       ],
+  //     ),
+  //   );
+  // }
+  //
+  // Widget _statChip(String label, int count, Color color) {
+  //   return Expanded(
+  //     child: Column(
+  //       children: [
+  //         Text('$count', style: MyStyles.boldText(size: 16, color: color)),
+  //         Text(label,
+  //             style: MyStyles.regularText(
+  //                 size: 10, color: AppTheme.graySubTitleColor)),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _errorBanner(BuildContext context, String error) {
     return Expanded(
@@ -436,14 +451,10 @@ class _AttendanceViewState extends State<_AttendanceView>
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 12),
-              Text(
-                error,
-                style: MyStyles.regularText(
-                  size: 14,
-                  color: AppTheme.graySubTitleColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              Text(error,
+                  style: MyStyles.regularText(
+                      size: 14, color: AppTheme.graySubTitleColor),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context
@@ -463,33 +474,23 @@ class _AttendanceViewState extends State<_AttendanceView>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.class_outlined,
-            size: 60,
-            color: AppTheme.graySubTitleColor.withOpacity(0.4),
-          ),
+          Icon(Icons.class_outlined,
+              size: 60,
+              color: AppTheme.graySubTitleColor.withOpacity(0.4)),
           const SizedBox(height: 12),
-          Text(
-            'No classes found',
-            style: MyStyles.regularText(
-              size: 14,
-              color: AppTheme.graySubTitleColor,
-            ),
-          ),
+          Text('No classes found',
+              style: MyStyles.regularText(
+                  size: 14, color: AppTheme.graySubTitleColor)),
         ],
       ),
     );
   }
 
   Widget _list(
-    List<AttendanceStudent> list,
-    BuildContext context,
-    AttendanceState state,
-  ) {
+      List<AttendanceStudent> list, BuildContext context, AttendanceState state) {
     if (list.isEmpty) {
       return Center(
-        child: Image.asset('assets/images/no_data.png', height: 200),
-      );
+          child: Image.asset('assets/images/no_data.png', height: 200));
     }
     final isAllTab = _tabController.index == 0;
     return ListView.builder(
@@ -500,13 +501,9 @@ class _AttendanceViewState extends State<_AttendanceView>
   }
 
   Widget _card(
-    AttendanceStudent s,
-    BuildContext context,
-    AttendanceState state,
-    bool showToggle,
-  ) {
-    final bool isPresent = s.isPresent;
-    final bool isSelected = state.selectedStudentIds.contains(s.id);
+      AttendanceStudent s, BuildContext context, AttendanceState state, bool showToggle) {
+    final bool isPresent   = s.isPresent;
+    final bool isSelected  = state.selectedStudentIds.contains(s.id);
 
     final Color statusColor = isPresent
         ? Colors.green
@@ -528,7 +525,9 @@ class _AttendanceViewState extends State<_AttendanceView>
 
     return GestureDetector(
       onTap: state.bulkMode
-          ? () => context.read<AttendanceCubit>().toggleStudentSelection(s.id)
+          ? () => context
+          .read<AttendanceCubit>()
+          .toggleStudentSelection(s.id)
           : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -571,14 +570,12 @@ class _AttendanceViewState extends State<_AttendanceView>
               radius: 26,
               backgroundColor: statusColor.withOpacity(0.12),
               backgroundImage:
-                  (s.fixedPhoto != null && s.fixedPhoto!.isNotEmpty)
+              (s.fixedPhoto != null && s.fixedPhoto!.isNotEmpty)
                   ? NetworkImage(s.fixedPhoto!)
                   : null,
               child: (s.fixedPhoto == null || s.fixedPhoto!.isEmpty)
-                  ? Text(
-                      s.initial,
-                      style: MyStyles.boldText(size: 18, color: statusColor),
-                    )
+                  ? Text(s.initial,
+                  style: MyStyles.boldText(size: 18, color: statusColor))
                   : null,
             ),
             const SizedBox(width: 12),
@@ -589,80 +586,68 @@ class _AttendanceViewState extends State<_AttendanceView>
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          s.name,
-                          style: MyStyles.boldText(
-                            size: 15,
-                            color: AppTheme.black_Color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(s.name,
+                            style: MyStyles.boldText(
+                                size: 15, color: AppTheme.black_Color),
+                            overflow: TextOverflow.ellipsis),
                       ),
                       if (s.rollNo != null && s.rollNo!.isNotEmpty) ...[
                         const SizedBox(width: 6),
-                        Text(
-                          '• ${s.rollNo}',
-                          style: MyStyles.mediumText(
-                            size: 13,
-                            color: AppTheme.btnColor,
-                          ),
-                        ),
+                        Text('• ${s.rollNo}',
+                            style: MyStyles.mediumText(
+                                size: 13, color: AppTheme.btnColor)),
                       ],
                     ],
                   ),
                   if (s.fatherName != null && s.fatherName!.isNotEmpty) ...[
                     const SizedBox(height: 3),
-                    Text(
-                      'Father: ${s.fatherName}',
-                      style: MyStyles.regularText(
-                        size: 12,
-                        color: AppTheme.graySubTitleColor,
-                      ),
-                    ),
+                    Text('Father: ${s.fatherName}',
+                        style: MyStyles.regularText(
+                            size: 12, color: AppTheme.graySubTitleColor)),
                   ],
                   if (s.motherName != null && s.motherName!.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      'Mother: ${s.motherName}',
-                      style: MyStyles.regularText(
-                        size: 12,
-                        color: AppTheme.graySubTitleColor,
-                      ),
-                    ),
+                    Text('Mother: ${s.motherName}',
+                        style: MyStyles.regularText(
+                            size: 12, color: AppTheme.graySubTitleColor)),
                   ],
-                  if (s.section != null && s.section!.isNotEmpty) ...[
+                  if (s.className != null && s.className!.isNotEmpty ||
+                      s.section != null && s.section!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      'Section: ${s.section}',
+                      [
+                        if (s.className != null && s.className!.isNotEmpty)
+                          'Class: ${s.className}',
+                        if (s.section != null && s.section!.isNotEmpty)
+                          'Section: ${s.section}',
+                      ].join('  |  '),
                       style: MyStyles.regularText(
-                        size: 12,
-                        color: AppTheme.graySubTitleColor,
-                      ),
+                          size: 12, color: AppTheme.graySubTitleColor),
                     ),
                   ],
                   const SizedBox(height: 5),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3,
-                    ),
+                        horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: statusColor.withOpacity(0.3)),
                     ),
-                    child: Text(
-                      statusLabel,
-                      style: MyStyles.mediumText(size: 11, color: statusColor),
-                    ),
+                    child: Text(statusLabel,
+                        style:
+                        MyStyles.mediumText(size: 11, color: statusColor)),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
+            // Toggle (hidden in bulk mode, only on All tab)
             if (!state.bulkMode && showToggle)
               GestureDetector(
-                onTap: () => context.read<AttendanceCubit>().toggleAttendance(
+                onTap: () => context
+                    .read<AttendanceCubit>()
+                    .toggleAttendance(
                   schoolId: widget.schoolId,
                   studentId: s.id,
                 ),

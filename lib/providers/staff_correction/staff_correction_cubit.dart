@@ -107,13 +107,19 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
     required String schoolId,
     String cardType = '',
     List<String> cardFor = const [],
+    List<String>? staffUuids, // optional: pass directly from Staff list tab
   }) async {
-    if (state.selectedIds.isEmpty) return;
+    List<String> selectedUuids;
 
-    final selectedUuids = state.items
-        .where((s) => state.selectedIds.contains(s.id) && s.uuid != null)
-        .map((s) => s.uuid!)
-        .toList();
+    if (staffUuids != null && staffUuids.isNotEmpty) {
+      selectedUuids = staffUuids;
+    } else {
+      if (state.selectedIds.isEmpty) return;
+      selectedUuids = state.items
+          .where((s) => state.selectedIds.contains(s.id) && s.uuid != null)
+          .map((s) => s.uuid!)
+          .toList();
+    }
 
     if (selectedUuids.isEmpty) {
       emit(state.copyWith(sendOrderError: 'No valid items found for selected entries'));

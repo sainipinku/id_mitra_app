@@ -1,54 +1,109 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:idmitra/Widgets/CommonAppBar.dart';
 import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/api_mamanger/UserLocal.dart';
-import 'package:idmitra/api_mamanger/api_manager.dart';
-import 'package:idmitra/api_mamanger/config.dart';
-import 'package:idmitra/api_mamanger/secure_storage.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/components/my_font_weight.dart';
 import 'package:idmitra/components/text_filed.dart';
-import 'package:idmitra/models/correction/CorrectionListModel.dart';
 import 'package:idmitra/models/orders/OrderModel.dart';
 import 'package:idmitra/models/staff/StaffDetailModel.dart';
 import 'package:idmitra/models/staff/StaffListModel.dart';
-import 'package:idmitra/models/students/StudentsListModel.dart';
-import 'package:idmitra/providers/add_student/add_student_cubit.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
-import 'package:idmitra/providers/correction/correction_cubit.dart';
-import 'package:idmitra/providers/correction/correction_state.dart';
-import 'package:idmitra/providers/orders/orders_cubit.dart';
+
 import 'package:idmitra/providers/staff_correction/staff_correction_cubit.dart';
 import 'package:idmitra/providers/staff_correction/staff_correction_state.dart';
 import 'package:idmitra/providers/staff_list/staff_list_cubit.dart';
-import 'package:idmitra/providers/student_form/student_form_cubit.dart';
-import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
-import 'package:idmitra/screens/orders/order_staff_page.dart';
-import 'package:idmitra/screens/staff/staff_add_student_form/staff_add_student_form.dart';
 import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
-import 'package:idmitra/Widgets/svg_file.dart';
-import 'package:idmitra/screens/home/FilterBottomSheet.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import '../../orders/order_staff_page.dart';
 import 'add_staff_form.dart';
 import 'assign_classes_sheet.dart';
 import 'staff_profile_page.dart';
+
+String _resolveImageShape(BuildContext context, String schoolId) {
+  String shape = 'rectangle';
+  try {
+    final schoolState = context.read<SchoolCubit>().state;
+    final schoolIntId = int.tryParse(schoolId);
+    if (schoolIntId != null) {
+      if (schoolState.imageShapeMap.containsKey(schoolIntId)) {
+        shape = schoolState.imageShapeMap[schoolIntId] ?? shape;
+      } else {
+        final match = schoolState.students.firstWhere(
+              (s) => s.id == schoolIntId,
+          orElse: () => SchoolDetailsModel(),
+        );
+        if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+          shape = match.imageShape!;
+        }
+      }
+    }
+  } catch (_) {}
+  return shape;
+}
+
+Widget _clipByShape(Widget child, String shape,
+    {double width = 60, double height = 60}) {
+  final sized = SizedBox(width: width, height: height, child: child);
+  switch (shape) {
+    case 'round':
+    case 'oval':
+      return ClipOval(child: sized);
+    case 'square':
+      return ClipRRect(borderRadius: BorderRadius.zero, child: sized);
+    case 'rectangle':
+    default:
+      return ClipRRect(borderRadius: BorderRadius.circular(6), child: sized);
+  }
+}
+
+Widget _buildShapedPreview(String imageUrl, String shape) {
+  final imageWidget = Image.network(
+    imageUrl,
+    width: double.infinity,
+    fit: BoxFit.contain,
+    loadingBuilder: (_, child, progress) => progress == null
+        ? child
+        : const SizedBox(
+      height: 300,
+      child: Center(child: CircularProgressIndicator()),
+    ),
+    errorBuilder: (_, __, ___) => Container(
+      height: 300,
+      width: double.infinity,
+      color: Colors.grey.shade300,
+      child: const Icon(Icons.person, size: 80, color: Colors.grey),
+    ),
+  );
+  switch (shape) {
+    case 'round':
+    case 'oval':
+      return ClipOval(child: imageWidget);
+    case 'square':
+      return ClipRRect(borderRadius: BorderRadius.zero, child: imageWidget);
+    case 'rectangle':
+    default:
+      return ClipRRect(
+          borderRadius: BorderRadius.circular(12), child: imageWidget);
+  }
+}
+
 
 class StaffListingPage extends StatefulWidget {
   final String schoolId;
   final bool showAppBar;
   final bool isSchool;
   final SchoolDetailsModel? schoolDetailsModel;
+
   const StaffListingPage({
     super.key,
     required this.schoolId,
@@ -89,6 +144,7 @@ class _StaffListingPageState extends State<StaffListingPage>
       setState(() => _schoolId = id);
       if (id.isNotEmpty) {
         _cubit.fetchStaff(schoolId: id);
+        _cubit.fetchStaffOrders(schoolId: id, reset: true);
         _correctionCubit.fetchStaffCorrection(schoolId: id);
         final schoolIntId = int.tryParse(id);
         if (schoolIntId != null) {
@@ -110,9 +166,7 @@ class _StaffListingPageState extends State<StaffListingPage>
   @override
   Widget build(BuildContext context) {
     if (_schoolId == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final tabBar = TabBar(
@@ -192,16 +246,18 @@ class _StaffListingPageState extends State<StaffListingPage>
                     child: _StaffCorrectionTab(
                         schoolId: _schoolId!, isSchool: widget.isSchool),
                   ),
-                  // Tab 3: Staff Orders
-                  _StaffOrdersTab(
-                      schoolId: _schoolId!, isSchool: widget.isSchool),
+                  BlocProvider.value(
+                    value: _cubit,
+                    child: _StaffOrdersTab(
+                        schoolId: _schoolId!, isSchool: widget.isSchool),
+                  ),
                 ],
               ),
             ),
           ],
         ),
-      ), // Scaffold
-    ); // MultiBlocProvider
+      ),
+    );
   }
 }
 
@@ -209,6 +265,7 @@ class _StaffListBody extends StatefulWidget {
   final String schoolId;
   final StaffListCubit cubit;
   final bool showAppBar;
+
   const _StaffListBody(
       {required this.schoolId, required this.cubit, this.showAppBar = true});
 
@@ -221,7 +278,55 @@ class _StaffListBodyState extends State<_StaffListBody> {
   final ScrollController _scrollCtrl = ScrollController();
   Timer? _debounce;
 
-  String get _schoolId => widget.schoolId;
+  final Set<int> _selectedIds = {};
+  final Map<int, String> _idToUuid = {};
+
+  void _toggleSelect(StaffListModel staff) {
+    setState(() {
+      if (_selectedIds.contains(staff.id)) {
+        _selectedIds.remove(staff.id);
+      } else {
+        _selectedIds.add(staff.id);
+        _idToUuid[staff.id] = staff.uuid;
+      }
+    });
+  }
+
+  void _selectAll(List<StaffListModel> list) {
+    setState(() {
+      for (final s in list) {
+        _selectedIds.add(s.id);
+        _idToUuid[s.id] = s.uuid;
+      }
+    });
+  }
+
+  void _clearSelection() => setState(() => _selectedIds.clear());
+
+  void _showProcessChecklistDialog(BuildContext ctx) {
+    final uuids = _selectedIds
+        .where((id) => _idToUuid.containsKey(id))
+        .map((id) => _idToUuid[id]!)
+        .toList();
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider(
+        create: (_) => StaffCorrectionCubit(),
+        child: _StaffProcessChecklistDialog(
+          schoolId: widget.schoolId,
+          staffUuids: uuids,
+          onSuccess: () {
+            _clearSelection();
+            widget.cubit.fetchStaff(
+              schoolId: widget.schoolId,
+              search: _searchCtrl.text.trim(),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -233,7 +338,7 @@ class _StaffListBodyState extends State<_StaffListBody> {
     if (_scrollCtrl.position.pixels >=
         _scrollCtrl.position.maxScrollExtent - 200) {
       widget.cubit.fetchStaff(
-        schoolId: _schoolId,
+        schoolId: widget.schoolId,
         search: _searchCtrl.text.trim(),
         isLoadMore: true,
       );
@@ -250,7 +355,7 @@ class _StaffListBodyState extends State<_StaffListBody> {
 
   Future<void> _refresh() async {
     await widget.cubit.fetchStaff(
-      schoolId: _schoolId,
+      schoolId: widget.schoolId,
       search: _searchCtrl.text.trim(),
     );
   }
@@ -258,7 +363,7 @@ class _StaffListBodyState extends State<_StaffListBody> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      widget.cubit.fetchStaff(schoolId: _schoolId, search: value.trim());
+      widget.cubit.fetchStaff(schoolId: widget.schoolId, search: value.trim());
     });
   }
 
@@ -266,16 +371,13 @@ class _StaffListBodyState extends State<_StaffListBody> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AddStaffFormPage(
-          editStaff: null,
-          schoolId: _schoolId,
-        ),
+        builder: (_) =>
+            AddStaffFormPage(editStaff: null, schoolId: widget.schoolId),
       ),
     );
-
     if (result == true && mounted) {
       widget.cubit.fetchStaff(
-        schoolId: _schoolId,
+        schoolId: widget.schoolId,
         search: _searchCtrl.text.trim(),
       );
     }
@@ -297,249 +399,233 @@ class _StaffListBodyState extends State<_StaffListBody> {
         onPressed: _navigateToAdd,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      style: MyStyles.regularText(
-                          size: 14, color: AppTheme.black_Color),
-                      onChanged: _onSearchChanged,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppTheme.whiteColor,
-                        contentPadding: const EdgeInsets.all(12),
-                        hintText: 'Search staff...',
-                        prefixIcon: const Icon(Icons.search),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide:
-                          BorderSide(color: AppTheme.backBtnBgColor),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide:
-                          BorderSide(color: AppTheme.backBtnBgColor),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        hintStyle: MyStyles.regularText(
-                            size: 14, color: AppTheme.graySubTitleColor),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: Column(
+          children: [
+            if (_selectedIds.isNotEmpty)
+              BlocBuilder<StaffListCubit, StaffListState>(
+                builder: (_, staffState) => Container(
+                  margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.btnColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${_selectedIds.length} selected',
+                        style: MyStyles.mediumText(
+                            size: 13, color: AppTheme.btnColor),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: BlocBuilder<StaffListCubit, StaffListState>(
-                      builder: (context, state) {
-                        if (state.loading) {
-                          return const ShimmerList(
-                              expanded: false, itemCount: 6);
-                        }
-
-                        if (state.error != null && state.list.isEmpty) {
-                          final isPermissionError = state.error!
-                              .toLowerCase()
-                              .contains('permission') ||
-                              state.error!.toLowerCase().contains('denied') ||
-                              state.error!
-                                  .toLowerCase()
-                                  .contains('unauthorized') ||
-                              state.error!.toLowerCase().contains('forbidden');
-                          return ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => _selectAll(staffState.list),
+                        child: Text('Select All',
+                            style: MyStyles.mediumText(
+                                size: 12, color: AppTheme.btnColor)),
+                      ),
+                      TextButton(
+                        onPressed: _clearSelection,
+                        child: Text('Clear',
+                            style: MyStyles.mediumText(
+                                size: 12, color: Colors.grey)),
+                      ),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () =>
+                            _showProcessChecklistDialog(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AppTheme.btnColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              SizedBox(
-                                height:
-                                MediaQuery.of(context).size.height * 0.6,
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          isPermissionError
-                                              ? Icons.lock_outline
-                                              : Icons.error_outline,
-                                          size: 56,
-                                          color: isPermissionError
-                                              ? Colors.orange.shade400
-                                              : Colors.red.shade300,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          state.error!,
-                                          style: MyStyles.regularText(
-                                              size: 14,
-                                              color: AppTheme.black_Color),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        if (!isPermissionError) ...[
-                                          const SizedBox(height: 12),
-                                          TextButton(
-                                            onPressed: _refresh,
-                                            child: const Text('Retry'),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              Text('Process Checklist',
+                                  style: MyStyles.mediumText(
+                                      size: 12, color: Colors.white)),
                             ],
-                          );
-                        }
-
-                        if (state.list.isEmpty) {
-                          return ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              SizedBox(
-                                height:
-                                MediaQuery.of(context).size.height * 0.6,
-                                child: Center(
-                                  child: Image.asset(
-                                      'assets/images/no_data.png',
-                                      height: 200),
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-
-                        return ListView.builder(
-                          controller: _scrollCtrl,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                          itemCount: state.list.length + (state.hasMore ? 1 : 0),
-                          itemBuilder: (_, i) {
-                            if (i < state.list.length) {
-                              return _StaffCard(
-                                  staff: state.list[i],
-                                  schoolId: _schoolId,
-                                  cubit: widget.cubit);
-                            }
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child:
-                              Center(child: CircularProgressIndicator()),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: TextField(
+                controller: _searchCtrl,
+                style: MyStyles.regularText(
+                    size: 14, color: AppTheme.black_Color),
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppTheme.whiteColor,
+                  contentPadding: const EdgeInsets.all(12),
+                  hintText: 'Search staff...',
+                  prefixIcon: const Icon(Icons.search),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide:
+                    BorderSide(color: AppTheme.backBtnBgColor),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide:
+                    BorderSide(color: AppTheme.backBtnBgColor),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  hintStyle: MyStyles.regularText(
+                      size: 14, color: AppTheme.graySubTitleColor),
+                ),
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: BlocBuilder<StaffListCubit, StaffListState>(
+                builder: (context, state) {
+                  if (state.loading) {
+                    return const ShimmerList(
+                        expanded: false, itemCount: 6);
+                  }
+                  if (state.error != null && state.list.isEmpty) {
+                    final isPermissionError = state.error!
+                        .toLowerCase()
+                        .contains('permission') ||
+                        state.error!.toLowerCase().contains('denied') ||
+                        state.error!
+                            .toLowerCase()
+                            .contains('unauthorized') ||
+                        state.error!
+                            .toLowerCase()
+                            .contains('forbidden');
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height:
+                          MediaQuery.of(context).size.height * 0.6,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isPermissionError
+                                        ? Icons.lock_outline
+                                        : Icons.error_outline,
+                                    size: 56,
+                                    color: isPermissionError
+                                        ? Colors.orange.shade400
+                                        : Colors.red.shade300,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(state.error!,
+                                      style: MyStyles.regularText(
+                                          size: 14,
+                                          color: AppTheme.black_Color),
+                                      textAlign: TextAlign.center),
+                                  if (!isPermissionError) ...[
+                                    const SizedBox(height: 12),
+                                    TextButton(
+                                      onPressed: _refresh,
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  if (state.list.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height:
+                          MediaQuery.of(context).size.height * 0.6,
+                          child: Center(
+                            child: Image.asset(
+                                'assets/images/no_data.png',
+                                height: 200),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return ListView.builder(
+                    controller: _scrollCtrl,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding:
+                    const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                    itemCount:
+                    state.list.length + (state.hasMore ? 1 : 0),
+                    itemBuilder: (_, i) {
+                      if (i < state.list.length) {
+                        final staff = state.list[i];
+                        final isSelected = _selectedIds.contains(staff.id);
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () => _toggleSelect(staff),
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding:
+                                const EdgeInsets.fromLTRB(0, 0, 4, 0),
+                                child: Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) => _toggleSelect(staff),
+                                  activeColor: AppTheme.btnColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(4)),
+                                  side: BorderSide(
+                                      color: AppTheme.graySubTitleColor),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: _StaffCard(
+                                staff: staff,
+                                schoolId: widget.schoolId,
+                                cubit: widget.cubit,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _StaffCountRow extends StatelessWidget {
-  final int total;
-  final String label;
-  const _StaffCountRow({required this.total, required this.label});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: AppTheme.btnColor.withOpacity(0.08),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Text(
-        '$label: $total',
-        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
-      ),
-    );
-  }
-}
-
-
-String _resolveImageShape(BuildContext context, String schoolId) {
-  String shape = 'rectangle';
-  try {
-    final schoolState = context.read<SchoolCubit>().state;
-    final schoolIntId = int.tryParse(schoolId);
-    if (schoolIntId != null) {
-      if (schoolState.imageShapeMap.containsKey(schoolIntId)) {
-        shape = schoolState.imageShapeMap[schoolIntId] ?? shape;
-      } else {
-        final match = schoolState.students.firstWhere(
-              (s) => s.id == schoolIntId,
-          orElse: () => SchoolDetailsModel(),
-        );
-        if (match.imageShape != null && match.imageShape!.isNotEmpty) {
-          shape = match.imageShape!;
-        }
-      }
-    }
-  } catch (_) {}
-  return shape;
-}
-
-Widget _clipByShape(Widget child, String shape,
-    {double width = 60, double height = 60}) {
-  final sized = SizedBox(width: width, height: height, child: child);
-  switch (shape) {
-    case 'round':
-    case 'oval':
-      return ClipOval(child: sized);
-    case 'square':
-      return ClipRRect(borderRadius: BorderRadius.zero, child: sized);
-    case 'rectangle':
-    default:
-      return ClipRRect(
-          borderRadius: BorderRadius.circular(6), child: sized);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: build shaped image preview (full-size, for dialog)
-// ─────────────────────────────────────────────────────────────────────────────
-Widget _buildShapedPreview(String imageUrl, String shape) {
-  final imageWidget = Image.network(
-    imageUrl,
-    width: double.infinity,
-    fit: BoxFit.contain,
-    loadingBuilder: (_, child, progress) => progress == null
-        ? child
-        : const SizedBox(
-        height: 300, child: Center(child: CircularProgressIndicator())),
-    errorBuilder: (_, __, ___) => Container(
-      height: 300,
-      width: double.infinity,
-      color: Colors.grey.shade300,
-      child: const Icon(Icons.person, size: 80, color: Colors.grey),
-    ),
-  );
-  switch (shape) {
-    case 'round':
-    case 'oval':
-      return ClipOval(child: imageWidget);
-    case 'square':
-      return ClipRRect(borderRadius: BorderRadius.zero, child: imageWidget);
-    case 'rectangle':
-    default:
-      return ClipRRect(
-          borderRadius: BorderRadius.circular(12), child: imageWidget);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _StaffCard
-// ─────────────────────────────────────────────────────────────────────────────
 class _StaffCard extends StatefulWidget {
   final StaffListModel staff;
   final String schoolId;
   final StaffListCubit cubit;
+
   const _StaffCard(
       {required this.staff, required this.schoolId, required this.cubit});
 
@@ -548,72 +634,41 @@ class _StaffCard extends StatefulWidget {
 }
 
 class _StaffCardState extends State<_StaffCard> {
-  late StaffListModel staff;
   String? _uploadedPhotoUrl;
   File? _photoFile;
-  bool _isUploading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    staff = widget.staff;
-  }
 
   @override
   void didUpdateWidget(covariant _StaffCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_uploadedPhotoUrl != null) {
-      staff = StaffListModel(
-        id: widget.staff.id,
-        uuid: widget.staff.uuid,
-        name: widget.staff.name,
-        designation: widget.staff.designation,
-        department: widget.staff.department,
-        email: widget.staff.email,
-        phone: widget.staff.phone,
-        whatsappPhone: widget.staff.whatsappPhone,
-        address: widget.staff.address,
-        profilePhotoUrl: _uploadedPhotoUrl,
-        roleName: widget.staff.roleName,
-        roleId: widget.staff.roleId,
-        status: widget.staff.status,
-        assignedClasses: widget.staff.assignedClasses,
-        dob: widget.staff.dob,
-        fatherName: widget.staff.fatherName,
-        motherName: widget.staff.motherName,
-        husbandName: widget.staff.husbandName,
-        gender: widget.staff.gender,
-        bloodGroup: widget.staff.bloodGroup,
-        pincode: widget.staff.pincode,
-        employeeId: widget.staff.employeeId,
-        nationalCode: widget.staff.nationalCode,
-        loginId: widget.staff.loginId,
-        dateOfJoining: widget.staff.dateOfJoining,
-      );
-    } else {
-      staff = widget.staff;
+    if (widget.staff.profilePhotoUrl != null &&
+        widget.staff.profilePhotoUrl!.isNotEmpty &&
+        _uploadedPhotoUrl == widget.staff.profilePhotoUrl) {
+      _uploadedPhotoUrl = null;
     }
   }
 
-  String? get _activePhotoUrl {
-    if (_uploadedPhotoUrl != null) {
-      return _uploadedPhotoUrl!.isEmpty ? null : _uploadedPhotoUrl;
-    }
-    return (staff.profilePhotoUrl != null && staff.profilePhotoUrl!.isNotEmpty)
-        ? staff.profilePhotoUrl
-        : null;
-  }
-
+  StaffListModel get staff => widget.staff;
   String get schoolId => widget.schoolId;
   StaffListCubit get cubit => widget.cubit;
 
+  String? get _activePhotoUrl {
+    if (_uploadedPhotoUrl != null && _uploadedPhotoUrl!.isNotEmpty) {
+      return _uploadedPhotoUrl;
+    }
+    final url = staff.profilePhotoUrl;
+    return (url != null && url.isNotEmpty) ? url : null;
+  }
+
+
   Future<void> _fromCamera() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+    final picked =
+    await ImagePicker().pickImage(source: ImageSource.camera);
     if (picked != null) await _uploadPhoto(picked.path);
   }
 
   Future<void> _fromGallery() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked =
+    await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked != null) {
       _photoFile = File(picked.path);
       await _cropAndUpload();
@@ -640,114 +695,169 @@ class _StaffCardState extends State<_StaffCard> {
   }
 
   Future<void> _uploadPhoto(String path) async {
-    setState(() => _isUploading = true);
     final newUrl = await cubit.uploadStaffPhoto(
       schoolId: schoolId,
       uuid: staff.uuid,
       imagePath: path,
     );
     if (newUrl != null && mounted) {
-      setState(() {
-        _uploadedPhotoUrl = newUrl;
-        staff = staff.copyWith(profilePhotoUrl: newUrl);
-      });
+      setState(() => _uploadedPhotoUrl = newUrl);
     }
-    if (mounted) setState(() => _isUploading = false);
   }
+
+
+  Future<void> _uploadSignature(String path) async {
+    await cubit.uploadStaffSignature(
+      schoolId: schoolId,
+      uuid: staff.uuid,
+      imagePath: path,
+    );
+    if (mounted) {
+      final state = cubit.state;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(state.signatureUploadError ??
+            state.signatureUploadSuccess ??
+            'Signature uploaded'),
+        backgroundColor: state.signatureUploadError != null
+            ? Colors.red
+            : Colors.green,
+      ));
+      cubit.clearSignatureMessages();
+    }
+  }
+
+
+  Widget _buildPhoto(BuildContext context, String initials) {
+    final shape = _resolveImageShape(context, schoolId);
+
+    return BlocBuilder<StaffListCubit, StaffListState>(
+      buildWhen: (p, c) =>
+      p.isPhotoUploading(staff.uuid) != c.isPhotoUploading(staff.uuid),
+      builder: (_, cubitState) {
+        final isUploading = cubitState.isPhotoUploading(staff.uuid);
+        Widget content;
+        if (isUploading) {
+          content = const SizedBox(
+            height: 60,
+            width: 60,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        } else if (_activePhotoUrl != null) {
+          content = Image.network(
+            _activePhotoUrl!,
+            height: 60,
+            width: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholder(initials),
+          );
+        } else {
+          content = _placeholder(initials);
+        }
+        return _clipByShape(content, shape);
+      },
+    );
+  }
+
+  Widget _placeholder(String initials) => Container(
+    height: 60,
+    width: 60,
+    decoration: BoxDecoration(
+      color: AppTheme.btnColor.withOpacity(0.15),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Center(
+      child: Text(initials,
+          style: MyStyles.boldText(size: 18, color: AppTheme.btnColor)),
+    ),
+  );
+
 
   void _showImagePreview(BuildContext context, String imageUrl) {
     final shape = _resolveImageShape(context, schoolId);
-
     showDialog(
       context: context,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: Colors.black,
-          insetPadding: const EdgeInsets.all(16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              color: Colors.black,
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: InteractiveViewer(
-                      panEnabled: true,
-                      minScale: 0.8,
-                      maxScale: 4,
-                      // always use latest uploaded url if available
-                      child: _buildShapedPreview(
-                        _activePhotoUrl ?? imageUrl,
-                        shape,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            color: Colors.black,
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    minScale: 0.8,
+                    maxScale: 4,
+                    child: _buildShapedPreview(
+                        _activePhotoUrl ?? imageUrl, shape),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromCamera();
+                        },
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text("Camera"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _fromCamera();
-                          },
-                          icon: const Icon(Icons.camera_alt, size: 18),
-                          label: const Text("Camera"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.btnColor,
-                            foregroundColor: Colors.white,
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 12),
-                          ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromGallery();
+                        },
+                        icon: const Icon(Icons.photo_library, size: 18),
+                        label: const Text("Gallery"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _fromGallery();
-                          },
-                          icon:
-                          const Icon(Icons.photo_library, size: 18),
-                          label: const Text("Gallery"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.btnColor,
-                            foregroundColor: Colors.white,
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 12),
-                          ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Future.delayed(
+                              const Duration(milliseconds: 300),
+                              _fromCamera);
+                        },
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text("Retake"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Future.delayed(
-                                const Duration(milliseconds: 300),
-                                _fromCamera);
-                          },
-                          icon: const Icon(Icons.camera_alt, size: 18),
-                          label: const Text("Retake"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -756,8 +866,7 @@ class _StaffCardState extends State<_StaffCard> {
       context: context,
       backgroundColor: AppTheme.whiteColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (sheetCtx) => Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -791,12 +900,60 @@ class _StaffCardState extends State<_StaffCard> {
     );
   }
 
-  Widget _pickerItem({
-    required String icon,
-    required String title,
-    required VoidCallback onTap,
-    Color color = Colors.black,
-  }) {
+  void _showSignaturePicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.whiteColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (sheetCtx) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Upload Signature',
+                style: MyStyles.boldText(size: 14, color: Colors.black)),
+            const SizedBox(height: 15),
+            _pickerItem(
+              icon: 'assets/icons/camera_single.svg',
+              title: 'Camera',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                Future.delayed(const Duration(milliseconds: 300), () async {
+                  final picked = await ImagePicker()
+                      .pickImage(source: ImageSource.camera);
+                  if (picked != null && context.mounted) {
+                    await _uploadSignature(picked.path);
+                  }
+                });
+              },
+            ),
+            _divider(),
+            _pickerItem(
+              icon: 'assets/icons/choose_from_gallery.svg',
+              title: 'Gallery',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                Future.delayed(const Duration(milliseconds: 300), () async {
+                  final picked = await ImagePicker()
+                      .pickImage(source: ImageSource.gallery);
+                  if (picked != null && context.mounted) {
+                    await _uploadSignature(picked.path);
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pickerItem(
+      {required String icon,
+        required String title,
+        required VoidCallback onTap,
+        Color color = Colors.black}) {
     return InkWell(
       onTap: onTap,
       child: Row(
@@ -815,121 +972,13 @@ class _StaffCardState extends State<_StaffCard> {
     color: Colors.grey.shade300,
   );
 
-  Widget _buildPhoto(BuildContext context, String initials) {
-    final shape = _resolveImageShape(context, schoolId);
-
-    Widget content;
-    if (_isUploading) {
-      content = const SizedBox(
-        height: 60,
-        width: 60,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    } else if (_activePhotoUrl != null) {
-      content = Image.network(
-        _activePhotoUrl!,
-        height: 60,
-        width: 60,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _placeholder(initials),
-      );
-    } else {
-      content = _placeholder(initials);
-    }
-
-    return _clipByShape(content, shape);
-  }
-
-  Widget _placeholder(String initials) {
-    return Container(
-      height: 60,
-      width: 60,
-      decoration: BoxDecoration(
-        color: AppTheme.btnColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: MyStyles.boldText(size: 18, color: AppTheme.btnColor),
-        ),
-      ),
-    );
-  }
-
-  void _showSignaturePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.whiteColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (sheetCtx) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Upload Signature',
-                style: MyStyles.boldText(size: 14, color: Colors.black)),
-            const SizedBox(height: 15),
-            _pickerItem(
-              icon: 'assets/icons/camera_single.svg',
-              title: 'Camera',
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                Future.delayed(const Duration(milliseconds: 300), () async {
-                  final picked = await ImagePicker()
-                      .pickImage(source: ImageSource.camera);
-                  if (picked != null && context.mounted) {
-                    _uploadSignature(context, picked.path);
-                  }
-                });
-              },
-            ),
-            _divider(),
-            _pickerItem(
-              icon: 'assets/icons/choose_from_gallery.svg',
-              title: 'Gallery',
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                Future.delayed(const Duration(milliseconds: 300), () async {
-                  final picked = await ImagePicker()
-                      .pickImage(source: ImageSource.gallery);
-                  if (picked != null && context.mounted) {
-                    _uploadSignature(context, picked.path);
-                  }
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _uploadSignature(BuildContext context, String path) async {
-    final signatureUrl = await cubit.uploadStaffSignature(
-      schoolId: schoolId,
-      uuid: staff.uuid,
-      imagePath: path,
-    );
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(signatureUrl != null
-              ? 'Signature uploaded successfully'
-              : 'Failed to upload signature'),
-          backgroundColor: signatureUrl != null ? Colors.green : Colors.red,
-        ),
-      );
-    }
-  }
 
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(
@@ -942,9 +991,7 @@ class _StaffCardState extends State<_StaffCard> {
                     width: 90,
                     height: 90,
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      shape: BoxShape.circle,
-                    ),
+                        color: Colors.red.shade50, shape: BoxShape.circle),
                     child: Icon(Icons.delete_outline_rounded,
                         size: 50, color: Colors.red.shade400),
                   ),
@@ -956,8 +1003,8 @@ class _StaffCardState extends State<_StaffCard> {
                       height: 26,
                       decoration: const BoxDecoration(
                           color: Colors.red, shape: BoxShape.circle),
-                      child:
-                      const Icon(Icons.close, size: 16, color: Colors.white),
+                      child: const Icon(Icons.close,
+                          size: 16, color: Colors.white),
                     ),
                   ),
                 ],
@@ -966,8 +1013,8 @@ class _StaffCardState extends State<_StaffCard> {
               const Text(
                 'Are you sure you want to\ndelete this staff?',
                 textAlign: TextAlign.center,
-                style:
-                TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                style: TextStyle(
+                    fontSize: 14, color: Colors.grey, height: 1.5),
               ),
               const SizedBox(height: 28),
               Row(
@@ -979,19 +1026,15 @@ class _StaffCardState extends State<_StaffCard> {
                       onTap: () async {
                         Navigator.pop(context);
                         final success = await cubit.deleteStaff(
-                          schoolId: schoolId,
-                          uuid: staff.uuid,
-                        );
+                            schoolId: schoolId, uuid: staff.uuid);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(success
-                                  ? 'Staff deleted successfully'
-                                  : 'Failed to delete staff'),
-                              backgroundColor:
-                              success ? Colors.green : Colors.red,
-                            ),
-                          );
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(success
+                                ? 'Staff deleted successfully'
+                                : 'Failed to delete staff'),
+                            backgroundColor:
+                            success ? Colors.green : Colors.red,
+                          ));
                         }
                       },
                     ),
@@ -1013,6 +1056,7 @@ class _StaffCardState extends State<_StaffCard> {
     );
   }
 
+
   void _showChangePasswordDialog(BuildContext context) {
     final passwordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
@@ -1023,8 +1067,8 @@ class _StaffCardState extends State<_StaffCard> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => Dialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
           child: SingleChildScrollView(
             padding:
             const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -1035,16 +1079,14 @@ class _StaffCardState extends State<_StaffCard> {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    shape: BoxShape.circle,
-                  ),
+                      color: Colors.blue.shade50, shape: BoxShape.circle),
                   child: Icon(Icons.lock_outline_rounded,
                       size: 50, color: Colors.blue.shade400),
                 ),
                 const SizedBox(height: 16),
                 Text('Change Password',
-                    style:
-                    MyStyles.boldText(size: 16, color: AppTheme.black_Color)),
+                    style: MyStyles.boldText(
+                        size: 16, color: AppTheme.black_Color)),
                 const SizedBox(height: 4),
                 Text(staff.name,
                     textAlign: TextAlign.center,
@@ -1092,8 +1134,8 @@ class _StaffCardState extends State<_StaffCard> {
                           : Icons.visibility,
                       color: AppTheme.graySubTitleColor,
                     ),
-                    onPressed: () =>
-                        setDialogState(() => obscureConfirm = !obscureConfirm),
+                    onPressed: () => setDialogState(
+                            () => obscureConfirm = !obscureConfirm),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -1104,7 +1146,8 @@ class _StaffCardState extends State<_StaffCard> {
                         title: 'Change',
                         color: AppTheme.btnColor,
                         onTap: () async {
-                          final password = passwordController.text.trim();
+                          final password =
+                          passwordController.text.trim();
                           final confirm =
                           confirmPasswordController.text.trim();
                           if (password.isEmpty) {
@@ -1163,6 +1206,7 @@ class _StaffCardState extends State<_StaffCard> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     final initials = staff.name.trim().isNotEmpty
@@ -1214,7 +1258,7 @@ class _StaffCardState extends State<_StaffCard> {
           ),
         );
         if ((result == true || result is StaffDetailModel) && mounted) {
-          widget.cubit.fetchStaff(schoolId: schoolId);
+          cubit.fetchStaff(schoolId: schoolId);
         }
       },
       child: Container(
@@ -1239,7 +1283,6 @@ class _StaffCardState extends State<_StaffCard> {
                   },
                   child: _buildPhoto(context, initials),
                 ),
-                // 📸 Edit icon
                 Positioned(
                   bottom: 0,
                   right: 0,
@@ -1270,9 +1313,7 @@ class _StaffCardState extends State<_StaffCard> {
                 ),
               ],
             ),
-
             const SizedBox(width: 12),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1280,22 +1321,18 @@ class _StaffCardState extends State<_StaffCard> {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          staff.name,
-                          style: MyStyles.boldText(
-                              size: 16, color: AppTheme.black_Color),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(staff.name,
+                            style: MyStyles.boldText(
+                                size: 16, color: AppTheme.black_Color),
+                            overflow: TextOverflow.ellipsis),
                       ),
                       if (staff.department.isNotEmpty) ...[
                         const SizedBox(width: 5),
                         Flexible(
-                          child: Text(
-                            '• ${staff.department}',
-                            style: MyStyles.boldText(
-                                size: 14, color: AppTheme.btnColor),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: Text('• ${staff.department}',
+                              style: MyStyles.boldText(
+                                  size: 14, color: AppTheme.btnColor),
+                              overflow: TextOverflow.ellipsis),
                         ),
                       ],
                     ],
@@ -1312,15 +1349,12 @@ class _StaffCardState extends State<_StaffCard> {
                     ),
                   const SizedBox(height: 3),
                   if (staff.phone.isNotEmpty)
-                    Text(
-                      'Phone: ${staff.phone}',
-                      style: MyStyles.regularText(
-                          size: 12, color: AppTheme.graySubTitleColor),
-                    ),
+                    Text('Phone: ${staff.phone}',
+                        style: MyStyles.regularText(
+                            size: 12, color: AppTheme.graySubTitleColor)),
                 ],
               ),
             ),
-
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.grey),
               onSelected: (value) async {
@@ -1348,23 +1382,14 @@ class _StaffCardState extends State<_StaffCard> {
                     uuid: staff.uuid,
                     currentStatus: staff.status,
                   );
-                  if (success) {
-                    final updated = cubit.state.list.firstWhere(
-                          (s) => s.uuid == staff.uuid,
-                      orElse: () => staff,
-                    );
-                    setState(() => staff = updated);
-                  }
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success
-                            ? 'Status updated'
-                            : 'Failed to update status'),
-                        backgroundColor: success ? Colors.green : Colors.red,
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(success
+                          ? 'Status updated'
+                          : 'Failed to update status'),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      duration: const Duration(seconds: 1),
+                    ));
                   }
                 }
               },
@@ -1378,8 +1403,7 @@ class _StaffCardState extends State<_StaffCard> {
                             ? Icons.toggle_on
                             : Icons.toggle_off,
                         size: 22,
-                        color:
-                        staff.status == 1 ? Colors.green : Colors.red,
+                        color: staff.status == 1 ? Colors.green : Colors.red,
                       ),
                       const SizedBox(width: 8),
                       Text(staff.status == 1 ? 'Deactivate' : 'Activate'),
@@ -1427,9 +1451,7 @@ class _StaffCardState extends State<_StaffCard> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _StaffCorrectionTab  (unchanged outer shell)
-// ─────────────────────────────────────────────────────────────────────────────
+
 class _StaffCorrectionTab extends StatefulWidget {
   final String schoolId;
   final bool isSchool;
@@ -1508,7 +1530,6 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
       },
       child: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
@@ -1537,14 +1558,12 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
               ),
             ),
           ),
-          // List
           Expanded(
             child: BlocBuilder<StaffCorrectionCubit, StaffCorrectionState>(
               builder: (context, state) {
                 if (state.loading && state.items.isEmpty) {
                   return const ShimmerList(expanded: false, itemCount: 6);
                 }
-
                 if (state.error != null && state.items.isEmpty) {
                   return Center(
                     child: Padding(
@@ -1557,8 +1576,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                           const SizedBox(height: 12),
                           Text(state.error!,
                               style: MyStyles.regularText(
-                                  size: 14,
-                                  color: AppTheme.black_Color),
+                                  size: 14, color: AppTheme.black_Color),
                               textAlign: TextAlign.center),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
@@ -1572,8 +1590,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                               backgroundColor: AppTheme.btnColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(10)),
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                         ],
@@ -1581,15 +1598,15 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                     ),
                   );
                 }
-
                 if (state.items.isEmpty) {
                   return RefreshIndicator(
                     color: AppTheme.btnColor,
-                    onRefresh: () async =>
-                        context.read<StaffCorrectionCubit>().fetchStaffCorrection(
-                          schoolId: widget.schoolId,
-                          search: _searchCtrl.text.trim(),
-                        ),
+                    onRefresh: () async => context
+                        .read<StaffCorrectionCubit>()
+                        .fetchStaffCorrection(
+                      schoolId: widget.schoolId,
+                      search: _searchCtrl.text.trim(),
+                    ),
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
@@ -1600,17 +1617,14 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(
-                                    'assets/images/no_data.png',
+                                Image.asset('assets/images/no_data.png',
                                     height: 160),
                                 const SizedBox(height: 12),
-                                Text(
-                                  'No correction entries found',
-                                  style: MyStyles.mediumText(
-                                      size: 14,
-                                      color:
-                                      AppTheme.graySubTitleColor),
-                                ),
+                                Text('No correction entries found',
+                                    style: MyStyles.mediumText(
+                                        size: 14,
+                                        color:
+                                        AppTheme.graySubTitleColor)),
                               ],
                             ),
                           ),
@@ -1619,14 +1633,14 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                     ),
                   );
                 }
-
                 return RefreshIndicator(
                   color: AppTheme.btnColor,
-                  onRefresh: () async =>
-                      context.read<StaffCorrectionCubit>().fetchStaffCorrection(
-                        schoolId: widget.schoolId,
-                        search: _searchCtrl.text.trim(),
-                      ),
+                  onRefresh: () async => context
+                      .read<StaffCorrectionCubit>()
+                      .fetchStaffCorrection(
+                    schoolId: widget.schoolId,
+                    search: _searchCtrl.text.trim(),
+                  ),
                   child: Column(
                     children: [
                       if (state.selectedIds.isNotEmpty)
@@ -1636,11 +1650,10 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                               horizontal: 16, vertical: 10),
                           child: Row(
                             children: [
-                              Text(
-                                '${state.selectedIds.length} selected',
-                                style: MyStyles.mediumText(
-                                    size: 13, color: AppTheme.btnColor),
-                              ),
+                              Text('${state.selectedIds.length} selected',
+                                  style: MyStyles.mediumText(
+                                      size: 13,
+                                      color: AppTheme.btnColor)),
                               const Spacer(),
                               TextButton(
                                 onPressed: () => context
@@ -1718,8 +1731,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                               );
                             }
                             return const Padding(
-                              padding:
-                              EdgeInsets.symmetric(vertical: 20),
+                              padding: EdgeInsets.symmetric(vertical: 20),
                               child: Center(
                                   child: CircularProgressIndicator(
                                       color: AppTheme.btnColor,
@@ -1735,8 +1747,8 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
             ),
           ),
         ],
-      ), // Column
-    ); // BlocListener
+      ),
+    );
   }
 
   void _showCreateOrderDialog(BuildContext ctx) {
@@ -1751,14 +1763,12 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _StaffCorrectionItemCard  ← FULLY UPDATED like _CorrectionCard
-// ─────────────────────────────────────────────────────────────────────────────
 class _StaffCorrectionItemCard extends StatefulWidget {
   final StaffCorrectionItem item;
   final String schoolId;
   final bool isSelected;
   final VoidCallback? onToggle;
+
   const _StaffCorrectionItemCard({
     required this.item,
     required this.schoolId,
@@ -1771,10 +1781,8 @@ class _StaffCorrectionItemCard extends StatefulWidget {
       _StaffCorrectionItemCardState();
 }
 
-class _StaffCorrectionItemCardState
-    extends State<_StaffCorrectionItemCard> {
+class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
   String? _uploadedPhotoUrl;
-  bool _isUploading = false;
   File? _photoFile;
 
   Color _statusColor(String? status) {
@@ -1793,7 +1801,6 @@ class _StaffCorrectionItemCardState
   String? get _currentPhotoUrl =>
       _uploadedPhotoUrl ?? widget.item.staff?.profilePhotoUrl;
 
-  // ── pickers ────────────────────────────────────────────────────────────────
   Future<void> _fromCamera() async {
     final picked =
     await ImagePicker().pickImage(source: ImageSource.camera);
@@ -1831,7 +1838,6 @@ class _StaffCorrectionItemCardState
   Future<void> _uploadPhoto(String path) async {
     final staff = widget.item.staff;
     if (staff == null) return;
-    setState(() => _isUploading = true);
     final newUrl =
     await context.read<StaffCorrectionCubit>().uploadStaffPhoto(
       schoolId: widget.schoolId,
@@ -1841,12 +1847,41 @@ class _StaffCorrectionItemCardState
     if (newUrl != null && mounted) {
       setState(() => _uploadedPhotoUrl = newUrl);
     }
-    if (mounted) setState(() => _isUploading = false);
   }
+
+  Widget _buildPhoto(BuildContext context, String initials) {
+    final shape = _resolveImageShape(context, widget.schoolId);
+    final photoUrl = _currentPhotoUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+
+    Widget content;
+    if (hasPhoto) {
+      content = Image.network(
+        photoUrl,
+        height: 60,
+        width: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(initials),
+      );
+    } else {
+      content = _placeholder(initials);
+    }
+    return _clipByShape(content, shape);
+  }
+
+  Widget _placeholder(String initials) => Container(
+    height: 60,
+    width: 60,
+    color: AppTheme.btnColor.withOpacity(0.12),
+    child: Center(
+      child: Text(initials,
+          style:
+          MyStyles.boldText(size: 18, color: AppTheme.btnColor)),
+    ),
+  );
 
   void _showImagePreview(BuildContext context, String imageUrl) {
     final shape = _resolveImageShape(context, widget.schoolId);
-
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -1887,8 +1922,7 @@ class _StaffCorrectionItemCardState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.btnColor,
                           foregroundColor: Colors.white,
-                          padding:
-                          const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
@@ -1905,8 +1939,7 @@ class _StaffCorrectionItemCardState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.btnColor,
                           foregroundColor: Colors.white,
-                          padding:
-                          const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
@@ -1915,7 +1948,6 @@ class _StaffCorrectionItemCardState
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
-                          // "Remove" clears the local override → shows placeholder
                           setState(() => _uploadedPhotoUrl = '');
                         },
                         icon: const Icon(Icons.delete, size: 18),
@@ -1923,8 +1955,7 @@ class _StaffCorrectionItemCardState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
-                          padding:
-                          const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
@@ -1934,60 +1965,6 @@ class _StaffCorrectionItemCardState
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPhoto(BuildContext context, String initials) {
-    final shape = _resolveImageShape(context, widget.schoolId);
-    final photoUrl = _currentPhotoUrl;
-    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
-
-    Widget content;
-    if (_isUploading) {
-      content = const SizedBox(
-        height: 60,
-        width: 60,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    } else if (hasPhoto) {
-      content = Image.network(
-        photoUrl,
-        height: 60,
-        width: 60,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _placeholder(initials),
-      );
-    } else {
-      content = _placeholder(initials);
-    }
-
-    return _clipByShape(content, shape);
-  }
-
-  Widget _placeholder(String initials) => Container(
-    height: 60,
-    width: 60,
-    color: AppTheme.btnColor.withOpacity(0.12),
-    child: Center(
-      child: Text(initials,
-          style: MyStyles.boldText(size: 18, color: AppTheme.btnColor)),
-    ),
-  );
-
-  Widget _pickerItem(
-      {required String icon,
-        required String title,
-        required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      child: Row(
-        children: [
-          SvgPicture.asset(icon),
-          const SizedBox(width: 10),
-          Text(title,
-              style: MyStyles.regularText(size: 14, color: Colors.black)),
-        ],
       ),
     );
   }
@@ -2027,15 +2004,13 @@ class _StaffCorrectionItemCardState
               : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: widget.isSelected
-                ? AppTheme.btnColor
-                : Colors.transparent,
+            color:
+            widget.isSelected ? AppTheme.btnColor : Colors.transparent,
             width: 1.5,
           ),
         ),
         child: Row(
           children: [
-            // Checkbox
             GestureDetector(
               onTap: widget.onToggle,
               behavior: HitTestBehavior.opaque,
@@ -2055,8 +2030,6 @@ class _StaffCorrectionItemCardState
                 ),
               ),
             ),
-
-            // Profile photo with tap + edit icon
             Stack(
               children: [
                 GestureDetector(
@@ -2086,8 +2059,7 @@ class _StaffCorrectionItemCardState
                       decoration: BoxDecoration(
                         color: Colors.black,
                         shape: BoxShape.circle,
-                        border:
-                        Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
                       child: Icon(
                         hasPhoto ? Icons.preview : Icons.camera_alt,
@@ -2100,8 +2072,6 @@ class _StaffCorrectionItemCardState
               ],
             ),
             const SizedBox(width: 12),
-
-            // Text info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2109,29 +2079,27 @@ class _StaffCorrectionItemCardState
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          staff?.name ?? 'Unknown',
-                          style: MyStyles.boldText(
-                              size: 15, color: AppTheme.black_Color),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(staff?.name ?? 'Unknown',
+                            style: MyStyles.boldText(
+                                size: 15, color: AppTheme.black_Color),
+                            overflow: TextOverflow.ellipsis),
                       ),
                       if ((staff?.department ?? '').isNotEmpty) ...[
                         const SizedBox(width: 5),
                         Flexible(
-                          child: Text(
-                            '• ${staff!.department}',
-                            style: MyStyles.boldText(
-                                size: 13, color: AppTheme.btnColor),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: Text('• ${staff!.department}',
+                              style: MyStyles.boldText(
+                                  size: 13, color: AppTheme.btnColor),
+                              overflow: TextOverflow.ellipsis),
                         ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 3),
-                  if ([staff?.designation ?? '', staff?.roleName ?? '']
-                      .any((s) => s.isNotEmpty))
+                  if ([
+                    staff?.designation ?? '',
+                    staff?.roleName ?? ''
+                  ].any((s) => s.isNotEmpty))
                     Text(
                       [staff?.designation ?? '', staff?.roleName ?? '']
                           .where((s) => s.isNotEmpty)
@@ -2141,40 +2109,34 @@ class _StaffCorrectionItemCardState
                     ),
                   if ((staff?.phone ?? '').isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      'Phone: ${staff!.phone}',
-                      style: MyStyles.regularText(
-                          size: 12, color: AppTheme.graySubTitleColor),
-                    ),
+                    Text('Phone: ${staff!.phone}',
+                        style: MyStyles.regularText(
+                            size: 12, color: AppTheme.graySubTitleColor)),
                   ],
                   if ((widget.item.remark ?? '').isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      'Remark: ${widget.item.remark}',
-                      style: MyStyles.regularText(
-                          size: 11, color: AppTheme.graySubTitleColor),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text('Remark: ${widget.item.remark}',
+                        style: MyStyles.regularText(
+                            size: 11, color: AppTheme.graySubTitleColor),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
-
-            // Status badge
             Container(
               padding:
               const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _statusColor(widget.item.status).withOpacity(0.12),
+                color:
+                _statusColor(widget.item.status).withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 (widget.item.status ?? 'N/A').toUpperCase(),
                 style: MyStyles.mediumText(
-                    size: 10,
-                    color: _statusColor(widget.item.status)),
+                    size: 10, color: _statusColor(widget.item.status)),
               ),
             ),
           ],
@@ -2184,185 +2146,6 @@ class _StaffCorrectionItemCardState
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Rest of the file (unchanged classes below)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DownloadChecklistDialog extends StatefulWidget {
-  final String schoolId;
-  const _DownloadChecklistDialog({required this.schoolId});
-
-  @override
-  State<_DownloadChecklistDialog> createState() =>
-      _DownloadChecklistDialogState();
-}
-
-class _DownloadChecklistDialogState
-    extends State<_DownloadChecklistDialog> {
-  Set<String> _selectedColumns = {};
-  String _printType = '';
-
-  @override
-  void initState() {
-    super.initState();
-    context
-        .read<CorrectionCubit>()
-        .fetchDownloadColumns(schoolId: widget.schoolId);
-  }
-
-  void _toggleColumn(String key) {
-    setState(() {
-      if (_selectedColumns.contains(key)) {
-        _selectedColumns.remove(key);
-      } else {
-        _selectedColumns.add(key);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<CorrectionCubit, CorrectionState>(
-      listenWhen: (p, c) =>
-      p.downloadLoading != c.downloadLoading ||
-          p.downloadUrl != c.downloadUrl ||
-          p.downloadError != c.downloadError ||
-          (p.columnsLoading && !c.columnsLoading),
-      listener: (ctx, state) async {
-        if (!state.columnsLoading &&
-            state.downloadColumns.isNotEmpty &&
-            _selectedColumns.isEmpty) {
-          setState(() {
-            _selectedColumns =
-                state.downloadColumns.map((c) => c.key).toSet();
-          });
-        }
-        if (!state.downloadLoading &&
-            state.downloadUrl != null &&
-            state.downloadUrl!.isNotEmpty) {
-          Navigator.of(context).pop();
-          final uri = Uri.tryParse(state.downloadUrl!);
-          if (uri != null) {
-            try {
-              await launchUrl(uri,
-                  mode: LaunchMode.externalApplication);
-            } catch (_) {}
-          }
-        }
-        if (!state.downloadLoading && state.downloadError != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.downloadError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
-        }
-      },
-      builder: (context, state) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Download Checklist',
-                    style: MyStyles.boldText(
-                        size: 16, color: AppTheme.black_Color)),
-                const SizedBox(height: 16),
-                if (state.columnsLoading)
-                  const Center(
-                      child: CircularProgressIndicator(
-                          color: AppTheme.btnColor))
-                else if (state.downloadColumns.isEmpty)
-                  Text('No columns available',
-                      style: MyStyles.regularText(
-                          size: 13, color: AppTheme.graySubTitleColor))
-                else
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxHeight:
-                        MediaQuery.of(context).size.height * 0.4),
-                    child: SingleChildScrollView(
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: state.downloadColumns.map((col) {
-                          final selected =
-                          _selectedColumns.contains(col.key);
-                          return FilterChip(
-                            label: Text(col.label,
-                                style: MyStyles.regularText(
-                                    size: 12,
-                                    color: selected
-                                        ? Colors.white
-                                        : AppTheme.black_Color)),
-                            selected: selected,
-                            onSelected: (_) => _toggleColumn(col.key),
-                            selectedColor: AppTheme.btnColor,
-                            backgroundColor: Colors.grey.shade100,
-                            checkmarkColor: Colors.white,
-                            side: BorderSide.none,
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: state.downloadLoading ||
-                            _selectedColumns.isEmpty
-                            ? null
-                            : () => context
-                            .read<CorrectionCubit>()
-                            .downloadCorrectionList(
-                          schoolId: widget.schoolId,
-                          columns: _selectedColumns.toList(),
-                          printType: _printType,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.btnColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: state.downloadLoading
-                            ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                            : const Text('Download'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
 
 class _StaffOrdersTab extends StatefulWidget {
   final String schoolId;
@@ -2381,29 +2164,17 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
   final ScrollController _scrollCtrl = ScrollController();
   Timer? _debounce;
 
-  List<OrderStaffItem> _orders = [];
-  bool _loading = false;
-  bool _hasMore = true;
-  int _page = 1;
-  int _total = 0;
-  String? _error;
-  String _selectedStatus = '';
-
-  bool get _hasActiveFilters =>
-      _selectedStatus.isNotEmpty ||
-          _dateFromCtrl.text.isNotEmpty ||
-          _dateToCtrl.text.isNotEmpty;
-
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
-        _fetch();
+        context.read<StaffListCubit>().fetchStaffOrders(
+          schoolId: widget.schoolId,
+        );
       }
     });
-    _fetch(reset: true);
   }
 
   @override
@@ -2417,281 +2188,203 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
   }
 
   void _resetAndFetch() {
-    setState(() {
-      _orders = [];
-      _page = 1;
-      _hasMore = true;
-      _error = null;
-      _loading = false;
-    });
-    _fetch(reset: true);
+    context.read<StaffListCubit>().fetchStaffOrders(
+      schoolId: widget.schoolId,
+      reset: true,
+      search: _searchCtrl.text.trim(),
+      status: context.read<StaffListCubit>().state.ordersSelectedStatus,
+      dateFrom: _dateFromCtrl.text.trim(),
+      dateTo: _dateToCtrl.text.trim(),
+    );
   }
 
   void _clearFilters() {
-    setState(() {
-      _selectedStatus = '';
-      _dateFromCtrl.clear();
-      _dateToCtrl.clear();
-    });
-    _resetAndFetch();
+    _searchCtrl.clear();
+    _dateFromCtrl.clear();
+    _dateToCtrl.clear();
+    context.read<StaffListCubit>().clearOrdersFilters(widget.schoolId);
   }
 
-  Future<void> _fetch({bool reset = false}) async {
-    if (!reset && (_loading || !_hasMore)) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final currentPage = reset ? 1 : _page;
-      String url =
-          '${Config.baseUrl}auth/school/${widget.schoolId}/staff/orders?page=$currentPage';
-      if (_selectedStatus.isNotEmpty) url += '&status=$_selectedStatus';
-      if (_searchCtrl.text.trim().isNotEmpty) {
-        url += '&search=${_searchCtrl.text.trim()}';
-      }
-      if (_dateFromCtrl.text.isNotEmpty) {
-        url += '&start_date=${_dateFromCtrl.text}';
-      }
-      if (_dateToCtrl.text.isNotEmpty) {
-        url += '&end_date=${_dateToCtrl.text}';
-      }
-
-      var response = await ApiManager().getRequest(url);
-
-      if (response == null) {
-        setState(() {
-          _loading = false;
-          _error = 'Failed to load staff orders';
-        });
-        return;
-      }
-
-      final json = jsonDecode(response.body);
-      final isSuccess =
-      (json['status'] == true || json['success'] == true);
-      if (!isSuccess) {
-        setState(() {
-          _loading = false;
-          _error = json['message'] ?? 'Failed to load staff orders';
-        });
-        return;
-      }
-
-      final data = json['data'] as Map<String, dynamic>?;
-      if (data == null) {
-        setState(() {
-          _loading = false;
-          _error = 'Invalid response format';
-        });
-        return;
-      }
-
-      List rawList = [];
-      int total = 0, lastPage = 1, respPage = 1;
-
-      if (data.containsKey('list') && data['list'] is Map) {
-        final listData = data['list'] as Map<String, dynamic>;
-        rawList = listData['data'] ?? [];
-        total = listData['total'] ?? 0;
-        lastPage = listData['last_page'] ?? 1;
-        respPage = listData['current_page'] ?? 1;
-      } else if (data.containsKey('orders')) {
-        final ordersData = data['orders'];
-        if (ordersData is List) {
-          rawList = ordersData;
-          total = rawList.length;
-        } else if (ordersData is Map) {
-          rawList = ordersData['data'] ?? [];
-          total = ordersData['total'] ?? 0;
-          lastPage = ordersData['last_page'] ?? 1;
-          respPage = ordersData['current_page'] ?? 1;
-        }
-      } else if (data.containsKey('data') && data['data'] is List) {
-        rawList = data['data'] as List;
-        total = data['total'] ?? rawList.length;
-        lastPage = data['last_page'] ?? 1;
-        respPage = data['current_page'] ?? 1;
-      }
-
-      final newOrders = rawList
-          .map((e) =>
-          OrderStaffItem.fromJson(e as Map<String, dynamic>))
-          .toList();
-      setState(() {
-        _loading = false;
-        _total = total;
-        _page = respPage + 1;
-        _hasMore = respPage < lastPage;
-        _orders = reset ? newOrders : [..._orders, ...newOrders];
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = e.toString();
-      });
-    }
+  bool get _hasActiveFilters {
+    final s = context.read<StaffListCubit>().state;
+    return s.ordersSelectedStatus.isNotEmpty ||
+        _dateFromCtrl.text.isNotEmpty ||
+        _dateToCtrl.text.isNotEmpty;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _StaffCountRow(total: _total, label: 'Total Orders'),
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-          child: _searchBar(),
-        ),
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Column(
-            children: [
-              const Divider(height: 1, color: AppTheme.LineColor),
-              const SizedBox(height: 10),
-              _statusDropdown(),
-              const SizedBox(height: 8),
-              Row(
+    return BlocBuilder<StaffListCubit, StaffListState>(
+      buildWhen: (p, c) =>
+      p.ordersLoading != c.ordersLoading ||
+          p.ordersPaginationLoading != c.ordersPaginationLoading ||
+          p.orders != c.orders ||
+          p.ordersTotal != c.ordersTotal ||
+          p.ordersError != c.ordersError ||
+          p.ordersHasMore != c.ordersHasMore ||
+          p.ordersSelectedStatus != c.ordersSelectedStatus,
+      builder: (context, state) {
+        return Column(
+          children: [
+            // Search
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: _searchBar(),
+            ),
+            // Filters
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Column(
                 children: [
-                  Expanded(
-                      child: _dateField(
-                          _dateFromCtrl, 'From dd-mm-yyyy')),
-                  const SizedBox(width: 8),
-                  Expanded(
-                      child:
-                      _dateField(_dateToCtrl, 'To dd-mm-yyyy')),
-                ],
-              ),
-              if (_hasActiveFilters) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: _clearFilters,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.lightRedColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.close,
-                              size: 12,
-                              color: AppTheme.cancelTextColor),
-                          const SizedBox(width: 4),
-                          Text('Clear Filters',
-                              style: MyStyles.mediumText(
-                                  size: 11,
-                                  color: AppTheme.cancelTextColor)),
-                        ],
+                  const Divider(height: 1, color: AppTheme.LineColor),
+                  const SizedBox(height: 10),
+                  _statusDropdown(state),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                          child:
+                          _dateField(_dateFromCtrl, 'From dd-mm-yyyy')),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child:
+                          _dateField(_dateToCtrl, 'To dd-mm-yyyy')),
+                    ],
+                  ),
+                  if (_hasActiveFilters) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: _clearFilters,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: AppTheme.lightRedColor,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.close,
+                                  size: 12,
+                                  color: AppTheme.cancelTextColor),
+                              const SizedBox(width: 4),
+                              Text('Clear Filters',
+                                  style: MyStyles.mediumText(
+                                      size: 11,
+                                      color: AppTheme.cancelTextColor)),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        if (!_loading && _total > 0)
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppTheme.btnColor.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.badge_outlined,
-                      size: 14, color: AppTheme.btnColor),
-                  const SizedBox(width: 6),
-                  Text('Total: $_total',
-                      style: MyStyles.mediumText(
-                          size: 12, color: AppTheme.btnColor)),
+                  ],
                 ],
               ),
             ),
-          ),
-        Expanded(
-          child: _error != null && _orders.isEmpty
-              ? Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline,
-                    size: 48, color: Colors.red.shade300),
-                const SizedBox(height: 12),
-                Text(_error!,
-                    style: MyStyles.regularText(
-                        size: 14, color: Colors.red),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _resetAndFetch,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.btnColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(10)),
+            // Total count
+            if (!state.ordersLoading && state.ordersTotal > 0)
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: AppTheme.btnColor.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    children: [
+                      Icon(Icons.badge_outlined,
+                          size: 14, color: AppTheme.btnColor),
+                      const SizedBox(width: 6),
+                      Text('Total: ${state.ordersTotal}',
+                          style: MyStyles.mediumText(
+                              size: 12, color: AppTheme.btnColor)),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            // List
+            Expanded(
+              child: state.ordersError != null && state.orders.isEmpty
+                  ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: Colors.red.shade300),
+                    const SizedBox(height: 12),
+                    Text(state.ordersError!,
+                        style: MyStyles.regularText(
+                            size: 14, color: Colors.red),
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _resetAndFetch,
+                      icon:
+                      const Icon(Icons.refresh, size: 16),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.btnColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                            BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+                  : state.orders.isEmpty && !state.ordersLoading
+                  ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/images/no_data.png',
+                        height: 160),
+                    const SizedBox(height: 12),
+                    Text('No staff orders found',
+                        style: MyStyles.mediumText(
+                            size: 14,
+                            color: AppTheme.graySubTitleColor)),
+                  ],
+                ),
+              )
+                  : RefreshIndicator(
+                color: AppTheme.btnColor,
+                onRefresh: () async => _resetAndFetch(),
+                child: ListView.builder(
+                  controller: _scrollCtrl,
+                  padding: const EdgeInsets.fromLTRB(
+                      16, 12, 16, 20),
+                  itemCount: state.orders.length +
+                      (state.ordersHasMore ? 1 : 0),
+                  itemBuilder: (_, i) {
+                    if (i < state.orders.length) {
+                      return _StaffOrderItemCard(
+                        order: state.orders[i],
+                        schoolId: widget.schoolId,
+                      );
+                    }
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(
+                          vertical: 20),
+                      child: Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.btnColor,
+                              strokeWidth: 2)),
+                    );
+                  },
+                ),
+              ),
             ),
-          )
-              : _orders.isEmpty && !_loading
-              ? Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/images/no_data.png',
-                    height: 160),
-                const SizedBox(height: 12),
-                Text('No staff orders found',
-                    style: MyStyles.mediumText(
-                        size: 14,
-                        color:
-                        AppTheme.graySubTitleColor)),
-              ],
-            ),
-          )
-              : RefreshIndicator(
-            color: AppTheme.btnColor,
-            onRefresh: () async => _resetAndFetch(),
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(
-                  16, 12, 16, 20),
-              itemCount:
-              _orders.length + (_hasMore ? 1 : 0),
-              itemBuilder: (_, i) {
-                if (i < _orders.length) {
-                  return _StaffOrderItemCard(
-                      order: _orders[i],
-                      schoolId: widget.schoolId);
-                }
-                return const Padding(
-                  padding:
-                  EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                      child: CircularProgressIndicator(
-                          color: AppTheme.btnColor,
-                          strokeWidth: 2)),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -2707,8 +2400,8 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
     decoration: InputDecoration(
       filled: true,
       fillColor: AppTheme.appBackgroundColor,
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14, vertical: 12),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       hintText: 'Search staff orders...',
       prefixIcon: const Icon(Icons.search_rounded,
           size: 20, color: AppTheme.graySubTitleColor),
@@ -2726,7 +2419,7 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
     ),
   );
 
-  Widget _statusDropdown() => Container(
+  Widget _statusDropdown(StaffListState state) => Container(
     height: 44,
     padding: const EdgeInsets.symmetric(horizontal: 10),
     decoration: BoxDecoration(
@@ -2737,7 +2430,7 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
     ),
     child: DropdownButtonHideUnderline(
       child: DropdownButton<String>(
-        value: _selectedStatus,
+        value: state.ordersSelectedStatus,
         isExpanded: true,
         icon: const Icon(Icons.keyboard_arrow_down_rounded,
             size: 18, color: AppTheme.graySubTitleColor),
@@ -2750,8 +2443,13 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
                 overflow: TextOverflow.ellipsis)))
             .toList(),
         onChanged: (v) {
-          setState(() => _selectedStatus = v ?? '');
-          _resetAndFetch();
+          context.read<StaffListCubit>().setOrdersFilter(
+            schoolId: widget.schoolId,
+            status: v ?? '',
+            dateFrom: _dateFromCtrl.text.trim(),
+            dateTo: _dateToCtrl.text.trim(),
+            search: _searchCtrl.text.trim(),
+          );
         },
       ),
     ),
@@ -2775,8 +2473,7 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
             setLocal(() {});
             _debounce?.cancel();
             _debounce = Timer(
-                const Duration(milliseconds: 200),
-                _resetAndFetch);
+                const Duration(milliseconds: 200), _resetAndFetch);
           },
           child: const Icon(Icons.close, size: 16),
         )
@@ -2794,28 +2491,15 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
   }
 }
 
-class _StaffOrderItemCard extends StatefulWidget {
+class _StaffOrderItemCard extends StatelessWidget {
   final OrderStaffItem order;
   final String schoolId;
+
   const _StaffOrderItemCard(
       {required this.order, required this.schoolId});
 
-  @override
-  State<_StaffOrderItemCard> createState() => _StaffOrderItemCardState();
-}
-
-class _StaffOrderItemCardState extends State<_StaffOrderItemCard> {
-  late String _currentStatus;
-  bool _updating = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentStatus = widget.order.status;
-  }
-
-  Color get _statusColor {
-    switch (_currentStatus) {
+  Color _statusColor(String status) {
+    switch (status) {
       case 'completed':
         return const Color(0xFF2DC24E);
       case 'cancelled':
@@ -2829,8 +2513,8 @@ class _StaffOrderItemCardState extends State<_StaffOrderItemCard> {
     }
   }
 
-  Color get _statusBg {
-    switch (_currentStatus) {
+  Color _statusBg(String status) {
+    switch (status) {
       case 'completed':
         return const Color(0xFFE8F9ED);
       case 'cancelled':
@@ -2844,64 +2528,13 @@ class _StaffOrderItemCardState extends State<_StaffOrderItemCard> {
     }
   }
 
-  String get _statusLabel => kOrderStatuses
+  String _statusLabel(String status) => kOrderStatuses
       .firstWhere(
-        (s) => s.value == _currentStatus,
-    orElse: () => OrderStatusOption(
-        _currentStatus, _currentStatus.replaceAll('_', ' ')),
+        (s) => s.value == status,
+    orElse: () =>
+        OrderStatusOption(status, status.replaceAll('_', ' ')),
   )
       .label;
-
-  Future<void> _updateStatus(String newStatus) async {
-    setState(() => _updating = true);
-    try {
-      final api = ApiManager();
-      final url =
-          '${Config.baseUrl}auth/partner/orders/${widget.order.uuid}/status';
-      final response =
-      await api.patchRequestWithBody(url, {'status': newStatus});
-      if (!mounted) return;
-      bool success = false;
-      if (response != null) {
-        final json = jsonDecode(response.body);
-        success = json['success'] == true;
-      }
-      setState(() {
-        _updating = false;
-        if (success) _currentStatus = newStatus;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success
-            ? 'Status updated successfully'
-            : 'Failed to update status'),
-        backgroundColor: success ? AppTheme.btnColor : Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(12),
-      ));
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _updating = false);
-    }
-  }
-
-  List<PopupMenuEntry<String>> _buildStatusMenuItems() {
-    return kOrderStatuses
-        .where((s) => s.value != _currentStatus)
-        .map((s) => PopupMenuItem<String>(
-      value: s.value,
-      child: Row(
-        children: [
-          Icon(_statusIcon(s.value),
-              size: 16, color: AppTheme.graySubTitleColor),
-          const SizedBox(width: 10),
-          Text(s.label),
-        ],
-      ),
-    ))
-        .toList();
-  }
 
   IconData _statusIcon(String status) {
     switch (status) {
@@ -2922,135 +2555,186 @@ class _StaffOrderItemCardState extends State<_StaffOrderItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StaffOrderDetailPage(
-              uuid: widget.order.uuid, schoolId: widget.schoolId),
-        ),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14)),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: (widget.order.staffPhoto != null &&
-                  widget.order.staffPhoto!.isNotEmpty)
-                  ? Image.network(widget.order.staffPhoto!,
-                  height: 60,
-                  width: 60,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder())
-                  : _placeholder(),
+    return BlocBuilder<StaffListCubit, StaffListState>(
+      buildWhen: (p, c) =>
+      p.isOrderUpdating(order.uuid) != c.isOrderUpdating(order.uuid) ||
+          p.orderStatus(order.uuid, order.status) !=
+              c.orderStatus(order.uuid, order.status),
+      builder: (context, cubitState) {
+        final currentStatus =
+        cubitState.orderStatus(order.uuid, order.status);
+        final isUpdating = cubitState.isOrderUpdating(order.uuid);
+
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StaffOrderDetailPage(
+                  uuid: order.uuid, schoolId: schoolId),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          ),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: (order.staffPhoto != null &&
+                      order.staffPhoto!.isNotEmpty)
+                      ? Image.network(order.staffPhoto!,
+                      height: 60,
+                      width: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder())
+                      : _placeholder(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(widget.order.staffName ?? '-',
-                            style: MyStyles.boldText(
-                                size: 16,
-                                color: AppTheme.black_Color),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(order.staffName ?? '-',
+                                style: MyStyles.boldText(
+                                    size: 16,
+                                    color: AppTheme.black_Color),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text('• ${order.typeLabel}',
+                                style: MyStyles.boldText(
+                                    size: 14, color: AppTheme.btnColor),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      if (order.schoolName != null)
+                        Text(order.schoolName!,
+                            style: MyStyles.regularText(
+                                size: 12,
+                                color: AppTheme.graySubTitleColor),
                             overflow: TextOverflow.ellipsis),
-                      ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                            '• ${widget.order.typeLabel}',
-                            style: MyStyles.boldText(
-                                size: 14, color: AppTheme.btnColor),
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  if (widget.order.schoolName != null)
-                    Text(widget.order.schoolName!,
-                        style: MyStyles.regularText(
-                            size: 12,
-                            color: AppTheme.graySubTitleColor),
-                        overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 3),
-                  Text('#${widget.order.id}',
-                      style: MyStyles.regularText(
-                          size: 12,
-                          color: AppTheme.graySubTitleColor)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                            color: _statusBg,
-                            borderRadius:
-                            BorderRadius.circular(20)),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                                width: 5,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                    color: _statusColor,
-                                    shape: BoxShape.circle)),
-                            const SizedBox(width: 4),
-                            Text(_statusLabel,
-                                style: MyStyles.mediumText(
-                                    size: 11,
-                                    color: _statusColor)),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(Icons.calendar_today_outlined,
-                          size: 11,
-                          color: AppTheme.graySubTitleColor),
-                      const SizedBox(width: 3),
-                      Text(widget.order.orderedAt,
+                      const SizedBox(height: 3),
+                      Text('#${order.id}',
                           style: MyStyles.regularText(
-                              size: 11,
+                              size: 12,
                               color: AppTheme.graySubTitleColor)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                                color: _statusBg(currentStatus),
+                                borderRadius:
+                                BorderRadius.circular(20)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                        color:
+                                        _statusColor(currentStatus),
+                                        shape: BoxShape.circle)),
+                                const SizedBox(width: 4),
+                                Text(_statusLabel(currentStatus),
+                                    style: MyStyles.mediumText(
+                                        size: 11,
+                                        color:
+                                        _statusColor(currentStatus))),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.calendar_today_outlined,
+                              size: 11,
+                              color: AppTheme.graySubTitleColor),
+                          const SizedBox(width: 3),
+                          Text(order.orderedAt,
+                              style: MyStyles.regularText(
+                                  size: 11,
+                                  color: AppTheme.graySubTitleColor)),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                isUpdating
+                    ? const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.btnColor),
+                  ),
+                )
+                    : PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert,
+                      color: Colors.grey),
+                  offset: const Offset(0, 32),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 8,
+                  onSelected: (newStatus) async {
+                    final success = await context
+                        .read<StaffListCubit>()
+                        .updateOrderStatus(
+                      orderUuid: order.uuid,
+                      newStatus: newStatus,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(
+                        content: Text(success
+                            ? 'Status updated successfully'
+                            : 'Failed to update status'),
+                        backgroundColor: success
+                            ? AppTheme.btnColor
+                            : Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                            BorderRadius.circular(10)),
+                        margin: const EdgeInsets.all(12),
+                      ));
+                    }
+                  },
+                  itemBuilder: (_) => kOrderStatuses
+                      .where((s) => s.value != currentStatus)
+                      .map((s) => PopupMenuItem<String>(
+                    value: s.value,
+                    child: Row(
+                      children: [
+                        Icon(_statusIcon(s.value),
+                            size: 16,
+                            color: AppTheme
+                                .graySubTitleColor),
+                        const SizedBox(width: 10),
+                        Text(s.label),
+                      ],
+                    ),
+                  ))
+                      .toList(),
+                ),
+              ],
             ),
-            _updating
-                ? const Padding(
-              padding: EdgeInsets.all(4),
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.btnColor),
-              ),
-            )
-                : PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert,
-                  color: Colors.grey),
-              offset: const Offset(0, 32),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 8,
-              onSelected: _updateStatus,
-              itemBuilder: (_) => _buildStatusMenuItems(),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -3062,13 +2746,13 @@ class _StaffOrderItemCardState extends State<_StaffOrderItemCard> {
   );
 }
 
+
 class _StaffTabCountBanner extends StatefulWidget {
   final TabController tabController;
   const _StaffTabCountBanner({required this.tabController});
 
   @override
-  State<_StaffTabCountBanner> createState() =>
-      _StaffTabCountBannerState();
+  State<_StaffTabCountBanner> createState() => _StaffTabCountBannerState();
 }
 
 class _StaffTabCountBannerState extends State<_StaffTabCountBanner> {
@@ -3091,18 +2775,22 @@ class _StaffTabCountBannerState extends State<_StaffTabCountBanner> {
   @override
   Widget build(BuildContext context) {
     final index = widget.tabController.index;
-
     if (index == 0) {
       return BlocBuilder<StaffListCubit, StaffListState>(
         buildWhen: (p, c) => p.total != c.total,
         builder: (_, s) => _banner('Total Staff', s.total),
       );
     }
-
     if (index == 1) {
       return BlocBuilder<StaffCorrectionCubit, StaffCorrectionState>(
         buildWhen: (p, c) => p.total != c.total,
         builder: (_, s) => _banner('Total Corrections', s.total),
+      );
+    }
+    if (index == 2) {
+      return BlocBuilder<StaffListCubit, StaffListState>(
+        buildWhen: (p, c) => p.ordersTotal != c.ordersTotal,
+        builder: (_, s) => _banner('Total Orders', s.ordersTotal),
       );
     }
     return const SizedBox.shrink();
@@ -3114,11 +2802,11 @@ class _StaffTabCountBannerState extends State<_StaffTabCountBanner> {
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     child: Text(
       '$label: $count',
-      style:
-      MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+      style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
     ),
   );
 }
+
 
 class _StaffListDotDateFormatter extends TextInputFormatter {
   @override
@@ -3128,10 +2816,10 @@ class _StaffListDotDateFormatter extends TextInputFormatter {
     newValue.text.replaceAll('/', '-').replaceAll('.', '-');
     return newValue.copyWith(
         text: text,
-        selection:
-        TextSelection.collapsed(offset: text.length));
+        selection: TextSelection.collapsed(offset: text.length));
   }
 }
+
 
 class _StaffCreateOrderDialog extends StatefulWidget {
   final String schoolId;
@@ -3142,8 +2830,7 @@ class _StaffCreateOrderDialog extends StatefulWidget {
       _StaffCreateOrderDialogState();
 }
 
-class _StaffCreateOrderDialogState
-    extends State<_StaffCreateOrderDialog> {
+class _StaffCreateOrderDialogState extends State<_StaffCreateOrderDialog> {
   static const _cardTypes = [
     {'value': '', 'label': '-Select card Type-'},
     {'value': 'pvc_card', 'label': 'Pvc Card'},
@@ -3231,8 +2918,7 @@ class _StaffCreateOrderDialogState
               const SizedBox(height: 8),
               Container(
                 height: 48,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(10),
@@ -3241,23 +2927,20 @@ class _StaffCreateOrderDialogState
                   child: DropdownButton<String>(
                     value: _selectedCardType,
                     isExpanded: true,
-                    icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
                         color: AppTheme.graySubTitleColor),
                     style: MyStyles.regularText(
                         size: 14, color: AppTheme.black_Color),
                     items: _cardTypes
                         .map((t) => DropdownMenuItem<String>(
                       value: t['value']!,
-                      child: Text(
-                        t['label']!,
-                        style: MyStyles.regularText(
-                          size: 14,
-                          color: t['value']!.isEmpty
-                              ? AppTheme.graySubTitleColor
-                              : AppTheme.black_Color,
-                        ),
-                      ),
+                      child: Text(t['label']!,
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: t['value']!.isEmpty
+                                ? AppTheme.graySubTitleColor
+                                : AppTheme.black_Color,
+                          )),
                     ))
                         .toList(),
                     onChanged: (v) =>
@@ -3267,8 +2950,7 @@ class _StaffCreateOrderDialogState
               ),
               const SizedBox(height: 16),
               ..._cardForOptions.map((opt) {
-                final isSelected =
-                _selectedCardFor.contains(opt['value']);
+                final isSelected = _selectedCardFor.contains(opt['value']);
                 return GestureDetector(
                   onTap: () => _toggleCardFor(opt['value']!),
                   child: Padding(
@@ -3298,8 +2980,7 @@ class _StaffCreateOrderDialogState
                         const SizedBox(width: 10),
                         Text(opt['label']!,
                             style: MyStyles.regularText(
-                                size: 14,
-                                color: AppTheme.black_Color)),
+                                size: 14, color: AppTheme.black_Color)),
                       ],
                     ),
                   ),
@@ -3317,9 +2998,8 @@ class _StaffCreateOrderDialogState
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B6B),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
+                          color: const Color(0xFFFF6B6B),
+                          borderRadius: BorderRadius.circular(25)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -3388,8 +3068,7 @@ class _StaffCreateOrderDialogState
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white),
+                            strokeWidth: 2, color: Colors.white),
                       )
                           : Row(
                         mainAxisSize: MainAxisSize.min,
@@ -3399,10 +3078,292 @@ class _StaffCreateOrderDialogState
                           const SizedBox(width: 6),
                           Text('Create',
                               style: MyStyles.mediumText(
-                                  size: 14,
-                                  color: Colors.white)),
+                                  size: 14, color: Colors.white)),
                         ],
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Staff Process Checklist Dialog (from Staff List Tab) ─────────────────────
+
+class _StaffProcessChecklistDialog extends StatefulWidget {
+  final String schoolId;
+  final List<String> staffUuids;
+  final VoidCallback? onSuccess;
+
+  const _StaffProcessChecklistDialog({
+    required this.schoolId,
+    required this.staffUuids,
+    this.onSuccess,
+  });
+
+  @override
+  State<_StaffProcessChecklistDialog> createState() =>
+      _StaffProcessChecklistDialogState();
+}
+
+class _StaffProcessChecklistDialogState
+    extends State<_StaffProcessChecklistDialog> {
+  static const _listTypes = [
+    {'value': '', 'label': '- Select List Type -'},
+    {'value': 'selected_class_wise', 'label': 'Selected Data - Class Wise'},
+    {'value': 'selected_section_wise', 'label': 'Selected Data - Section Wise'},
+    {'value': 'complete_class_wise', 'label': 'Complete School Class Wise'},
+    {
+      'value': 'complete_section_wise',
+      'label': 'Complete School Class Sections Wise'
+    },
+  ];
+
+  static const _processTypes = [
+    {'value': '', 'label': '- Select Process Type -'},
+    {'value': 'create', 'label': 'Create Correction List'},
+  ];
+
+  String _selectedListType = '';
+  String _selectedProcessType = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<StaffCorrectionCubit, StaffCorrectionState>(
+      listenWhen: (p, c) =>
+          p.sendOrderLoading != c.sendOrderLoading ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
+      listener: (ctx, state) {
+        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+          Navigator.of(context).pop();
+          widget.onSuccess?.call();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Correction list created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+        if (!state.sendOrderLoading && state.sendOrderError != null) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.sendOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+      builder: (context, state) => Dialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Process Checklist Or Orders',
+                        style: MyStyles.boldText(
+                            size: 16, color: AppTheme.black_Color)),
+                  ),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [
+                          Color(0xFFFF6B6B),
+                          Color(0xFFFF8E53)
+                        ]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Text('List Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedListType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedListType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedListType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _listTypes
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['value']!,
+                              child: Text(t['label']!,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: t['value']!.isEmpty
+                                        ? AppTheme.graySubTitleColor
+                                        : AppTheme.black_Color,
+                                  )),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedListType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Select Process Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedProcessType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedProcessType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedProcessType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _processTypes
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['value']!,
+                              child: Text(t['label']!,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: t['value']!.isEmpty
+                                        ? AppTheme.graySubTitleColor
+                                        : AppTheme.black_Color,
+                                  )),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedProcessType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B6B),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text('Cancel',
+                          style: MyStyles.mediumText(
+                              size: 14, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () {
+                            if (_selectedListType.isEmpty) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: const Text(
+                                    'Please select a list type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            if (_selectedProcessType.isEmpty) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: const Text(
+                                    'Please select a process type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            context
+                                .read<StaffCorrectionCubit>()
+                                .processOrder(
+                                  schoolId: widget.schoolId,
+                                  staffUuids: widget.staffUuids,
+                                );
+                          },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: state.sendOrderLoading
+                            ? Colors.grey
+                            : AppTheme.btnColor,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: state.sendOrderLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text('Confirm',
+                              style: MyStyles.mediumText(
+                                  size: 14, color: Colors.white)),
                     ),
                   ),
                 ],
