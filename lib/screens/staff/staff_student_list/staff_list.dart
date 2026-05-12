@@ -415,11 +415,6 @@ class _StaffListBodyState extends State<_StaffListBody> {
                   ),
                   child: Row(
                     children: [
-                      Text(
-                        '${_selectedIds.length} selected',
-                        style: MyStyles.mediumText(
-                            size: 13, color: AppTheme.btnColor),
-                      ),
                       const Spacer(),
                       TextButton(
                         onPressed: () => _selectAll(staffState.list),
@@ -2232,7 +2227,6 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: _searchBar(),
             ),
-            // Filters
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -2308,7 +2302,6 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
                   ),
                 ),
               ),
-            // List
             Expanded(
               child: state.ordersError != null && state.orders.isEmpty
                   ? Center(
@@ -3093,7 +3086,6 @@ class _StaffCreateOrderDialogState extends State<_StaffCreateOrderDialog> {
   }
 }
 
-// ── Staff Process Checklist Dialog (from Staff List Tab) ─────────────────────
 
 class _StaffProcessChecklistDialog extends StatefulWidget {
   final String schoolId;

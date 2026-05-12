@@ -266,7 +266,6 @@ class _StudentsTabState extends State<_StudentsTab> {
   final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
 
-  // Selection state for Process Checklist
   final Set<int> _selectedIds = {};
   final Map<int, String> _idToUuid = {};
 
@@ -444,11 +443,6 @@ class _StudentsTabState extends State<_StudentsTab> {
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                '${_selectedIds.length} selected',
-                                style: MyStyles.mediumText(
-                                    size: 13, color: AppTheme.btnColor),
-                              ),
                               const Spacer(),
                               TextButton(
                                 onPressed: () =>
@@ -2404,7 +2398,6 @@ class _DownloadChecklistDialogState
   }
 }
 
-// ─── Process Checklist Dialog (from Students Tab) ─────────────────────────────
 
 class _ProcessChecklistDialog extends StatefulWidget {
   final String schoolId;
@@ -3358,12 +3351,25 @@ class _OrderCardState extends State<_OrderCard> {
 class _DotDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    final text =
-    newValue.text.replaceAll('/', '-').replaceAll('.', '-');
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length > 8) digits = digits.substring(0, 8);
+
+    String formatted = '';
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) formatted += '.';
+      formatted += digits[i];
+    }
+
     return newValue.copyWith(
-        text: text,
-        selection:
-        TextSelection.collapsed(offset: text.length));
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }
