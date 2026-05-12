@@ -82,7 +82,7 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 2,
+      length: widget.editStudent != null ? 1 : 2,
       vsync: this,
       initialIndex: widget.initialTab,
     );
@@ -507,22 +507,41 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
   }
 
   Widget _classDropdown(List<ClassOption> classes) {
-    if (classes.isEmpty) return _loadingTile('Loading classes...');
-    final seen = <String>{};
-    final unique = classes.where((c) => seen.add(c.nameWithPrefix)).toList();
+    if (classes.isEmpty) {
+      return _loadingTile('Loading classes...');
+    }
+
     final val = _toInt(_selectVal['class']);
-    final selected = (val != null && unique.any((c) => c.id == val))
-        ? unique.firstWhere((c) => c.id == val)
+
+    final selected = (val != null &&
+        classes.any((c) => c.id == val))
+        ? classes.firstWhere((c) => c.id == val)
         : null;
+
     return Dropdown<ClassOption>(
       value: selected,
-      items: unique,
+      items: classes,
       hintText: 'Select Class',
       onChange: (v) {
         setState(() {
           _selectVal['class'] = v?.id;
-          _selectVal['class_section'] = null;
+
+          // IMPORTANT
+          if (v != null &&
+              v.sections.isNotEmpty) {
+            _selectVal['class_section'] =
+                v.sections.first.id;
+          } else if (v != null &&
+              v.sectionsIds.isNotEmpty) {
+            _selectVal['class_section'] =
+                v.sectionsIds.first;
+          } else {
+            _selectVal['class_section'] = null;
+          }
         });
+
+        debugPrint(
+            "AUTO SECTION => ${_selectVal['class_section']}");
       },
       displayText: (_, o) => o.nameWithPrefix,
       showClearButton: false,
@@ -547,24 +566,31 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
     );
   }
 
-  Widget _sectionDropdown(List<SectionOption> sections) {
-    final val = _toInt(_selectVal['class_section']);
+  Widget _sectionDropdown(
+      List<SectionOption> sections) {
+    final val =
+    _toInt(_selectVal['class_section']);
+
     SectionOption? selected;
-    if (val != null) {
-      if (sections.any((s) => s.id == val)) {
-        selected = sections.firstWhere((s) => s.id == val);
-      } else {
-        selected = SectionOption(id: val, name: 'Section $val');
-        if (!sections.contains(selected)) {
-          sections = [selected, ...sections];
-        }
-      }
+
+    if (val != null &&
+        sections.any((s) => s.id == val)) {
+      selected =
+          sections.firstWhere((s) => s.id == val);
     }
+
     return Dropdown<SectionOption>(
       value: selected,
       items: sections,
-      hintText: sections.isEmpty ? 'No sections available' : 'Select Section',
-      onChange: (v) => setState(() => _selectVal['class_section'] = v?.id),
+      hintText: 'Select Section',
+      onChange: (v) {
+        setState(() {
+          _selectVal['class_section'] = v?.id;
+        });
+
+        debugPrint(
+            "SELECTED SECTION => ${v?.id}");
+      },
       displayText: (_, o) => o.name,
       showClearButton: false,
     );
@@ -888,41 +914,132 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
     }
   }
 
-  Widget _dynamicSelectField(String name, StudentFormDataModel? data) {
+  Widget _dynamicSelectField(
+      String name,
+      StudentFormDataModel? data,
+      ) {
     switch (name) {
+
+
       case 'session':
         return _sessionDropdown(data?.sessions ?? []);
+
+
       case 'class':
         return _classDropdown(data?.classes ?? []);
+
+
       case 'house':
         return _houseDropdown(data?.houses ?? []);
+
+
       case 'gender':
-        return _stringDropdown(name, _kGenderOptions);
+        return _stringDropdown(
+          name,
+          _kGenderOptions,
+        );
+
+
       case 'transport_mode':
         return _transportDropdown();
+
+
       case 'blood_group':
-        return _stringDropdown(name, _kBloodGroupOptions);
-      case 'is_rte_student':
-        return _stringDropdown(name, _kRteOptions);
-      case 'class_section':
-        final selectedClassId = _toInt(_selectVal['class']);
-        if (selectedClassId == null) {
-          return _loadingTile('Select a class first');
-        }
-        final selectedClass = data?.classes.firstWhere(
-          (c) => c.id == selectedClassId,
-          orElse: () => ClassOption(id: -1, name: '', nameWithPrefix: ''),
+        return _stringDropdown(
+          name,
+          _kBloodGroupOptions,
         );
-        var sections = selectedClass?.sections ?? [];
-        if (sections.isEmpty &&
-            (selectedClass?.sectionsIds.isNotEmpty ?? false)) {
-          sections = selectedClass!.sectionsIds
-              .map((id) => SectionOption(id: id, name: 'Section $id'))
-              .toList();
+
+
+      case 'is_rte_student':
+        return _stringDropdown(
+          name,
+          _kRteOptions,
+        );
+
+
+      case 'class_section':
+
+        final selectedClassId =
+        _toInt(_selectVal['class']);
+
+        debugPrint(
+          "SELECTED CLASS ID => $selectedClassId",
+        );
+
+        if (selectedClassId == null) {
+          return _loadingTile(
+            'Select a class first',
+          );
         }
-        return _sectionDropdown(sections);
+
+        final selectedClass = data?.classes.firstWhere(
+              (c) => c.id == selectedClassId,
+          orElse: () => ClassOption(
+            id: -1,
+            name: '',
+            nameWithPrefix: '',
+          ),
+        );
+
+        List<SectionOption> sections =
+            selectedClass?.sections ?? [];
+
+        debugPrint(
+          "SECTIONS => ${sections.map((e) => e.id).toList()}",
+        );
+
+        if (sections.isEmpty) {
+          return _loadingTile(
+            'No sections available',
+          );
+        }
+
+        final int? selectedSectionId =
+        _toInt(_selectVal['class_section']);
+
+        SectionOption? selectedSection;
+
+        if (selectedSectionId != null) {
+          try {
+            selectedSection = sections.firstWhere(
+                  (s) => s.id == selectedSectionId,
+            );
+          } catch (_) {
+            selectedSection = null;
+          }
+        }
+
+        return Dropdown<SectionOption>(
+          value: selectedSection,
+
+          items: sections,
+
+          hintText: 'Select Section',
+
+          onChange: (v) {
+            setState(() {
+
+              _selectVal['class_section'] = v?.id;
+
+              debugPrint(
+                "SELECTED SECTION => ${_selectVal['class_section']}",
+              );
+            });
+          },
+
+          displayText: (_, o) => o.name,
+
+          showClearButton: false,
+        );
+
+    // ================= DEFAULT =================
+
       default:
-        return _stringDropdown(name, ['-Select-']);
+        return _stringDropdown(
+          name,
+          ['-Select-'],
+        );
     }
   }
 
@@ -1284,6 +1401,7 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
               ),
               body: Column(
                 children: [
+                  if (widget.editStudent == null)
                   Material(
                     color: Colors.white,
                     child: TabBar(
@@ -1313,6 +1431,8 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
                               ),
                             ),
                           )
+                        : widget.editStudent != null
+                        ? _mainInfoTab(currentFields, additionalFields, data)
                         : TabBarView(
                             controller: _tabController,
                             children: [
@@ -1328,7 +1448,7 @@ class _StaffAddStudentFormPageState extends State<StaffAddStudentFormPage>
                   AnimatedBuilder(
                     animation: _tabController,
                     builder: (context, _) {
-                      if (_tabController.index == 1) return const SizedBox.shrink();
+                      if (widget.editStudent == null && _tabController.index == 1) return const SizedBox.shrink();
                       return Container(
                     padding: const EdgeInsets.all(16),
                     color: Colors.white,

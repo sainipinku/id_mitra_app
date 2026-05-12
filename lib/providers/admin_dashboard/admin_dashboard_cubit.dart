@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/models/home/SchoolDashboardModel.dart';
-
 part 'admin_dashboard_state.dart';
 
 class AdminDashboardCubit extends Cubit<AdminDashboardState> {

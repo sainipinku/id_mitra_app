@@ -214,18 +214,18 @@ class _StudentIdCardWidgetState extends State<StudentIdCardWidget>
                   value: fatherName.isEmpty ? '—' : fatherName,
                 ),
                 const SizedBox(height: 6),
-                _PremiumInfoRow(
-                  icon: Icons.person_2_outlined,
-                  label: 'Mother',
-                  value: motherName.isEmpty ? '—' : motherName,
-                ),
-                const SizedBox(height: 6),
-                _PremiumInfoRow(
-                  icon: Icons.cake_outlined,
-                  label: 'DOB',
-                  value: dob.isEmpty ? '—' : dob,
-                ),
-                const SizedBox(height: 6),
+                // _PremiumInfoRow(
+                //   icon: Icons.person_2_outlined,
+                //   label: 'Mother',
+                //   value: motherName.isEmpty ? '—' : motherName,
+                // ),
+                // const SizedBox(height: 6),
+                // _PremiumInfoRow(
+                //   icon: Icons.cake_outlined,
+                //   label: 'DOB',
+                //   value: dob.isEmpty ? '—' : dob,
+                // ),
+                // const SizedBox(height: 6),
                 _PremiumInfoRow(
                   icon: Icons.phone_outlined,
                   label: 'Mobile',

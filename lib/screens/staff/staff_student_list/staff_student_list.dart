@@ -34,18 +34,21 @@ import 'package:idmitra/screens/home/StudentCard.dart';
 import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
 import 'package:idmitra/screens/staff/staff_add_student_form/staff_add_student_form.dart';
 import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
+import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class StaffStudentsScreen extends StatefulWidget {
   final String? schoolId;
   final bool showAppBar;
   final SchoolDetailsModel? schoolDetailsModel;
+  final List<int> assignedClassIds;
 
   const StaffStudentsScreen({
     super.key,
     this.schoolId,
     this.showAppBar = false,
     this.schoolDetailsModel,
+    this.assignedClassIds = const [],
   });
 
   @override
@@ -57,19 +60,27 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
   String _schoolId = '';
   bool _schoolLoaded = false;
   late TabController _tabController;
+  bool _correctionIsGridView = false;
+  bool _studentsIsGridView = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() => setState(() {}));
     if (widget.schoolId != null && widget.schoolId!.isNotEmpty) {
       _schoolId = widget.schoolId!;
       _schoolLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          // Agar staff ko assigned classes hain to pehli class se filter karo
+          final classId = widget.assignedClassIds.isNotEmpty
+              ? widget.assignedClassIds.first.toString()
+              : '';
           context.read<StudentsCubit>().fetchStudents(
             search: '',
             schoolId: _schoolId,
+            classId: classId,
           );
         }
       });
@@ -87,9 +98,13 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          final classId = widget.assignedClassIds.isNotEmpty
+              ? widget.assignedClassIds.first.toString()
+              : '';
           context.read<StudentsCubit>().fetchStudents(
             search: '',
             schoolId: _schoolId,
+            classId: classId,
           );
         }
       });
@@ -152,6 +167,56 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
                 'Student Listings',
                 style: MyStyles.boldText(size: 20, color: Colors.black),
               ),
+              actions: _tabController.index != 2
+                  ? [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_tabController.index == 0) {
+                              setState(() => _studentsIsGridView = !_studentsIsGridView);
+                            } else {
+                              setState(() => _correctionIsGridView = !_correctionIsGridView);
+                            }
+                          },
+                          child: Builder(builder: (context) {
+                            final isGrid = _tabController.index == 0 ? _studentsIsGridView : _correctionIsGridView;
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isGrid ? AppTheme.btnColor : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isGrid ? AppTheme.btnColor : Colors.grey.shade300,
+                                ),
+                                boxShadow: isGrid
+                                    ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                                    : [],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isGrid ? Icons.view_list_rounded : Icons.badge_outlined,
+                                    size: 18,
+                                    color: isGrid ? Colors.white : AppTheme.black_Color,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isGrid ? 'List' : 'ID Card',
+                                    style: MyStyles.mediumText(
+                                      size: 12,
+                                      color: isGrid ? Colors.white : AppTheme.black_Color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ]
+                  : null,
               bottom: TabBar(
                 controller: _tabController,
                 labelColor: AppTheme.btnColor,
@@ -166,7 +231,7 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
                 tabs: const [
                   Tab(text: 'Students List'),
                   Tab(text: 'Correction List'),
-                  Tab(text: 'Orders'),
+                  Tab(text: 'Orders List'),
                 ],
               ),
             )
@@ -196,19 +261,27 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
                 ),
               ),
             ),
-      body: TabBarView(
+      body: Column(
+        children: [
+          Expanded(
+            child: TabBarView(
         controller: _tabController,
         children: [
           // Tab 1: Students
           _StaffStudentsTab(
             schoolId: _schoolId,
             schoolDetailsModel: widget.schoolDetailsModel,
+            isGridView: _studentsIsGridView,
+            assignedClassIds: widget.assignedClassIds,
           ),
-          // Tab 2: Correction List (isSchool = true for staff)
           BlocProvider(
             create: (_) =>
                 CorrectionCubit()..fetchCorrectionStudents(schoolId: _schoolId),
-            child: _StaffCorrectionTab(schoolId: _schoolId),
+            child: _StaffCorrectionTab(
+              schoolId: _schoolId,
+              isGridView: _correctionIsGridView,
+              schoolDetailsModel: widget.schoolDetailsModel,
+            ),
           ),
           // Tab 3: Orders
           BlocProvider(
@@ -218,7 +291,53 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
             child: _StaffOrdersTab(schoolId: _schoolId),
           ),
         ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _StaffCountRow extends StatelessWidget {
+  final int total;
+  final String label;
+  const _StaffCountRow({required this.total, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppTheme.btnColor.withOpacity(0.08),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Text(
+        '$label: $total',
+        style: MyStyles.mediumText(size: 13, color: AppTheme.btnColor),
+      ),
+    );
+  }
+}
+
+class _StaffCountBanner extends StatelessWidget {
+  final TabController tabController;
+  const _StaffCountBanner({required this.tabController});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: tabController,
+      builder: (context, _) {
+        final tab = tabController.index;
+        int total = 0;
+        String label = '';
+        if (tab == 0) {
+          total = context.watch<StudentsCubit>().state.total;
+          label = 'Total Students';
+        }
+        return tab == 0
+            ? _StaffCountRow(total: total, label: label)
+            : const SizedBox.shrink();
+      },
     );
   }
 }
@@ -226,7 +345,14 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
 class _StaffStudentsTab extends StatefulWidget {
   final String schoolId;
   final SchoolDetailsModel? schoolDetailsModel;
-  const _StaffStudentsTab({required this.schoolId, this.schoolDetailsModel});
+  final bool isGridView;
+  final List<int> assignedClassIds;
+  const _StaffStudentsTab({
+    required this.schoolId,
+    this.schoolDetailsModel,
+    this.isGridView = false,
+    this.assignedClassIds = const [],
+  });
 
   @override
   State<_StaffStudentsTab> createState() => _StaffStudentsTabState();
@@ -237,7 +363,61 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
-  bool _isGridView = false;
+
+  final Set<int> _selectedIds = {};
+  final Map<int, String> _idToUuid = {};
+
+  bool get _isGridView => widget.isGridView;
+
+  void _toggleSelect(StudentDetailsData student) {
+    if (student.id == null) return;
+    setState(() {
+      if (_selectedIds.contains(student.id)) {
+        _selectedIds.remove(student.id);
+      } else {
+        _selectedIds.add(student.id!);
+        if (student.uuid != null) _idToUuid[student.id!] = student.uuid!;
+      }
+    });
+  }
+
+  void _selectAll(List<StudentDetailsData> students) {
+    setState(() {
+      for (final s in students) {
+        if (s.id != null) {
+          _selectedIds.add(s.id!);
+          if (s.uuid != null) _idToUuid[s.id!] = s.uuid!;
+        }
+      }
+    });
+  }
+
+  void _clearSelection() => setState(() => _selectedIds.clear());
+
+  void _showProcessChecklistDialog(BuildContext ctx) {
+    final uuids = _selectedIds
+        .where((id) => _idToUuid.containsKey(id))
+        .map((id) => _idToUuid[id]!)
+        .toList();
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider(
+        create: (_) => CorrectionCubit(),
+        child: _StaffStudentsProcessChecklistDialog(
+          schoolId: widget.schoolId,
+          studentUuids: uuids,
+          onSuccess: () {
+            _clearSelection();
+            context.read<StudentsCubit>().fetchStudents(
+              search: _searchCtrl.text.trim(),
+              schoolId: widget.schoolId,
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -249,8 +429,25 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
           search: _searchCtrl.text.trim(),
           schoolId: widget.schoolId,
           gender: '',
-          classId: '',
+          classId: widget.assignedClassIds.isNotEmpty
+              ? widget.assignedClassIds.first.toString()
+              : '',
         );
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Agar assigned classes hain to filter apply karo
+        if (widget.assignedClassIds.isNotEmpty) {
+          context.read<StudentsCubit>().applyFilters(
+            classId: widget.assignedClassIds.first.toString(),
+            schoolId: widget.schoolId,
+          );
+        }
+        final schoolIntId = widget.schoolDetailsModel?.id;
+        if (schoolIntId != null) {
+          context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
+        }
       }
     });
   }
@@ -294,6 +491,23 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.assignedClassIds.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/images/no_data.png', height: 200),
+              const SizedBox(height: 12),
+              Text(
+                'No classes assigned',
+                style: MyStyles.mediumText(size: 16, color: AppTheme.graySubTitleColor),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       floatingActionButton: _isGridView
           ? null
@@ -303,7 +517,14 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
               onPressed: _navigateToAddStudent,
               child: const Icon(Icons.add, color: Colors.white),
             ),
-      body: RefreshIndicator(
+      body: Column(
+        children: [
+          BlocBuilder<StudentsCubit, StudentsState>(
+            buildWhen: (p, c) => p.total != c.total,
+            builder: (_, s) => _StaffCountRow(total: s.total, label: 'Total Students'),
+          ),
+          Expanded(
+            child: RefreshIndicator(
         onRefresh: () async => context.read<StudentsCubit>().fetchStudents(
           search: _searchCtrl.text.trim(),
           schoolId: widget.schoolId,
@@ -314,6 +535,62 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              if (_selectedIds.isNotEmpty)
+                BlocBuilder<StudentsCubit, StudentsState>(
+                  builder: (_, studState) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.btnColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${_selectedIds.length} selected',
+                          style: MyStyles.mediumText(
+                              size: 13, color: AppTheme.btnColor),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () =>
+                              _selectAll(studState.studentsList),
+                          child: Text('Select All',
+                              style: MyStyles.mediumText(
+                                  size: 12, color: AppTheme.btnColor)),
+                        ),
+                        TextButton(
+                          onPressed: _clearSelection,
+                          child: Text('Clear',
+                              style: MyStyles.mediumText(
+                                  size: 12, color: Colors.grey)),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () =>
+                              _showProcessChecklistDialog(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppTheme.btnColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Process Checklist',
+                                    style: MyStyles.mediumText(
+                                        size: 12, color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(child: _searchBar()),
@@ -369,64 +646,13 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => setState(() => _isGridView = !_isGridView),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isGridView ? AppTheme.btnColor : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _isGridView
-                              ? AppTheme.btnColor
-                              : Colors.grey.shade300,
-                          width: 1,
-                        ),
-                        boxShadow: _isGridView
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.btnColor.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : [],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isGridView
-                                ? Icons.view_list_rounded
-                                : Icons.badge_outlined,
-                            size: 18,
-                            color: _isGridView
-                                ? Colors.white
-                                : AppTheme.black_Color,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _isGridView ? 'List' : 'ID Card',
-                            style: MyStyles.mediumText(
-                              size: 12,
-                              color: _isGridView
-                                  ? Colors.white
-                                  : AppTheme.black_Color,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 15),
               Expanded(
                 child: BlocBuilder<StudentsCubit, StudentsState>(
                   builder: (context, state) {
+                    final schoolState = context.watch<SchoolCubit>().state;
                     if (state.loading)
                       return const ShimmerList(expanded: false);
                     if (state.studentsList.isEmpty) {
@@ -482,10 +708,60 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
                       itemBuilder: (context, index) {
                         if (index < state.studentsList.length) {
                           final student = state.studentsList[index];
-                          return StudentCard(
-                            key: ValueKey(student.uuid),
-                            studentData: student,
-                            schoolId: widget.schoolId,
+                          final schoolIntId = widget.schoolDetailsModel?.id ?? student.schoolId;
+                          String? imageShape;
+                          try {
+                            if (schoolIntId != null && schoolState.imageShapeMap.containsKey(schoolIntId)) {
+                              imageShape = schoolState.imageShapeMap[schoolIntId];
+                            } else {
+                              if (schoolIntId != null) {
+                                final match = schoolState.students.firstWhere(
+                                  (s) => s.id == schoolIntId,
+                                  orElse: () => SchoolDetailsModel(),
+                                );
+                                if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                                  imageShape = match.imageShape;
+                                }
+                              }
+                              imageShape ??= widget.schoolDetailsModel?.imageShape;
+                            }
+                          } catch (_) {}
+                          final isSelected = student.id != null &&
+                              _selectedIds.contains(student.id);
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _toggleSelect(student),
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      0, 0, 4, 0),
+                                  child: Checkbox(
+                                    value: isSelected,
+                                    onChanged: (_) =>
+                                        _toggleSelect(student),
+                                    activeColor: AppTheme.btnColor,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(4)),
+                                    side: BorderSide(
+                                        color:
+                                        AppTheme.graySubTitleColor),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: StudentCard(
+                                  key: ValueKey(
+                                      state.studentsList[index].uuid),
+                                  studentData: student,
+                                  schoolId: widget.schoolId,
+                                  schoolIntId: schoolIntId,
+                                  imageShape: imageShape,
+                                ),
+                              ),
+                            ],
                           );
                         }
                         return const Padding(
@@ -500,6 +776,9 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
             ],
           ),
         ),
+      ),
+          ),
+        ],
       ),
     );
   }
@@ -541,7 +820,14 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
 class _StaffCorrectionTab extends StatefulWidget {
   final String schoolId;
   final VoidCallback? onOrderSent;
-  const _StaffCorrectionTab({required this.schoolId, this.onOrderSent});
+  final bool isGridView;
+  final SchoolDetailsModel? schoolDetailsModel;
+  const _StaffCorrectionTab({
+    required this.schoolId,
+    this.onOrderSent,
+    this.isGridView = false,
+    this.schoolDetailsModel,
+  });
 
   @override
   State<_StaffCorrectionTab> createState() => _StaffCorrectionTabState();
@@ -551,7 +837,8 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
   final ScrollController _scrollCtrl = ScrollController();
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
-  bool _isGridView = false;
+
+  bool get _isGridView => widget.isGridView;
 
   @override
   void initState() {
@@ -563,6 +850,14 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
           schoolId: widget.schoolId,
           isLoadMore: true,
         );
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final schoolIntId = widget.schoolDetailsModel?.id;
+        if (schoolIntId != null) {
+          context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
+        }
       }
     });
   }
@@ -611,87 +906,105 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
       },
       child: Column(
         children: [
+          BlocBuilder<CorrectionCubit, CorrectionState>(
+            buildWhen: (p, c) => p.studentsTotal != c.studentsTotal,
+            builder: (_, s) => _StaffCountRow(total: s.studentsTotal, label: 'Total Correction'),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Expanded(child: _searchBar()),
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => setState(() => _isGridView = !_isGridView),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _isGridView ? AppTheme.btnColor : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _isGridView ? AppTheme.btnColor : Colors.grey.shade300,
-                      ),
-                      boxShadow: _isGridView
-                          ? [BoxShadow(color: AppTheme.btnColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
-                          : [],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isGridView ? Icons.view_list_rounded : Icons.badge_outlined,
-                          size: 18,
-                          color: _isGridView ? Colors.white : AppTheme.black_Color,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _isGridView ? 'List' : 'ID Card',
-                          style: MyStyles.mediumText(
-                            size: 12,
-                            color: _isGridView ? Colors.white : AppTheme.black_Color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () async {
-                    final result =
-                        await showModalBottomSheet<Map<String, dynamic>>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: AppTheme.whiteColor,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(25),
+                BlocBuilder<CorrectionCubit, CorrectionState>(
+                  buildWhen: (p, c) => p.selectedClassIds != c.selectedClassIds,
+                  builder: (context, filterState) {
+                    final isFilterActive = filterState.selectedClassIds.isNotEmpty;
+                    return GestureDetector(
+                      onTap: () async {
+                        final result =
+                            await showModalBottomSheet<Map<String, dynamic>>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: AppTheme.whiteColor,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(25),
+                                ),
+                              ),
+                              builder: (_) => BlocProvider(
+                                create: (_) =>
+                                    OrdersCubit()
+                                      ..fetchSchoolClasses(widget.schoolId),
+                                child: FilterBottomSheet(schoolId: widget.schoolId),
+                              ),
+                            );
+                        if (result != null) {
+                          _debounce?.cancel();
+                          _debounce = Timer(const Duration(milliseconds: 300), () {
+                            final rawClass = result['class'];
+                            final List<String> classIds = rawClass is String && rawClass.isNotEmpty
+                                ? rawClass.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+                                : rawClass is List
+                                    ? List<String>.from(rawClass.map((e) => e.toString()))
+                                    : [];
+                            final List<int> sectionIds = result['section'] is List
+                                ? List<int>.from((result['section'] as List).map((e) => int.tryParse(e.toString()) ?? 0).where((e) => e != 0))
+                                : [];
+                            context.read<CorrectionCubit>().setSelectedClassIds(classIds);
+                            context.read<CorrectionCubit>().fetchCorrectionStudents(
+                              schoolId: widget.schoolId,
+                              classIds: classIds,
+                              sectionIds: sectionIds,
+                              search: _searchCtrl.text.trim(),
+                            );
+                          });
+                        }
+                      },
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isFilterActive ? AppTheme.btnColor.withOpacity(0.1) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: isFilterActive
+                                  ? Border.all(color: AppTheme.btnColor, width: 1.5)
+                                  : null,
+                            ),
+                            child: svgIcon(
+                              icon: 'assets/icons/filtter.svg',
+                              clr: isFilterActive ? AppTheme.btnColor : AppTheme.black_Color,
                             ),
                           ),
-                          builder: (_) => BlocProvider(
-                            create: (_) =>
-                                OrdersCubit()
-                                  ..fetchSchoolClasses(widget.schoolId),
-                            child: FilterBottomSheet(schoolId: widget.schoolId),
-                          ),
-                        );
-                    if (result != null) {
-                      _debounce?.cancel();
-                      _debounce = Timer(const Duration(milliseconds: 300), () {
-                        context.read<CorrectionCubit>().fetchCorrectionStudents(
-                          schoolId: widget.schoolId,
-                          classFilter: result['class'] ?? '',
-                        );
-                      });
-                    }
+                          if (isFilterActive)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.btnColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${filterState.selectedClassIds.length}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: svgIcon(
-                      icon: 'assets/icons/filtter.svg',
-                      clr: AppTheme.black_Color,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -699,6 +1012,25 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
           Expanded(
             child: BlocBuilder<CorrectionCubit, CorrectionState>(
               builder: (context, state) {
+                final schoolState = context.watch<SchoolCubit>().state;
+                final schoolId = widget.schoolDetailsModel?.id;
+                String? imageShape;
+                if (schoolId != null && schoolState.imageShapeMap.containsKey(schoolId)) {
+                  imageShape = schoolState.imageShapeMap[schoolId];
+                } else {
+                  try {
+                    if (schoolId != null) {
+                      final match = schoolState.students.firstWhere(
+                        (s) => s.id == schoolId,
+                        orElse: () => SchoolDetailsModel(),
+                      );
+                      if (match.imageShape != null && match.imageShape!.isNotEmpty) {
+                        imageShape = match.imageShape;
+                      }
+                    }
+                  } catch (_) {}
+                  imageShape ??= widget.schoolDetailsModel?.imageShape;
+                }
                 if (state.studentsLoading && state.students.isEmpty) {
                   return const ShimmerList(expanded: false);
                 }
@@ -844,7 +1176,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                                             ),
                                             const SizedBox(width: 5),
                                             Text(
-                                              'Send Order',
+                                              'Create order',
                                               style: MyStyles.mediumText(
                                                 size: 12,
                                                 color: Colors.white,
@@ -875,6 +1207,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                                           child: StudentIdCardWidget(
                                             student: _correctionToStudentData(s),
                                             schoolId: widget.schoolId,
+                                            schoolDetailsModel: widget.schoolDetailsModel,
                                           ),
                                         ),
                                       ),
@@ -900,9 +1233,48 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                               return _CorrectionStudentCard(
                                 item: item,
                                 isSelected: isSelected,
+                                imageShape: imageShape,
                                 onToggle: () => context
                                     .read<CorrectionCubit>()
                                     .toggleStudentSelection(item.id),
+                                onTapCard: () {
+                                  final s = item.student;
+                                  if (s == null) return;
+                                  final studentData = _correctionToStudentData(s);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => MultiBlocProvider(
+                                        providers: [
+                                          BlocProvider(
+                                            create: (_) => StudentFormCubit()
+                                              ..loadFromSchoolId(
+                                                schoolId: widget.schoolId,
+                                                schoolName: '',
+                                              ),
+                                          ),
+                                          BlocProvider(
+                                            create: (_) => StudentFormDataCubit()
+                                              ..load(widget.schoolId),
+                                          ),
+                                          BlocProvider(
+                                            create: (_) => AddStudentCubit(),
+                                          ),
+                                        ],
+                                        child: StaffAddStudentFormPage(
+                                          schoolId: widget.schoolId,
+                                          editStudent: studentData,
+                                        ),
+                                      ),
+                                    ),
+                                  ).then((_) {
+                                    context
+                                        .read<CorrectionCubit>()
+                                        .fetchCorrectionStudents(
+                                          schoolId: widget.schoolId,
+                                        );
+                                  });
+                                },
                               );
                             }
                             return const Padding(
@@ -962,9 +1334,11 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
     onChanged: (value) {
       _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 500), () {
+        final classIds = context.read<CorrectionCubit>().state.selectedClassIds;
         context.read<CorrectionCubit>().fetchCorrectionStudents(
           schoolId: widget.schoolId,
           search: value.trim(),
+          classIds: classIds,
         );
       });
     },
@@ -994,10 +1368,15 @@ class _CorrectionStudentCard extends StatefulWidget {
   final CorrectionStudentItem item;
   final bool isSelected;
   final VoidCallback onToggle;
+  final VoidCallback? onTapCard;
+  final String? imageShape;
+
   const _CorrectionStudentCard({
     required this.item,
     required this.isSelected,
     required this.onToggle,
+    this.onTapCard,
+    this.imageShape,
   });
 
   @override
@@ -1084,16 +1463,26 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
             Text("Choose Image", style: MyStyles.boldText(size: 14, color: Colors.black)),
             const SizedBox(height: 15),
             InkWell(
-              onTap: () { Navigator.pop(ctx); _fromCamera(); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _fromCamera();
+              },
               child: Row(children: [
                 SvgPicture.asset('assets/icons/camera_single.svg'),
                 const SizedBox(width: 10),
                 Text("Camera", style: MyStyles.regularText(size: 14, color: Colors.black)),
               ]),
             ),
-            Container(margin: const EdgeInsets.symmetric(vertical: 10), height: 1, color: Colors.grey.shade300),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              height: 1,
+              color: Colors.grey.shade300,
+            ),
             InkWell(
-              onTap: () { Navigator.pop(ctx); _fromGallery(); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _fromGallery();
+              },
               child: Row(children: [
                 SvgPicture.asset('assets/icons/choose_from_gallery.svg'),
                 const SizedBox(width: 10),
@@ -1107,6 +1496,7 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
   }
 
   void _showImagePreview(String imageUrl) {
+    final shape = widget.imageShape ?? 'rectangle';
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -1125,34 +1515,60 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
                     panEnabled: true,
                     minScale: 0.8,
                     maxScale: 4,
-                    child: Image.network(
-                      imageUrl,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
-                      },
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 300,
-                        width: double.infinity,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.person, size: 80, color: Colors.grey),
-                      ),
-                    ),
+                    child: _buildShapedPreview(imageUrl, shape),
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showPicker();
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Edit Profile Image"),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromCamera();
+                        },
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text("Camera"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fromGallery();
+                        },
+                        icon: const Icon(Icons.photo_library, size: 18),
+                        label: const Text("Gallery"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.btnColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() => _currentPhotoUrl = '');
+                        },
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text("Retake"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1170,133 +1586,165 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
     final fatherPhone = s?.fatherPhone ?? '';
     final photoUrl = _currentPhotoUrl ?? '';
 
-    return GestureDetector(
-      onTap: widget.onToggle,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: widget.isSelected
-              ? AppTheme.btnColor.withOpacity(0.06)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: widget.isSelected ? AppTheme.btnColor : Colors.transparent,
-            width: 1.5,
-          ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.isSelected
+            ? AppTheme.btnColor.withOpacity(0.06)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: widget.isSelected ? AppTheme.btnColor : Colors.transparent,
+          width: 1.5,
         ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: Checkbox(
-                value: widget.isSelected,
-                onChanged: (_) => widget.onToggle(),
-                activeColor: AppTheme.btnColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                side: BorderSide(color: AppTheme.graySubTitleColor),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: widget.onToggle,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 8, 0),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: widget.isSelected,
+                  onChanged: (_) => widget.onToggle(),
+                  activeColor: AppTheme.btnColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  side: BorderSide(color: AppTheme.graySubTitleColor),
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () {
-                if (photoUrl.isNotEmpty) {
-                  _showImagePreview(photoUrl);
-                } else {
-                  _showPicker();
-                }
-              },
-              child: Stack(
+          ),
+
+          Expanded(
+            child: GestureDetector(
+              onTap: () => widget.onTapCard?.call(),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: _isUploading
-                        ? const SizedBox(
-                            height: 60,
-                            width: 60,
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                          )
-                        : photoUrl.isNotEmpty
-                            ? Image.network(
-                                photoUrl,
-                                height: 60,
-                                width: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _placeholder(),
-                              )
-                            : _placeholder(),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      height: 22,
-                      width: 22,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Icon(
-                        photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt,
-                        size: 12,
-                        color: Colors.white,
-                      ),
+          // Photo Section
+          GestureDetector(
+            onTap: () {
+              if (photoUrl.isNotEmpty) {
+                _showImagePreview(photoUrl);
+              } else {
+                _showPicker();
+              }
+            },
+            child: Stack(
+              children: [
+                _buildPhoto(photoUrl),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    height: 22,
+                    width: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      photoUrl.isNotEmpty ? Icons.preview : Icons.camera_alt,
+                      size: 12,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        s?.name ?? '',
+                        style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (className.isNotEmpty) ...[
+                      const SizedBox(width: 5),
                       Flexible(
                         child: Text(
-                          s?.name ?? '',
-                          style: MyStyles.boldText(size: 16, color: AppTheme.black_Color),
+                          '• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
+                          style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (className.isNotEmpty) ...[
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: Text(
-                            '• $className${sectionName.isNotEmpty ? ' ($sectionName)' : ''}',
-                            style: MyStyles.boldText(size: 14, color: AppTheme.btnColor),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                if (fatherPhone.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.phone, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  if (fatherPhone.isNotEmpty)
-                    Row(
-                      children: [
-                        const Icon(Icons.phone, size: 12, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(fatherPhone, style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                      ],
-                    ),
-                  const SizedBox(height: 2),
-                  if ((s?.fatherName ?? '').isNotEmpty)
-                    Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                  if ((s?.motherName ?? '').isNotEmpty)
-                    Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
-                  if ((s?.address ?? '').isNotEmpty)
-                    Text(s!.address!, style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor), overflow: TextOverflow.ellipsis, maxLines: 1),
+                const SizedBox(height: 2),
+                if ((s?.fatherName ?? '').isNotEmpty)
+                  Text('F: ${s!.fatherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                if ((s?.motherName ?? '').isNotEmpty)
+                  Text('M: ${s!.motherName}', style: MyStyles.regularText(size: 12, color: AppTheme.graySubTitleColor)),
+                if ((s?.address ?? '').isNotEmpty)
+                  Text(
+                    s!.address!,
+                    style: MyStyles.regularText(size: 11, color: AppTheme.graySubTitleColor),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+              ],
+            ),
+          ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildShapedPreview(String imageUrl, String shape) {
+    final imageWidget = Image.network(
+      imageUrl,
+      width: double.infinity,
+      fit: BoxFit.contain,
+      loadingBuilder: (_, child, progress) => progress == null
+          ? child
+          : const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
+      errorBuilder: (_, __, ___) => Container(
+        height: 300,
+        width: double.infinity,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.person, size: 80, color: Colors.grey),
+      ),
+    );
+    switch (shape) {
+      case 'round':
+      case 'oval':
+        return ClipOval(child: imageWidget);
+      case 'square':
+        return ClipRRect(borderRadius: BorderRadius.zero, child: imageWidget);
+      case 'rectangle':
+      default:
+        return ClipRRect(borderRadius: BorderRadius.circular(12), child: imageWidget);
+    }
   }
 
   Widget _placeholder() => Container(
@@ -1305,6 +1753,47 @@ class _CorrectionStudentCardState extends State<_CorrectionStudentCard> {
     color: Colors.grey.shade200,
     child: const Icon(Icons.person, color: Colors.grey),
   );
+
+  Widget _buildPhoto(String photoUrl) {
+    final shape = widget.imageShape ?? 'rectangle';
+    Widget content;
+    if (_isUploading) {
+      content = const SizedBox(
+        height: 60,
+        width: 60,
+        child: Center(
+            child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    } else if (photoUrl.isNotEmpty) {
+      content = Image.network(
+        photoUrl,
+        height: 60,
+        width: 60,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(),
+      );
+    } else {
+      content = _placeholder();
+    }
+
+    switch (shape) {
+      case 'round':
+      case 'oval':
+        return ClipOval(
+            child: SizedBox(width: 60, height: 60, child: content));
+      case 'square':
+        return ClipRRect(
+          borderRadius: BorderRadius.zero,
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+      case 'rectangle':
+      default:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(width: 60, height: 60, child: content),
+        );
+    }
+  }
 }
 
 class _DownloadChecklistDialog extends StatefulWidget {
@@ -1321,31 +1810,10 @@ class _DownloadChecklistDialogState extends State<_DownloadChecklistDialog> {
   String _printType = '';
 
   List<Map<String, String>> _buildPrintTypes(List<CorrectionItem> items) {
-    final types = items
-        .map((e) => e.listType ?? '')
-        .where((t) => t.isNotEmpty)
-        .toSet()
-        .toList();
     return [
       {'value': '', 'label': '-Select Print Type-'},
-      ...types.map(
-        (t) => {
-          'value': t,
-          'label': t == 'class_wise'
-              ? 'Class Wise'
-              : t == 'section_wise'
-              ? 'Section Wise'
-              : t
-                    .replaceAll('_', ' ')
-                    .split(' ')
-                    .map(
-                      (w) => w.isNotEmpty
-                          ? '${w[0].toUpperCase()}${w.substring(1)}'
-                          : '',
-                    )
-                    .join(' '),
-        },
-      ),
+      {'value': 'class_wise', 'label': 'Class Wise'},
+      {'value': 'section_wise', 'label': 'Section Wise'},
     ];
   }
 
@@ -1769,6 +2237,10 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        BlocBuilder<OrdersCubit, OrdersState>(
+          buildWhen: (p, c) => p.total != c.total,
+          builder: (_, s) => _StaffCountRow(total: s.total, label: 'Total Orders'),
+        ),
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -2340,8 +2812,6 @@ class _StaffOrderCardState extends State<_StaffOrderCard> {
                       ),
                     ),
                   )
-                : _currentStatus == 'completed'
-                ? const SizedBox.shrink()
                 : PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.grey),
                     offset: const Offset(0, 32),
@@ -2350,27 +2820,39 @@ class _StaffOrderCardState extends State<_StaffOrderCard> {
                     ),
                     elevation: 8,
                     onSelected: _updateStatus,
-                    itemBuilder: (_) => [
-                      const PopupMenuItem<String>(
-                        value: 'completed',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline,
-                              size: 16,
-                              color: AppTheme.graySubTitleColor,
-                            ),
-                            SizedBox(width: 10),
-                            Text('Mark as Completed'),
-                          ],
-                        ),
-                      ),
-                    ],
+                    itemBuilder: (_) => _buildStatusMenuItems(),
                   ),
           ],
         ),
       ),
     );
+  }
+
+  List<PopupMenuEntry<String>> _buildStatusMenuItems() {
+    return kOrderStatuses
+        .where((s) => s.value != _currentStatus)
+        .map((s) => PopupMenuItem<String>(
+              value: s.value,
+              child: Row(
+                children: [
+                  Icon(_statusIcon(s.value), size: 16, color: AppTheme.graySubTitleColor),
+                  const SizedBox(width: 10),
+                  Text(s.label),
+                ],
+              ),
+            ))
+        .toList();
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'completed': return Icons.check_circle_outline;
+      case 'cancelled': return Icons.cancel_outlined;
+      case 're_order': return Icons.refresh_rounded;
+      case 'work_in_process': return Icons.hourglass_top_rounded;
+      case 'order_created': return Icons.add_circle_outline;
+      default: return Icons.circle_outlined;
+    }
   }
 
   Widget _placeholder() => Container(
@@ -2391,6 +2873,289 @@ class _StaffDotDateFormatter extends TextInputFormatter {
     return newValue.copyWith(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+// ── Staff Students Process Checklist Dialog ───────────────────────────────────
+
+class _StaffStudentsProcessChecklistDialog extends StatefulWidget {
+  final String schoolId;
+  final List<String> studentUuids;
+  final VoidCallback? onSuccess;
+
+  const _StaffStudentsProcessChecklistDialog({
+    required this.schoolId,
+    required this.studentUuids,
+    this.onSuccess,
+  });
+
+  @override
+  State<_StaffStudentsProcessChecklistDialog> createState() =>
+      _StaffStudentsProcessChecklistDialogState();
+}
+
+class _StaffStudentsProcessChecklistDialogState
+    extends State<_StaffStudentsProcessChecklistDialog> {
+  static const _listTypes = [
+    {'value': '', 'label': '- Select List Type -'},
+    {'value': 'selected_class_wise', 'label': 'Selected Data - Class Wise'},
+    {'value': 'selected_section_wise', 'label': 'Selected Data - Section Wise'},
+    {'value': 'complete_class_wise', 'label': 'Complete School Class Wise'},
+    {
+      'value': 'complete_section_wise',
+      'label': 'Complete School Class Sections Wise'
+    },
+  ];
+
+  static const _processTypes = [
+    {'value': '', 'label': '- Select Process Type -'},
+    {'value': 'create', 'label': 'Create Correction List'},
+  ];
+
+  String _selectedListType = '';
+  String _selectedProcessType = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+          p.sendOrderLoading != c.sendOrderLoading ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
+      listener: (ctx, state) {
+        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+          Navigator.of(context).pop();
+          widget.onSuccess?.call();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Correction list created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+        if (!state.sendOrderLoading && state.sendOrderError != null) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.sendOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+      builder: (context, state) => Dialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Process Checklist Or Orders',
+                        style: MyStyles.boldText(
+                            size: 16, color: AppTheme.black_Color)),
+                  ),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [
+                          Color(0xFFFF6B6B),
+                          Color(0xFFFF8E53)
+                        ]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Text('List Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedListType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedListType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedListType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _listTypes
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['value']!,
+                              child: Text(t['label']!,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: t['value']!.isEmpty
+                                        ? AppTheme.graySubTitleColor
+                                        : AppTheme.black_Color,
+                                  )),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedListType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Select Process Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedProcessType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedProcessType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedProcessType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _processTypes
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['value']!,
+                              child: Text(t['label']!,
+                                  style: MyStyles.regularText(
+                                    size: 14,
+                                    color: t['value']!.isEmpty
+                                        ? AppTheme.graySubTitleColor
+                                        : AppTheme.black_Color,
+                                  )),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedProcessType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B6B),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text('Cancel',
+                          style: MyStyles.mediumText(
+                              size: 14, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () {
+                            if (_selectedListType.isEmpty) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: const Text(
+                                    'Please select a list type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            if (_selectedProcessType.isEmpty) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: const Text(
+                                    'Please select a process type'),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                margin: const EdgeInsets.all(12),
+                              ));
+                              return;
+                            }
+                            context.read<CorrectionCubit>().processOrder(
+                                  schoolId: widget.schoolId,
+                                  processType: _selectedProcessType,
+                                  listType: _selectedListType,
+                                  studentUuids: widget.studentUuids,
+                                );
+                          },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: state.sendOrderLoading
+                            ? Colors.grey
+                            : AppTheme.btnColor,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: state.sendOrderLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text('Confirm',
+                              style: MyStyles.mediumText(
+                                  size: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

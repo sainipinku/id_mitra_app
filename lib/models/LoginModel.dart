@@ -111,6 +111,7 @@ class User {
   String? sig;
   Map<String, dynamic>? school;
   int? schoolId;
+  List<AssignedClass>? assignedClasses;
 
   User({
     this.id,
@@ -168,6 +169,7 @@ class User {
     this.sig,
     this.school,
     this.schoolId,
+    this.assignedClasses,
   });
 
   User copyWith({
@@ -331,6 +333,10 @@ class User {
     sig: json["sig"],
     school: json["school"] == null ? null : Map<String, dynamic>.from(json["school"]),
     schoolId: json["school_id"],
+    assignedClasses: json["assigned_classes"] == null
+        ? []
+        : List<AssignedClass>.from(
+            (json["assigned_classes"] as List).map((x) => AssignedClass.fromJson(x))),
   );
 
   Map<String, dynamic> toJson() => {
@@ -382,4 +388,18 @@ class User {
     "registered_time_human": registeredTimeHuman,
     "profile_photo_url": profilePhotoUrl,
   };
+}
+
+class AssignedClass {
+  final int id;
+  final String className;
+
+  const AssignedClass({required this.id, required this.className});
+
+  factory AssignedClass.fromJson(Map<String, dynamic> json) => AssignedClass(
+        id: json["id"] ?? 0,
+        className: json["class_name"] ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {"id": id, "class_name": className};
 }
