@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/Widgets/shimmer_loader.dart';
 import 'package:idmitra/Widgets/svg_file.dart';
 import 'package:idmitra/api_mamanger/UserLocal.dart';
+import 'package:idmitra/api_mamanger/api_manager.dart';
+import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
 import 'package:idmitra/components/app_theme.dart';
 import 'package:idmitra/config/sharedpref.dart';
+import 'package:idmitra/models/LoginModel.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/models/home/SchoolDashboardModel.dart';
 import 'package:idmitra/providers/admin_dashboard/admin_dashboard_cubit.dart';
@@ -28,7 +33,7 @@ import 'staff_home.dart';
 class StaffDashboard extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
 
-   StaffDashboard({super.key,this.schoolDetailsModel});
+  StaffDashboard({super.key,this.schoolDetailsModel});
 
   @override
   State<StaffDashboard> createState() => _StaffDashboardState();
@@ -40,6 +45,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
   String _profileImage = '';
   String _schoolId = '';
   List<int> _assignedClassIds = [];
+  bool _userLoaded = false;
   final StudentsCubit _studentsCubit = StudentsCubit();
   final StaffCubit _staffCubit = StaffCubit();
 
@@ -57,6 +63,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           schoolId: schoolId,
           schoolDetailsModel: schoolDetailsModel,
           assignedClassIds: _assignedClassIds,
+          userLoaded: _userLoaded,
         ),
       ),
       BlocProvider.value(
@@ -86,18 +93,87 @@ class _StaffDashboardState extends State<StaffDashboard> {
   Future<void> _loadUser() async {
     final user = await UserLocal.getUser();
     final school = await UserLocal.getSchool();
-    final assignedClasses = await UserLocal.getAssignedClasses();
+
+    // First set from local cache so UI shows quickly
+    final cachedClasses = await UserLocal.getAssignedClasses();
+    final newSchoolId = school['schoolId'] ?? '';
+
     if (mounted) {
-      final newSchoolId = school['schoolId'] ?? '';
       setState(() {
         _userName = user['name'] ?? 'Staff';
         _profileImage = user['profileImage'] ?? '';
         _schoolId = newSchoolId;
-        _assignedClassIds = assignedClasses.map((c) => c.id).toList();
+        _assignedClassIds = cachedClasses.map((c) => c.id).toList();
+        _userLoaded = true;
       });
       if (newSchoolId.isNotEmpty) {
         _staffCubit.fetchStaff(schoolId: newSchoolId);
       }
+    }
+
+    // Then fetch fresh assigned classes from API and update if different
+    try {
+      final api = ApiManager();
+      final userUuid = user['userUuid'] as String? ?? '';
+
+      // Use staffAssignedClasses endpoint if we have UUID and schoolId
+      if (userUuid.isNotEmpty && newSchoolId.isNotEmpty) {
+        final assignedUrl = Config.baseUrl +
+            Routes.staffAssignedClasses(newSchoolId, userUuid);
+        print('Fetching assigned classes from: $assignedUrl');
+        final assignedResponse = await api.getRequest(assignedUrl);
+        if (assignedResponse != null && assignedResponse.statusCode == 200) {
+          final jsonData = jsonDecode(assignedResponse.body);
+          // Response: {"data": {"assigned_classes": {uuid: {...}, ...}}}
+          final rawData = jsonData['data']?['assigned_classes'];
+          print('Fresh assigned_classes from staffAssignedClasses API: $rawData');
+          List<AssignedClass> freshClasses = [];
+          if (rawData is Map) {
+            rawData.forEach((key, value) {
+              final item = Map<String, dynamic>.from(value as Map);
+              freshClasses.add(AssignedClass.fromJson(item));
+            });
+          } else if (rawData is List) {
+            freshClasses = (rawData as List)
+                .map((e) => AssignedClass.fromJson(Map<String, dynamic>.from(e)))
+                .toList();
+          }
+          final freshIds = freshClasses.map((c) => c.id).toList();
+          print('Fresh assignedClassIds: $freshIds');
+          await UserLocal.saveAssignedClasses(freshClasses);
+          if (mounted && freshIds.toString() != _assignedClassIds.toString()) {
+            setState(() {
+              _assignedClassIds = freshIds;
+            });
+          }
+          return; // done
+        }
+      }
+
+      // Fallback: try auth/user endpoint
+      final response = await api.getRequest(
+        Config.baseUrl + Routes.getUserDetails(),
+      );
+      if (response != null && response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        final rawClasses = jsonData['user']?['assigned_classes'];
+        print('Fresh assigned_classes from auth/user API: $rawClasses');
+        if (rawClasses is List && rawClasses.isNotEmpty) {
+          final freshClasses = rawClasses
+              .map((e) => AssignedClass.fromJson(Map<String, dynamic>.from(e)))
+              .toList();
+          final freshIds = freshClasses.map((c) => c.id).toList();
+          print('Fresh assignedClassIds: $freshIds');
+          await UserLocal.saveAssignedClasses(freshClasses);
+          if (mounted && freshIds.toString() != _assignedClassIds.toString()) {
+            setState(() {
+              _assignedClassIds = freshIds;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching fresh assigned classes: $e');
     }
   }
 
@@ -240,10 +316,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 
   PreferredSizeWidget _appBar(
-    BuildContext context,
-    DashSchool? dashSchool,
-    AdminDashboardState dashState,
-  ) {
+      BuildContext context,
+      DashSchool? dashSchool,
+      AdminDashboardState dashState,
+      ) {
     final schoolName = dashSchool?.name ?? '';
     return AppBar(
       backgroundColor: Colors.white,
@@ -253,132 +329,132 @@ class _StaffDashboardState extends State<StaffDashboard> {
       title: dashState.loading
           ? const DashboardAppBarShimmer()
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: const Color(0xFFE0E0E0),
-                    backgroundImage: _profileImage.isNotEmpty
-                        ? NetworkImage(_profileImage)
-                        : null,
-                    child: _profileImage.isEmpty
-                        ? const Icon(Icons.person, color: Colors.grey)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: dashSchool != null
-                          ? () => _onSchoolTap(context, dashSchool, dashState)
-                          : null,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color(0xFFE0E0E0),
+              backgroundImage: _profileImage.isNotEmpty
+                  ? NetworkImage(_profileImage)
+                  : null,
+              child: _profileImage.isEmpty
+                  ? const Icon(Icons.person, color: Colors.grey)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: dashSchool != null
+                    ? () => _onSchoolTap(context, dashSchool, dashState)
+                    : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _userName,
+                      style: MyStyles.boldTxt(AppTheme.black_Color, 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (schoolName.isNotEmpty)
+                      Row(
                         children: [
-                          Text(
-                            _userName,
-                            style: MyStyles.boldTxt(AppTheme.black_Color, 16),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (schoolName.isNotEmpty)
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    schoolName,
-                                    style: MyStyles.regularTxt(
-                                        AppTheme.btnColor, 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 2),
-                                Icon(Icons.arrow_forward_ios,
-                                    size: 10, color: AppTheme.btnColor),
-                              ],
-                            )
-                          else
-                            Text(
-                              "ID Mitra Staff",
+                          Flexible(
+                            child: Text(
+                              schoolName,
                               style: MyStyles.regularTxt(
-                                  AppTheme.graySubTitleColor, 12),
+                                  AppTheme.btnColor, 12),
+                              overflow: TextOverflow.ellipsis,
                             ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(Icons.arrow_forward_ios,
+                              size: 10, color: AppTheme.btnColor),
                         ],
+                      )
+                    else
+                      Text(
+                        "ID Mitra Staff",
+                        style: MyStyles.regularTxt(
+                            AppTheme.graySubTitleColor, 12),
                       ),
-                    ),
-                  ),
-                  Stack(
-                    children: [
-                      IconButton(
-                        icon: Container(
-                          height: 70,
-                          width: 70,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.btn10perOpacityColor,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(3.0),
-                            child: svgIcon(
-                              icon: 'assets/icons/home/notification.svg',
-                              clr: AppTheme.btnColor,
-                            ),
-                          ),
-                        ),
-                        onPressed: () {
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (_) => const ParentDashboard(),
-                          //   ),
-                          // );
-                        },
-                      ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            "2",
-                            style: TextStyle(color: Colors.white, fontSize: 10),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: Container(
-                      height: 70,
-                      width: 70,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppTheme.btn10perOpacityColor,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(3.0),
-                        child: svgIcon(
-                          icon: 'assets/icons/home/user-profile.svg',
-                          clr: AppTheme.btnColor,
-                        ),
-                      ),
-                    ),
-                    onPressed: () {
-                      navigateWithTransition(
-                        context: context,
-                        page: BlocProvider.value(
-                          value: context.read<AdminDashboardCubit>(),
-                          child: const AdminProfilePage(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
+            Stack(
+              children: [
+                IconButton(
+                  icon: Container(
+                    height: 70,
+                    width: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.btn10perOpacityColor,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(3.0),
+                      child: svgIcon(
+                        icon: 'assets/icons/home/notification.svg',
+                        clr: AppTheme.btnColor,
+                      ),
+                    ),
+                  ),
+                  onPressed: () {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => const ParentDashboard(),
+                    //   ),
+                    // );
+                  },
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text(
+                      "2",
+                      style: TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: Container(
+                height: 70,
+                width: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.btn10perOpacityColor,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: svgIcon(
+                    icon: 'assets/icons/home/user-profile.svg',
+                    clr: AppTheme.btnColor,
+                  ),
+                ),
+              ),
+              onPressed: () {
+                navigateWithTransition(
+                  context: context,
+                  page: BlocProvider.value(
+                    value: context.read<AdminDashboardCubit>(),
+                    child: const AdminProfilePage(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

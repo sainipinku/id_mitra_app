@@ -8,7 +8,13 @@ import 'package:idmitra/providers/orders/orders_state.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final String schoolId;
-  const FilterBottomSheet({super.key, required this.schoolId});
+  /// When provided, only these class IDs will be shown in the filter list.
+  final List<int> allowedClassIds;
+  const FilterBottomSheet({
+    super.key,
+    required this.schoolId,
+    this.allowedClassIds = const [],
+  });
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -142,7 +148,32 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
                   );
                 }
-                final classes = state.availableClasses;
+                // If allowedClassIds is set, only show those classes
+                final classes = widget.allowedClassIds.isEmpty
+                    ? state.availableClasses
+                    : state.availableClasses
+                        .where((c) => widget.allowedClassIds.contains(c.classId))
+                        .toList();
+
+                if (classes.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset('assets/images/no_data.png', height: 120),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No assigned classes to filter',
+                            style: MyStyles.regularText(
+                                size: 13, color: AppTheme.graySubTitleColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.35,

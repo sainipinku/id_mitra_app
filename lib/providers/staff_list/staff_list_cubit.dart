@@ -437,20 +437,26 @@ class StaffListCubit extends Cubit<StaffListState> {
       final token = await UserSecureStorage.fetchToken();
       final url =
           '${Config.baseUrl}${Routes.staffAssignClass(schoolId, uuid)}';
+      final body = jsonEncode({'class': classId, 'section': sectionIds});
+      print('AssignClass URL: $url');
+      print('AssignClass Body: $body');
       final response = await http.post(
         Uri.parse(url),
-        body: jsonEncode({'class': classId, 'section': sectionIds}),
+        body: body,
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
       );
+      print('AssignClass Status: ${response.statusCode}');
+      print('AssignClass Response: ${response.body}');
       final success =
           response.statusCode == 200 || response.statusCode == 201;
       emit(state.copyWith(assigningClass: false));
       return success;
-    } catch (_) {
+    } catch (e) {
+      print('AssignClass Error: $e');
       emit(state.copyWith(assigningClass: false));
       return false;
     }
