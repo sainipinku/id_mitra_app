@@ -35,6 +35,8 @@ import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
 import 'package:idmitra/screens/orders/order_detail_page.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
@@ -265,8 +267,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen>
           ),
           BlocProvider(
             create: (_) => OrdersCubit()
-              ..fetchOrders(schoolId: _schoolId, isSchool: true)
-              ..fetchSchoolClasses(_schoolId),
+              ..fetchSchoolOrders(schoolId: _schoolId),
             child: _AdminOrdersTab(schoolId: _schoolId, isSchool: true),
           ),
         ],
@@ -360,11 +361,12 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
       barrierDismissible: false,
       builder: (_) => BlocProvider(
         create: (_) => CorrectionCubit(),
-        child: _AdminProcessChecklistDialog(
+        child: _ProcessChecklistDialog(
           schoolId: widget.schoolId,
           studentUuids: uuids,
           onSuccess: () {
             _clearSelection();
+            // Refresh student list
             context.read<StudentsCubit>().fetchStudents(
               search: _searchCtrl.text.trim(),
               schoolId: widget.schoolId,
@@ -494,7 +496,6 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
                           ),
                           child: Row(
                             children: [
-                              const Spacer(),
                               TextButton(
                                 onPressed: () =>
                                     _selectAll(studState.studentsList),
@@ -1155,8 +1156,8 @@ class _AdminCorrectionTabState extends State<_AdminCorrectionTab> {
                                 )
                                     : GestureDetector(
                                   onTap: ()=>
-                                  _showCreateOrderDialog(
-                                      context),
+                                      _showCreateOrderDialog(
+                                          context),
                                   child: Container(
                                     padding: const EdgeInsets
                                         .symmetric(
@@ -1888,48 +1889,43 @@ class _CreateOrderDialog extends StatefulWidget {
 }
 
 class _CreateOrderDialogState extends State<_CreateOrderDialog> {
-  static const _cardTypes = [
-    {'value': '', 'label': '-Select card Type-'},
-    {'value': 'pvc_card', 'label': 'Pvc Card'},
-    {'value': 'rfid_card', 'label': 'RFID Card'},
-    {'value': 'pasting_card', 'label': 'Pasting card'},
-    {'value': 'acrylic_card', 'label': 'Acrylic Card'},
-    {'value': 'nfc_card', 'label': 'NFC Card'},
-    {'value': 'my_fair_card', 'label': 'My Fair Card'},
+  static const _listTypes = [
+    {'value': 'csc_wise', 'label': 'CSC Wise'},
+    {'value': 'cscs_wise', 'label': 'CSCS Wise'},
+    {'value': 'sle_session_wise', 'label': 'SLE Session Wise'},
   ];
 
-  static const _cardForOptions = [
-    {'value': 'student_card', 'label': 'Student Card'},
-    {'value': 'parent_card', 'label': 'Parent Card'},
-    {'value': 'admit_card', 'label': 'Admit Card'},
-  ];
-
-  String _selectedCardType = '';
-  final Set<String> _selectedCardFor = {'student_card', 'parent_card'};
-
-  void _toggleCardFor(String value) {
-    setState(() {
-      if (_selectedCardFor.contains(value)) {
-        _selectedCardFor.remove(value);
-      } else {
-        _selectedCardFor.add(value);
-      }
-    });
-  }
+  String _selectedListType = 'csc_wise';
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
-      p.sendOrderLoading != c.sendOrderLoading ||
-          p.sendOrderSuccess != c.sendOrderSuccess ||
-          p.sendOrderError != c.sendOrderError,
+      p.createOrderLoading != c.createOrderLoading ||
+          p.createOrderSuccess != c.createOrderSuccess ||
+          p.createOrderError != c.createOrderError,
       listener: (ctx, state) {
-        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+        if (!state.createOrderLoading && state.createOrderSuccess) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Order created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
-        if (!state.sendOrderLoading && state.sendOrderError != null) {
+        if (!state.createOrderLoading && state.createOrderError != null) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.createOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
       },
       builder: (context, state) => Dialog(
@@ -1949,7 +1945,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                           size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -1957,10 +1953,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       height: 32,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFFF6B6B),
-                              Color(0xFFFF8E53)
-                            ]),
+                            colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.close,
@@ -1970,91 +1963,46 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                 ],
               ),
               const Divider(height: 24),
-              Text('Create Card Order For',
+              Text('List Type',
                   style: MyStyles.mediumText(
                       size: 13, color: AppTheme.black_Color)),
               const SizedBox(height: 8),
               Container(
                 height: 48,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  border:
-                  Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: _selectedCardType,
+                    value: _selectedListType,
                     isExpanded: true,
-                    icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
                         color: AppTheme.graySubTitleColor),
                     style: MyStyles.regularText(
                         size: 14, color: AppTheme.black_Color),
-                    items: _cardTypes
+                    items: _listTypes
                         .map((t) => DropdownMenuItem<String>(
                       value: t['value']!,
                       child: Text(t['label']!,
                           style: MyStyles.regularText(
                             size: 14,
-                            color: t['value']!.isEmpty
-                                ? AppTheme.graySubTitleColor
-                                : AppTheme.black_Color,
+                            color: AppTheme.black_Color,
                           )),
                     ))
                         .toList(),
                     onChanged: (v) =>
-                        setState(() => _selectedCardType = v ?? ''),
+                        setState(() => _selectedListType = v ?? 'csc_wise'),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              ..._cardForOptions.map((opt) {
-                final isSelected =
-                _selectedCardFor.contains(opt['value']);
-                return GestureDetector(
-                  onTap: () => _toggleCardFor(opt['value']!),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppTheme.btnColor
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppTheme.btnColor
-                                  : Colors.grey.shade400,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: isSelected
-                              ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(opt['label']!,
-                            style: MyStyles.regularText(
-                                size: 14,
-                                color: AppTheme.black_Color)),
-                      ],
-                    ),
-                  ),
-                );
-              }),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -2067,7 +2015,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.refresh,
+                          const Icon(Icons.close,
                               size: 14, color: Colors.white),
                           const SizedBox(width: 6),
                           Text('Cancel',
@@ -2079,74 +2027,40 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () {
-                      if (_selectedCardType.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select a card type'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      if (_selectedCardFor.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select at least one card option'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      context
-                          .read<CorrectionCubit>()
-                          .processOrder(
+                      context.read<CorrectionCubit>().createOrder(
                         schoolId: widget.schoolId,
-                        cardType: _selectedCardType,
-                        cardFor: _selectedCardFor.toList(),
+                     //   processType: 'correction_list',
+                      //  listType: _selectedListType,
                       );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
-                        color: state.sendOrderLoading
+                        color: state.createOrderLoading
                             ? Colors.grey
                             : const Color(0xFF6C63FF),
                         borderRadius: BorderRadius.circular(25),
                       ),
-                      child: state.sendOrderLoading
+                      child: state.createOrderLoading
                           ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white),
+                            strokeWidth: 2, color: Colors.white),
                       )
                           : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                              Icons.add_circle_outline,
-                              size: 14,
-                              color: Colors.white),
+                          const Icon(Icons.add_circle_outline,
+                              size: 14, color: Colors.white),
                           const SizedBox(width: 6),
                           Text('Create',
                               style: MyStyles.mediumText(
-                                  size: 14,
-                                  color: Colors.white)),
+                                  size: 14, color: Colors.white)),
                         ],
                       ),
                     ),
@@ -2160,6 +2074,281 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
     );
   }
 }
+
+class _ProcessChecklistDialog extends StatefulWidget {
+  final String schoolId;
+  final List<String> studentUuids;
+  final VoidCallback? onSuccess;
+
+  const _ProcessChecklistDialog({
+    required this.schoolId,
+    required this.studentUuids,
+    this.onSuccess,
+  });
+
+  @override
+  State<_ProcessChecklistDialog> createState() =>
+      _ProcessChecklistDialogState();
+}
+
+class _ProcessChecklistDialogState extends State<_ProcessChecklistDialog> {
+  static const _listTypes = [
+    {'value': '', 'label': '- Select List Type -'},
+    {'value': 'selected_class_wise', 'label': 'Selected Data - Class Wise'},
+    {'value': 'selected_section_wise', 'label': 'Selected Data - Section Wise'},
+    {'value': 'complete_class_wise', 'label': 'Complete School Class Wise'},
+    {
+      'value': 'complete_section_wise',
+      'label': 'Complete School Class Sections Wise'
+    },
+  ];
+
+  static const _processTypes = [
+    {'value': '', 'label': '- Select Process Type -'},
+    {'value': 'create', 'label': 'Create Correction List'},
+  ];
+
+  String _selectedListType = '';
+  String _selectedProcessType = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+      p.sendOrderLoading != c.sendOrderLoading ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
+      listener: (ctx, state) {
+        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+          Navigator.of(context).pop();
+          widget.onSuccess?.call();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Correction list created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+        if (!state.sendOrderLoading && state.sendOrderError != null) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.sendOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+      builder: (context, state) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Process Checklist Or Orders',
+                      style: MyStyles.boldText(
+                          size: 16, color: AppTheme.black_Color)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Text('List Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedListType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedListType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedListType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _listTypes
+                        .map((t) => DropdownMenuItem<String>(
+                      value: t['value']!,
+                      child: Text(t['label']!,
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: t['value']!.isEmpty
+                                ? AppTheme.graySubTitleColor
+                                : AppTheme.black_Color,
+                          )),
+                    ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedListType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Select Process Type',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
+              const SizedBox(height: 8),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _selectedProcessType.isNotEmpty
+                        ? AppTheme.btnColor
+                        : Colors.grey.shade300,
+                    width: _selectedProcessType.isNotEmpty ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedProcessType,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.graySubTitleColor),
+                    style: MyStyles.regularText(
+                        size: 14, color: AppTheme.black_Color),
+                    items: _processTypes
+                        .map((t) => DropdownMenuItem<String>(
+                      value: t['value']!,
+                      child: Text(t['label']!,
+                          style: MyStyles.regularText(
+                            size: 14,
+                            color: t['value']!.isEmpty
+                                ? AppTheme.graySubTitleColor
+                                : AppTheme.black_Color,
+                          )),
+                    ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedProcessType = v ?? ''),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B6B),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text('Cancel',
+                          style: MyStyles.mediumText(
+                              size: 14, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: state.sendOrderLoading
+                        ? null
+                        : () {
+                      if (_selectedListType.isEmpty) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(
+                          content:
+                          const Text('Please select a list type'),
+                          backgroundColor: Colors.orange,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          margin: const EdgeInsets.all(12),
+                        ));
+                        return;
+                      }
+                      if (_selectedProcessType.isEmpty) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(
+                          content:
+                          const Text('Please select a process type'),
+                          backgroundColor: Colors.orange,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          margin: const EdgeInsets.all(12),
+                        ));
+                        return;
+                      }
+                      context.read<CorrectionCubit>().processOrder(
+                        schoolId: widget.schoolId,
+                        processType: _selectedProcessType,
+                        listType: _selectedListType,
+                        studentUuids: widget.studentUuids,
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: state.sendOrderLoading
+                            ? Colors.grey
+                            : AppTheme.btnColor,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: state.sendOrderLoading
+                          ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                          : Text('Confirm',
+                          style: MyStyles.mediumText(
+                              size: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class _DownloadChecklistDialog extends StatefulWidget {
   final String schoolId;
@@ -2206,7 +2395,6 @@ class _DownloadChecklistDialogState
     return BlocConsumer<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
       p.downloadLoading != c.downloadLoading ||
-          p.downloadUrl != c.downloadUrl ||
           p.downloadError != c.downloadError ||
           (p.columnsLoading && !c.columnsLoading),
       listener: (ctx, state) async {
@@ -2218,47 +2406,22 @@ class _DownloadChecklistDialogState
                 state.downloadColumns.map((c) => c.key).toSet();
           });
         }
-        if (!state.downloadLoading &&
-            state.downloadUrl != null &&
-            state.downloadUrl!.isNotEmpty) {
-          Navigator.of(context).pop();
-          final uri = Uri.tryParse(state.downloadUrl!);
-          if (uri != null) {
-            try {
-              await launchUrl(uri,
-                  mode: LaunchMode.externalApplication);
-            } catch (_) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                  Text('Download URL: ${state.downloadUrl}'),
-                  backgroundColor: AppTheme.btnColor,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  margin: const EdgeInsets.all(12),
-                ));
-              }
-            }
-          }
-        }
+
         if (!state.downloadLoading && state.downloadError != null) {
           Navigator.of(context).pop();
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.downloadError!),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(12),
-            ));
-          }
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.downloadError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
       },
       builder: (context, state) => Dialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -2278,11 +2441,10 @@ class _DownloadChecklistDialogState
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFFF6B6B),
-                              Color(0xFFFF8E53)
-                            ]),
+                        gradient: const LinearGradient(colors: [
+                          Color(0xFFFF6B6B),
+                          Color(0xFFFF8E53)
+                        ]),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.close,
@@ -2298,6 +2460,7 @@ class _DownloadChecklistDialogState
                     size: 13, color: AppTheme.graySubTitleColor),
               ),
               const SizedBox(height: 16),
+
               if (state.columnsLoading)
                 const Center(
                   child: Padding(
@@ -2362,6 +2525,7 @@ class _DownloadChecklistDialogState
                     );
                   }).toList(),
                 ),
+
               const SizedBox(height: 16),
               Text('Print List Type *',
                   style: MyStyles.mediumText(
@@ -2372,8 +2536,7 @@ class _DownloadChecklistDialogState
                 padding:
                 const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  border:
-                  Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -2388,10 +2551,7 @@ class _DownloadChecklistDialogState
                     items: _buildPrintTypes(state.items)
                         .map((t) => DropdownMenuItem<String>(
                       value: t['value']!,
-                      child: Text(t['label']!,
-                          style: MyStyles.regularText(
-                              size: 14,
-                              color: AppTheme.black_Color)),
+                      child: Text(t['label']!),
                     ))
                         .toList(),
                     onChanged: (v) =>
@@ -2400,6 +2560,7 @@ class _DownloadChecklistDialogState
                 ),
               ),
               const SizedBox(height: 20),
+
               BlocBuilder<CorrectionCubit, CorrectionState>(
                 buildWhen: (p, c) =>
                 p.downloadLoading != c.downloadLoading,
@@ -2426,45 +2587,41 @@ class _DownloadChecklistDialogState
                     GestureDetector(
                       onTap: state.downloadLoading
                           ? null
-                          : () {
+                          : () async {
                         if (_printType.isEmpty) {
                           ScaffoldMessenger.of(context)
-                              .showSnackBar(SnackBar(
-                            content: const Text(
+                              .showSnackBar(const SnackBar(
+                            content: Text(
                                 'Please select a Print List Type'),
                             backgroundColor: Colors.orange,
-                            behavior:
-                            SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(10)),
-                            margin: const EdgeInsets.all(12),
                           ));
                           return;
                         }
                         if (_selectedColumns.isEmpty) {
                           ScaffoldMessenger.of(context)
-                              .showSnackBar(SnackBar(
-                            content: const Text(
+                              .showSnackBar(const SnackBar(
+                            content: Text(
                                 'Please select at least one column'),
                             backgroundColor: Colors.orange,
-                            behavior:
-                            SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(10)),
-                            margin: const EdgeInsets.all(12),
                           ));
                           return;
                         }
-                        ctx
+
+                        final pdfBytes = await context
                             .read<CorrectionCubit>()
                             .downloadCorrectionList(
                           schoolId: widget.schoolId,
-                          columns:
-                          _selectedColumns.toList(),
-                          printType: _printType,
+                          selected: _selectedColumns.toList(),
+                          listType: _printType,
                         );
+
+                        if (pdfBytes != null && pdfBytes.isNotEmpty) {
+                          await Printing.layoutPdf(
+                            onLayout: (PdfPageFormat format) async => pdfBytes,
+                            name: 'Correction_List_${DateTime.now().millisecondsSinceEpoch}',
+                          );
+                          if (mounted) Navigator.of(context).pop();
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -2483,7 +2640,7 @@ class _DownloadChecklistDialogState
                               strokeWidth: 2,
                               color: Colors.white),
                         )
-                            : Text('Confirm',
+                            : Text('Print Now',
                             style: MyStyles.mediumText(
                                 size: 14, color: Colors.white)),
                       ),
@@ -2525,13 +2682,12 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<OrdersCubit>().fetchOrders(
+        context.read<OrdersCubit>().fetchSchoolOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
           status: _selectedStatus,
-          classId: _selectedClass,
+          classFilter: _selectedClass,
           schoolId: widget.schoolId,
-          isSchool: widget.isSchool,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -2550,12 +2706,11 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
   }
 
   void _resetAndFetch() {
-    context.read<OrdersCubit>().fetchOrders(
+    context.read<OrdersCubit>().fetchSchoolOrders(
       search: _searchCtrl.text.trim(),
       status: _selectedStatus,
-      classId: _selectedClass,
+      classFilter: _selectedClass,
       schoolId: widget.schoolId,
-      isSchool: widget.isSchool,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -2793,19 +2948,18 @@ class _AdminOrdersTabState extends State<_AdminOrdersTab> {
   Widget _classDropdown() =>
       BlocBuilder<OrdersCubit, OrdersState>(
         buildWhen: (p, c) =>
-        p.availableClasses != c.availableClasses ||
-            p.classesLoading != c.classesLoading,
+        p.schoolClassesWithSections != c.schoolClassesWithSections ||
+            p.loading != c.loading,
         builder: (_, state) => _dropdown(
           value: _selectedClass.isEmpty ? '' : _selectedClass,
           hint: 'All Classes',
-          loading: state.classesLoading,
           items: [
             const DropdownMenuItem(
                 value: '', child: Text('All Classes')),
-            ...state.availableClasses.map(
+            ...state.schoolClassesWithSections.map(
                   (c) => DropdownMenuItem(
-                value: c.classId.toString(),
-                child: Text(c.nameWithprefix ?? c.name,
+                value: c.value,
+                child: Text(c.label,
                     overflow: TextOverflow.ellipsis),
               ),
             ),
@@ -3208,282 +3362,6 @@ class _DotDateFormatter extends TextInputFormatter {
     return newValue.copyWith(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-
-class _AdminProcessChecklistDialog extends StatefulWidget {
-  final String schoolId;
-  final List<String> studentUuids;
-  final VoidCallback? onSuccess;
-
-  const _AdminProcessChecklistDialog({
-    required this.schoolId,
-    required this.studentUuids,
-    this.onSuccess,
-  });
-
-  @override
-  State<_AdminProcessChecklistDialog> createState() =>
-      _AdminProcessChecklistDialogState();
-}
-
-class _AdminProcessChecklistDialogState
-    extends State<_AdminProcessChecklistDialog> {
-  static const _listTypes = [
-    {'value': '', 'label': '- Select List Type -'},
-    {'value': 'selected_class_wise', 'label': 'Selected Data - Class Wise'},
-    {'value': 'selected_section_wise', 'label': 'Selected Data - Section Wise'},
-    {'value': 'complete_class_wise', 'label': 'Complete School Class Wise'},
-    {
-      'value': 'complete_section_wise',
-      'label': 'Complete School Class Sections Wise'
-    },
-  ];
-
-  static const _processTypes = [
-    {'value': '', 'label': '- Select Process Type -'},
-    {'value': 'create', 'label': 'Create Correction List'},
-  ];
-
-  String _selectedListType = '';
-  String _selectedProcessType = '';
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<CorrectionCubit, CorrectionState>(
-      listenWhen: (p, c) =>
-      p.sendOrderLoading != c.sendOrderLoading ||
-          p.sendOrderSuccess != c.sendOrderSuccess ||
-          p.sendOrderError != c.sendOrderError,
-      listener: (ctx, state) {
-        if (!state.sendOrderLoading && state.sendOrderSuccess) {
-          Navigator.of(context).pop();
-          widget.onSuccess?.call();
-          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: const Text('Correction list created successfully!'),
-            backgroundColor: AppTheme.btnColor,
-            behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
-        }
-        if (!state.sendOrderLoading && state.sendOrderError != null) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: Text(state.sendOrderError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
-        }
-      },
-      builder: (context, state) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text('Process Checklist Or Orders',
-                      style: MyStyles.boldText(
-                          size: 16, color: AppTheme.black_Color)),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: state.sendOrderLoading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.close,
-                          color: Colors.white, size: 18),
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              Text('List Type',
-                  style: MyStyles.mediumText(
-                      size: 13, color: AppTheme.black_Color)),
-              const SizedBox(height: 8),
-              Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _selectedListType.isNotEmpty
-                        ? AppTheme.btnColor
-                        : Colors.grey.shade300,
-                    width: _selectedListType.isNotEmpty ? 1.5 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedListType,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: AppTheme.graySubTitleColor),
-                    style: MyStyles.regularText(
-                        size: 14, color: AppTheme.black_Color),
-                    items: _listTypes
-                        .map((t) => DropdownMenuItem<String>(
-                      value: t['value']!,
-                      child: Text(t['label']!,
-                          style: MyStyles.regularText(
-                            size: 14,
-                            color: t['value']!.isEmpty
-                                ? AppTheme.graySubTitleColor
-                                : AppTheme.black_Color,
-                          )),
-                    ))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedListType = v ?? ''),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('Select Process Type',
-                  style: MyStyles.mediumText(
-                      size: 13, color: AppTheme.black_Color)),
-              const SizedBox(height: 8),
-              Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _selectedProcessType.isNotEmpty
-                        ? AppTheme.btnColor
-                        : Colors.grey.shade300,
-                    width: _selectedProcessType.isNotEmpty ? 1.5 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedProcessType,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: AppTheme.graySubTitleColor),
-                    style: MyStyles.regularText(
-                        size: 14, color: AppTheme.black_Color),
-                    items: _processTypes
-                        .map((t) => DropdownMenuItem<String>(
-                      value: t['value']!,
-                      child: Text(t['label']!,
-                          style: MyStyles.regularText(
-                            size: 14,
-                            color: t['value']!.isEmpty
-                                ? AppTheme.graySubTitleColor
-                                : AppTheme.black_Color,
-                          )),
-                    ))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedProcessType = v ?? ''),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  GestureDetector(
-                    onTap: state.sendOrderLoading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B6B),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: Text('Cancel',
-                          style: MyStyles.mediumText(
-                              size: 14, color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: state.sendOrderLoading
-                        ? null
-                        : () {
-                      if (_selectedListType.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content:
-                          const Text('Please select a list type'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      if (_selectedProcessType.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select a process type'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      context.read<CorrectionCubit>().processOrder(
-                        schoolId: widget.schoolId,
-                        processType: _selectedProcessType,
-                        listType: _selectedListType,
-                        studentUuids: widget.studentUuids,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: state.sendOrderLoading
-                            ? Colors.grey
-                            : AppTheme.btnColor,
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: state.sendOrderLoading
-                          ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                          : Text('Confirm',
-                          style: MyStyles.mediumText(
-                              size: 14, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

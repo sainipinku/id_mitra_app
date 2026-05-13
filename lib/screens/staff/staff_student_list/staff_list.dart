@@ -16,11 +16,18 @@ import 'package:idmitra/models/orders/OrderModel.dart';
 import 'package:idmitra/models/staff/StaffDetailModel.dart';
 import 'package:idmitra/models/staff/StaffListModel.dart';
 import 'package:idmitra/models/schools/SchoolListModel.dart';
+import 'package:idmitra/providers/orders/orders_cubit.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 
+import 'package:idmitra/models/correction/CorrectionListModel.dart';
+import 'package:idmitra/providers/correction/correction_cubit.dart';
+import 'package:idmitra/providers/correction/correction_state.dart';
 import 'package:idmitra/providers/staff_correction/staff_correction_cubit.dart';
 import 'package:idmitra/providers/staff_correction/staff_correction_state.dart';
 import 'package:idmitra/providers/staff_list/staff_list_cubit.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:idmitra/screens/staff/staff_order_page/staff_order_detail_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 
@@ -1362,11 +1369,15 @@ class _StaffCardState extends State<_StaffCard> {
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    builder: (_) => AssignClassesSheet(
-                      schoolId: schoolId,
-                      staffUuid: staff.uuid,
-                      staffName: staff.name,
-                      cubit: cubit,
+                    builder: (_) => BlocProvider(
+                      create: (_) => OrdersCubit()
+                        ..fetchSchoolClasses(schoolId),
+                      child: AssignClassesSheet(
+                        schoolId: schoolId,
+                        staffUuid: staff.uuid,
+                        staffName: staff.name,
+                        cubit: cubit,
+                      ),
                     ),
                   );
                 } else if (value == 'upload_signature') {
@@ -1495,9 +1506,29 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
     });
   }
 
+  void _showDownloadDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider(
+        create: (_) => CorrectionCubit()
+          ..fetchDownloadColumns(schoolId: widget.schoolId),
+        child: _StaffDownloadChecklistDialog(schoolId: widget.schoolId),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<StaffCorrectionCubit, StaffCorrectionState>(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppTheme.btnColor,
+        tooltip: 'Download',
+        onPressed: () => _showDownloadDialog(context),
+        child: const Icon(Icons.download_rounded, color: Colors.white),
+      ),
+      body: BlocListener<StaffCorrectionCubit, StaffCorrectionState>(
       listenWhen: (p, c) =>
       p.sendOrderSuccess != c.sendOrderSuccess ||
           p.sendOrderError != c.sendOrderError,
@@ -1743,6 +1774,7 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1757,6 +1789,264 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
     );
   }
 }
+
+
+class _StaffDownloadChecklistDialog extends StatefulWidget {
+  final String schoolId;
+  const _StaffDownloadChecklistDialog({required this.schoolId});
+
+  @override
+  State<_StaffDownloadChecklistDialog> createState() =>
+      __StaffDownloadChecklistDialogState();
+}
+
+class __StaffDownloadChecklistDialogState
+    extends State<_StaffDownloadChecklistDialog> {
+  Set<String> _selectedColumns = {};
+
+  @override
+  void initState() {
+    super.initState();
+    context
+        .read<CorrectionCubit>()
+        .fetchDownloadColumns(schoolId: widget.schoolId);
+  }
+
+  void _toggleColumn(String key) {
+    setState(() {
+      if (_selectedColumns.contains(key)) {
+        _selectedColumns.remove(key);
+      } else {
+        _selectedColumns.add(key);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CorrectionCubit, CorrectionState>(
+      listenWhen: (p, c) =>
+      p.downloadLoading != c.downloadLoading ||
+          p.downloadError != c.downloadError ||
+          (p.columnsLoading && !c.columnsLoading),
+      listener: (ctx, state) async {
+        if (!state.columnsLoading &&
+            state.downloadColumns.isNotEmpty &&
+            _selectedColumns.isEmpty) {
+          setState(() {
+            _selectedColumns =
+                state.downloadColumns.map((c) => c.key).toSet();
+          });
+        }
+
+        if (!state.downloadLoading && state.downloadError != null) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.downloadError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
+        }
+      },
+      builder: (context, state) => Dialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Download Checklist',
+                      style: MyStyles.boldText(
+                          size: 18, color: AppTheme.black_Color)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [
+                          Color(0xFFFF6B6B),
+                          Color(0xFFFF8E53)
+                        ]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Select Data You Want to Display in Correction List',
+                style: MyStyles.mediumText(
+                    size: 13, color: AppTheme.graySubTitleColor),
+              ),
+              const SizedBox(height: 16),
+
+              if (state.columnsLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: CircularProgressIndicator(
+                        color: AppTheme.btnColor, strokeWidth: 2),
+                  ),
+                )
+              else if (state.downloadColumns.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text('No columns available',
+                      style: MyStyles.regularText(
+                          size: 13,
+                          color: AppTheme.graySubTitleColor)),
+                )
+              else
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 3.2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 4,
+                  children: state.downloadColumns.map((col) {
+                    final isSelected =
+                    _selectedColumns.contains(col.key);
+                    return GestureDetector(
+                      onTap: () => _toggleColumn(col.key),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.btnColor
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.btnColor
+                                    : Colors.grey.shade400,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check,
+                                size: 13, color: Colors.white)
+                                : null,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(col.label,
+                                style: MyStyles.regularText(
+                                    size: 12,
+                                    color: AppTheme.black_Color),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+
+              const SizedBox(height: 20),
+
+              BlocBuilder<CorrectionCubit, CorrectionState>(
+                buildWhen: (p, c) =>
+                p.downloadLoading != c.downloadLoading,
+                builder: (ctx, state) => Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: state.downloadLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6B6B),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Text('Cancel',
+                            style: MyStyles.mediumText(
+                                size: 14, color: Colors.white)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: state.downloadLoading
+                          ? null
+                          : () async {
+                        if (_selectedColumns.isEmpty) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(
+                            content: Text(
+                                'Please select at least one column'),
+                            backgroundColor: Colors.orange,
+                          ));
+                          return;
+                        }
+
+                        final pdfBytes = await context
+                            .read<CorrectionCubit>()
+                            .downloadCorrectionList(
+                          schoolId: widget.schoolId,
+                          selected: _selectedColumns.toList(),
+                          listType: '',
+                        );
+
+                        if (pdfBytes != null && pdfBytes.isNotEmpty) {
+                          await Printing.layoutPdf(
+                            onLayout: (PdfPageFormat format) async => pdfBytes,
+                            name: 'Correction_List_${DateTime.now().millisecondsSinceEpoch}',
+                          );
+                          if (mounted) Navigator.of(context).pop();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: state.downloadLoading
+                              ? Colors.grey
+                              : const Color(0xFF6C63FF),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: state.downloadLoading
+                            ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white),
+                        )
+                            : Text('Print Now',
+                            style: MyStyles.mediumText(
+                                size: 14, color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class _StaffCorrectionItemCard extends StatefulWidget {
   final StaffCorrectionItem item;
@@ -1980,16 +2270,7 @@ class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
         : '?';
 
     return GestureDetector(
-      onTap: () {
-        if (staff == null) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                StaffProfilePage(staff: staff, schoolId: widget.schoolId),
-          ),
-        );
-      },
+      onTap: () {},
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
@@ -3107,13 +3388,8 @@ class _StaffProcessChecklistDialogState
     extends State<_StaffProcessChecklistDialog> {
   static const _listTypes = [
     {'value': '', 'label': '- Select List Type -'},
-    {'value': 'selected_class_wise', 'label': 'Selected Data - Class Wise'},
-    {'value': 'selected_section_wise', 'label': 'Selected Data - Section Wise'},
-    {'value': 'complete_class_wise', 'label': 'Complete School Class Wise'},
-    {
-      'value': 'complete_section_wise',
-      'label': 'Complete School Class Sections Wise'
-    },
+    {'value': 'selected', 'label': 'Selected Staff Correction List'},
+    {'value': 'all', 'label': 'All Staff Correction List'},
   ];
 
   static const _processTypes = [
@@ -3335,6 +3611,8 @@ class _StaffProcessChecklistDialogState
                                 .processOrder(
                                   schoolId: widget.schoolId,
                                   staffUuids: widget.staffUuids,
+                                  listType: _selectedListType,
+                                  processType: _selectedProcessType,
                                 );
                           },
                     child: Container(

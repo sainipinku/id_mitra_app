@@ -28,6 +28,8 @@ import 'package:idmitra/providers/orders/orders_state.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
@@ -334,8 +336,7 @@ class _StaffStudentsScreenState extends State<StaffStudentsScreen>
                 // Tab 3: Orders
                 BlocProvider(
                   create: (_) => OrdersCubit()
-                    ..fetchOrders(schoolId: _schoolId, isSchool: true)
-                    ..fetchSchoolClasses(_schoolId),
+                    ..fetchSchoolOrders(schoolId: _schoolId),
                   child: _StaffOrdersTab(schoolId: _schoolId),
                 ),
               ],
@@ -469,23 +470,19 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
           search: _searchCtrl.text.trim(),
           schoolId: widget.schoolId,
           gender: '',
-          classId: widget.assignedClassIds.isNotEmpty
-              ? widget.assignedClassIds.first.toString()
-              : '',
+          classId: '',
         );
       }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _fetchDone) return; // ← FIX: skip if already fetched
+      if (!mounted || _fetchDone) return;
       _fetchDone = true;
 
       final classId = widget.assignedClassIds.isNotEmpty
           ? widget.assignedClassIds.first.toString()
           : '';
 
-      // ← FIX: use fetchStudents directly with correct classId
-      //    (removed applyFilters which was overriding with empty classId)
       context.read<StudentsCubit>().fetchStudents(
         search: '',
         schoolId: widget.schoolId,
@@ -508,7 +505,6 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
     final schoolIdChanged = widget.schoolId != oldWidget.schoolId;
     final userJustLoaded = widget.userLoaded && !oldWidget.userLoaded;
 
-    // ← FIX: only re-fetch when something meaningful changed
     if ((classIdsChanged || schoolIdChanged || userJustLoaded) &&
         widget.schoolId.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -698,16 +694,22 @@ class _StaffStudentsTabState extends State<_StaffStudentsTab> {
                                           ? widget.assignedClassIds.first.toString()
                                           : '')
                                       : selectedClass.toString();
+                                  final List<int> sectionIds = result['section'] is List
+                                      ? List<int>.from(
+                                          (result['section'] as List)
+                                              .map((e) => int.tryParse(e.toString()) ?? 0)
+                                              .where((e) => e != 0))
+                                      : [];
                                   context
                                       .read<StudentsCubit>()
-                                      .fetchStudents(
-                                    search: '',
+                                      .applyFilters(
                                     schoolId: widget.schoolId,
                                     classId: effectiveClassId,
                                     gender: result['gender']
                                         ?.toString()
                                         .toLowerCase() ??
                                         '',
+                                    sectionIds: sectionIds,
                                   );
                                 },
                               );
@@ -990,7 +992,15 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<CorrectionCubit, CorrectionState>(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppTheme.btnColor,
+        tooltip: 'Download',
+        onPressed: () => _showDownloadDialog(context),
+        child: const Icon(Icons.download_rounded, color: Colors.white),
+      ),
+      body: BlocListener<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
       p.sendOrderSuccess != c.sendOrderSuccess ||
           p.sendOrderError != c.sendOrderError,
@@ -1439,6 +1449,19 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
             ),
           ),
         ],
+      ),
+      ),
+    );
+  }
+
+  void _showDownloadDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider(
+        create: (_) => CorrectionCubit()
+          ..fetchDownloadColumns(schoolId: widget.schoolId),
+        child: _DownloadChecklistDialog(schoolId: widget.schoolId),
       ),
     );
   }
@@ -2058,15 +2081,29 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
   Widget build(BuildContext context) {
     return BlocConsumer<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
-      p.sendOrderLoading != c.sendOrderLoading ||
-          p.sendOrderSuccess != c.sendOrderSuccess ||
-          p.sendOrderError != c.sendOrderError,
+      p.createOrderLoading != c.createOrderLoading ||
+          p.createOrderSuccess != c.createOrderSuccess ||
+          p.createOrderError != c.createOrderError,
       listener: (ctx, state) {
-        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+        if (!state.createOrderLoading && state.createOrderSuccess) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Order created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
-        if (!state.sendOrderLoading && state.sendOrderError != null) {
+        if (!state.createOrderLoading && state.createOrderError != null) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.createOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
       },
       builder: (context, state) => Dialog(
@@ -2086,7 +2123,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                           size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -2189,7 +2226,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -2214,7 +2251,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () {
                       if (_selectedCardType.isEmpty) {
@@ -2247,7 +2284,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       }
                       context
                           .read<CorrectionCubit>()
-                          .processOrder(
+                          .createOrder(
                         schoolId: widget.schoolId,
                         cardType: _selectedCardType,
                         cardFor: _selectedCardFor.toList(),
@@ -2257,12 +2294,12 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
-                        color: state.sendOrderLoading
+                        color: state.createOrderLoading
                             ? Colors.grey
                             : const Color(0xFF6C63FF),
                         borderRadius: BorderRadius.circular(25),
                       ),
-                      child: state.sendOrderLoading
+                      child: state.createOrderLoading
                           ? const SizedBox(
                         width: 18,
                         height: 18,
@@ -2294,10 +2331,6 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Download Checklist Dialog
-// ---------------------------------------------------------------------------
-
 class _DownloadChecklistDialog extends StatefulWidget {
   final String schoolId;
   const _DownloadChecklistDialog({required this.schoolId});
@@ -2312,8 +2345,7 @@ class _DownloadChecklistDialogState
   Set<String> _selectedColumns = {};
   String _printType = '';
 
-  List<Map<String, String>> _buildPrintTypes(
-      List<CorrectionItem> items) {
+  List<Map<String, String>> _buildPrintTypes(List<CorrectionItem> items) {
     return [
       {'value': '', 'label': '-Select Print Type-'},
       {'value': 'class_wise', 'label': 'Class Wise'},
@@ -2344,7 +2376,6 @@ class _DownloadChecklistDialogState
     return BlocConsumer<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
       p.downloadLoading != c.downloadLoading ||
-          p.downloadUrl != c.downloadUrl ||
           p.downloadError != c.downloadError ||
           (p.columnsLoading && !c.columnsLoading),
       listener: (ctx, state) async {
@@ -2356,34 +2387,17 @@ class _DownloadChecklistDialogState
                 state.downloadColumns.map((c) => c.key).toSet();
           });
         }
-        if (!state.downloadLoading &&
-            state.downloadUrl != null &&
-            state.downloadUrl!.isNotEmpty) {
+
+        if (!state.downloadLoading && state.downloadError != null) {
           Navigator.of(context).pop();
-          final uri = Uri.tryParse(state.downloadUrl!);
-          if (uri != null) {
-            try {
-              await launchUrl(uri,
-                  mode: LaunchMode.externalApplication);
-            } catch (_) {}
-          }
-        }
-        if (!state.downloadLoading &&
-            state.downloadError != null) {
-          Navigator.of(context).pop();
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.downloadError!),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                margin: const EdgeInsets.all(12),
-              ),
-            );
-          }
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.downloadError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
       },
       builder: (context, state) => Dialog(
@@ -2398,11 +2412,9 @@ class _DownloadChecklistDialogState
             children: [
               Row(
                 children: [
-                  Text(
-                    'Download Checklist',
-                    style: MyStyles.boldText(
-                        size: 18, color: AppTheme.black_Color),
-                  ),
+                  Text('Download Checklist',
+                      style: MyStyles.boldText(
+                          size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
@@ -2410,12 +2422,10 @@ class _DownloadChecklistDialogState
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFFF6B6B),
-                            Color(0xFFFF8E53)
-                          ],
-                        ),
+                        gradient: const LinearGradient(colors: [
+                          Color(0xFFFF6B6B),
+                          Color(0xFFFF8E53)
+                        ]),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.close,
@@ -2431,6 +2441,7 @@ class _DownloadChecklistDialogState
                     size: 13, color: AppTheme.graySubTitleColor),
               ),
               const SizedBox(height: 16),
+
               if (state.columnsLoading)
                 const Center(
                   child: Padding(
@@ -2441,14 +2452,11 @@ class _DownloadChecklistDialogState
                 )
               else if (state.downloadColumns.isEmpty)
                 Padding(
-                  padding:
-                  const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'No columns available',
-                    style: MyStyles.regularText(
-                        size: 13,
-                        color: AppTheme.graySubTitleColor),
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text('No columns available',
+                      style: MyStyles.regularText(
+                          size: 13,
+                          color: AppTheme.graySubTitleColor)),
                 )
               else
                 GridView.count(
@@ -2472,8 +2480,7 @@ class _DownloadChecklistDialogState
                               color: isSelected
                                   ? AppTheme.btnColor
                                   : Colors.transparent,
-                              borderRadius:
-                              BorderRadius.circular(5),
+                              borderRadius: BorderRadius.circular(5),
                               border: Border.all(
                                 color: isSelected
                                     ? AppTheme.btnColor
@@ -2488,25 +2495,22 @@ class _DownloadChecklistDialogState
                           ),
                           const SizedBox(width: 6),
                           Flexible(
-                            child: Text(
-                              col.label,
-                              style: MyStyles.regularText(
-                                  size: 12,
-                                  color: AppTheme.black_Color),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: Text(col.label,
+                                style: MyStyles.regularText(
+                                    size: 12,
+                                    color: AppTheme.black_Color),
+                                overflow: TextOverflow.ellipsis),
                           ),
                         ],
                       ),
                     );
                   }).toList(),
                 ),
+
               const SizedBox(height: 16),
-              Text(
-                'Print List Type *',
-                style: MyStyles.mediumText(
-                    size: 13, color: AppTheme.black_Color),
-              ),
+              Text('Print List Type *',
+                  style: MyStyles.mediumText(
+                      size: 13, color: AppTheme.black_Color)),
               const SizedBox(height: 8),
               Container(
                 height: 48,
@@ -2526,15 +2530,10 @@ class _DownloadChecklistDialogState
                     style: MyStyles.regularText(
                         size: 14, color: AppTheme.black_Color),
                     items: _buildPrintTypes(state.items)
-                        .map(
-                          (t) => DropdownMenuItem<String>(
-                        value: t['value']!,
-                        child: Text(t['label']!,
-                            style: MyStyles.regularText(
-                                size: 14,
-                                color: AppTheme.black_Color)),
-                      ),
-                    )
+                        .map((t) => DropdownMenuItem<String>(
+                      value: t['value']!,
+                      child: Text(t['label']!),
+                    ))
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _printType = v ?? ''),
@@ -2542,89 +2541,93 @@ class _DownloadChecklistDialogState
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  GestureDetector(
-                    onTap: state.downloadLoading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B6B),
-                        borderRadius: BorderRadius.circular(25),
+
+              BlocBuilder<CorrectionCubit, CorrectionState>(
+                buildWhen: (p, c) =>
+                p.downloadLoading != c.downloadLoading,
+                builder: (ctx, state) => Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: state.downloadLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6B6B),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Text('Cancel',
+                            style: MyStyles.mediumText(
+                                size: 14, color: Colors.white)),
                       ),
-                      child: Text('Cancel',
-                          style: MyStyles.mediumText(
-                              size: 14, color: Colors.white)),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: state.downloadLoading
-                        ? null
-                        : () {
-                      if (_printType.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select a Print List Type'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      if (_selectedColumns.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select at least one column'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      context
-                          .read<CorrectionCubit>()
-                          .downloadCorrectionList(
-                        schoolId: widget.schoolId,
-                        columns: _selectedColumns.toList(),
-                        printType: _printType,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: state.downloadLoading
-                            ? Colors.grey
-                            : const Color(0xFF6C63FF),
-                        borderRadius: BorderRadius.circular(25),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: state.downloadLoading
+                          ? null
+                          : () async {
+                        if (_printType.isEmpty) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(
+                            content: Text(
+                                'Please select a Print List Type'),
+                            backgroundColor: Colors.orange,
+                          ));
+                          return;
+                        }
+                        if (_selectedColumns.isEmpty) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(
+                            content: Text(
+                                'Please select at least one column'),
+                            backgroundColor: Colors.orange,
+                          ));
+                          return;
+                        }
+
+                        final pdfBytes = await context
+                            .read<CorrectionCubit>()
+                            .downloadCorrectionList(
+                          schoolId: widget.schoolId,
+                          selected: _selectedColumns.toList(),
+                          listType: _printType,
+                        );
+
+                        if (pdfBytes != null && pdfBytes.isNotEmpty) {
+                          await Printing.layoutPdf(
+                            onLayout: (PdfPageFormat format) async => pdfBytes,
+                            name: 'Correction_List_${DateTime.now().millisecondsSinceEpoch}',
+                          );
+                          if (mounted) Navigator.of(context).pop();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: state.downloadLoading
+                              ? Colors.grey
+                              : const Color(0xFF6C63FF),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: state.downloadLoading
+                            ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white),
+                        )
+                            : Text('Print Now',
+                            style: MyStyles.mediumText(
+                                size: 14, color: Colors.white)),
                       ),
-                      child: state.downloadLoading
-                          ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white),
-                      )
-                          : Text('Confirm',
-                          style: MyStyles.mediumText(
-                              size: 14, color: Colors.white)),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -2634,9 +2637,6 @@ class _DownloadChecklistDialogState
   }
 }
 
-// ---------------------------------------------------------------------------
-// Orders Tab
-// ---------------------------------------------------------------------------
 
 class _StaffOrdersTab extends StatefulWidget {
   final String schoolId;
@@ -2662,13 +2662,12 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<OrdersCubit>().fetchOrders(
+        context.read<OrdersCubit>().fetchSchoolOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
           status: _selectedStatus,
-          classId: _selectedClass,
+          classFilter: _selectedClass,
           schoolId: widget.schoolId,
-          isSchool: true,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -2687,12 +2686,11 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
   }
 
   void _resetAndFetch() {
-    context.read<OrdersCubit>().fetchOrders(
+    context.read<OrdersCubit>().fetchSchoolOrders(
       search: _searchCtrl.text.trim(),
       status: _selectedStatus,
-      classId: _selectedClass,
+      classFilter: _selectedClass,
       schoolId: widget.schoolId,
-      isSchool: true,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -2931,21 +2929,19 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
   Widget _classDropdown() =>
       BlocBuilder<OrdersCubit, OrdersState>(
         buildWhen: (p, c) =>
-        p.availableClasses != c.availableClasses ||
-            p.classesLoading != c.classesLoading,
+        p.schoolClassesWithSections != c.schoolClassesWithSections ||
+            p.loading != c.loading,
         builder: (_, state) => _dropdown(
-          value:
-          _selectedClass.isEmpty ? '' : _selectedClass,
+          value: _selectedClass.isEmpty ? '' : _selectedClass,
           hint: 'All Classes',
-          loading: state.classesLoading,
           items: [
             const DropdownMenuItem(
                 value: '', child: Text('All Classes')),
-            ...state.availableClasses.map(
+            ...state.schoolClassesWithSections.map(
                   (c) => DropdownMenuItem(
-                value: c.classId.toString(),
+                value: c.value,
                 child: Text(
-                  c.nameWithprefix ?? c.name,
+                  c.label,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -3363,9 +3359,6 @@ class _StaffDotDateFormatter extends TextInputFormatter {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Process Checklist Dialog
-// ---------------------------------------------------------------------------
 
 class _StaffStudentsProcessChecklistDialog extends StatefulWidget {
   final String schoolId;

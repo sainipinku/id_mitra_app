@@ -108,6 +108,8 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
     String cardType = '',
     List<String> cardFor = const [],
     List<String>? staffUuids, // optional: pass directly from Staff list tab
+    String listType = '',
+    String processType = 'create',
   }) async {
     List<String> selectedUuids;
 
@@ -130,7 +132,8 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
     try {
       final url = '${Config.baseUrl}auth/school/$schoolId/staff/correction-lists/process';
       final body = <String, dynamic>{
-        'processType': 'create',
+        'processType': processType.isNotEmpty ? processType : 'create',
+        'list_type': listType.isNotEmpty ? listType : 'selected',
         'staff': selectedUuids,
         if (cardType.isNotEmpty) 'card_type': cardType,
         if (cardFor.isNotEmpty) 'card_for': cardFor,

@@ -49,8 +49,21 @@ class _StaffDashboardState extends State<StaffDashboard> {
   final StudentsCubit _studentsCubit = StudentsCubit();
   final StaffCubit _staffCubit = StaffCubit();
 
+  // Cached widgets — rebuilt only when schoolId or key data changes
+  List<Widget>? _cachedWidgets;
+  String _cachedSchoolId = '';
+  SchoolDetailsModel? _cachedSchoolDetailsModel;
+
   List<Widget> _getWidgets(String schoolId, SchoolDetailsModel? schoolDetailsModel) {
-    return [
+    // Rebuild only when schoolId changes (not on every setState)
+    if (_cachedWidgets != null &&
+        _cachedSchoolId == schoolId &&
+        _cachedSchoolDetailsModel?.id == schoolDetailsModel?.id) {
+      return _cachedWidgets!;
+    }
+    _cachedSchoolId = schoolId;
+    _cachedSchoolDetailsModel = schoolDetailsModel;
+    _cachedWidgets = [
       StaffHome(
         onStudentAdded: _onStudentAdded,
         onStudentsTap: _onStudentsTap,
@@ -71,6 +84,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         child: StaffListingPage(schoolId: schoolId, showAppBar: false),
       ),
     ];
+    return _cachedWidgets!;
   }
 
   void _onStudentAdded() => setState(() => _selectedIndex = 1);
@@ -105,6 +119,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         _schoolId = newSchoolId;
         _assignedClassIds = cachedClasses.map((c) => c.id).toList();
         _userLoaded = true;
+        _cachedWidgets = null; // force rebuild with updated assignedClassIds
       });
       if (newSchoolId.isNotEmpty) {
         _staffCubit.fetchStaff(schoolId: newSchoolId);
@@ -144,6 +159,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           if (mounted && freshIds.toString() != _assignedClassIds.toString()) {
             setState(() {
               _assignedClassIds = freshIds;
+              _cachedWidgets = null; // force rebuild with fresh assignedClassIds
             });
           }
           return; // done
@@ -168,6 +184,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           if (mounted && freshIds.toString() != _assignedClassIds.toString()) {
             setState(() {
               _assignedClassIds = freshIds;
+              _cachedWidgets = null; // force rebuild with fresh assignedClassIds
             });
           }
         }
@@ -246,7 +263,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 : null;
             return Scaffold(
               appBar: _appBar(context, dashSchool, dashState),
-              body: Center(child: _getWidgets(schoolId, schoolDetailsModel).elementAt(_selectedIndex)),
+              body: IndexedStack(
+                index: _selectedIndex,
+                children: _getWidgets(schoolId, schoolDetailsModel),
+              ),
               bottomNavigationBar: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Container(

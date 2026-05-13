@@ -25,7 +25,7 @@ class StaffHome extends StatelessWidget {
   final String schoolId;
   SchoolDetailsModel? schoolDetailsModel;
 
-   StaffHome({
+  StaffHome({
     super.key,
     this.onStudentAdded,
     this.onStudentsTap,
@@ -52,7 +52,7 @@ class _StaffHomeView extends StatelessWidget {
   final String schoolId;
   SchoolDetailsModel? schoolDetailsModel;
 
-   _StaffHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap, this.schoolId = '',this.schoolDetailsModel});
+  _StaffHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap, this.schoolId = '',this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +160,7 @@ class _StaffHomeView extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                if (data != null) _AttendanceCard(attendance: data.attendance),
+                if (data != null) _AttendanceCard(attendance: data.attendance, schoolId: effectiveSchoolId),
                 const SizedBox(height: 20),
 
                 Text(
@@ -179,22 +179,31 @@ class _StaffHomeView extends StatelessWidget {
   }
 }
 
-
 class _AttendanceCard extends StatelessWidget {
   final DashAttendance attendance;
-  const _AttendanceCard({required this.attendance});
+  final String schoolId;
+  const _AttendanceCard({required this.attendance, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final school = await UserLocal.getSchool();
-        final schoolId = school['schoolId']?.toString() ?? '';
-        if (!context.mounted || schoolId.isEmpty) return;
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (_) => AttendanceScreen(schoolId: schoolId,)),
-        // );
+        final assignedClasses = await UserLocal.getAssignedClasses();
+        final allowedClassIds = assignedClasses.map((c) => c.id).toList();
+        final sid = schoolId.isNotEmpty
+            ? schoolId
+            : (await UserLocal.getSchool())['schoolId']?.toString() ?? '';
+        if (!context.mounted || sid.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AttendanceScreen(
+              schoolId: sid,
+              todayOnly: true,
+              allowedClassIds: allowedClassIds,
+            ),
+          ),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -210,11 +219,7 @@ class _AttendanceCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.how_to_reg_outlined,
-                  color: AppTheme.btnColor,
-                  size: 18,
-                ),
+                Icon(Icons.how_to_reg_outlined, color: AppTheme.btnColor, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   "Today's Attendance",
@@ -263,6 +268,15 @@ class _AttendanceCard extends StatelessWidget {
                 '${attendance.attendancePercentage.toStringAsFixed(1)}% attendance',
                 style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _AttStat('Present', attendance.present, Colors.green),
+                  _AttStat('Absent', attendance.absent, Colors.red),
+                  _AttStat('Late', attendance.late, Colors.orange),
+                  _AttStat('Leave', attendance.leave, Colors.blue),
+                ],
+              ),
             ],
           ],
         ),
@@ -283,10 +297,7 @@ class _AttStat extends StatelessWidget {
       child: Column(
         children: [
           Text('$count', style: MyStyles.boldTxt(color, 18)),
-          Text(
-            label,
-            style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11),
-          ),
+          Text(label, style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11)),
         ],
       ),
     );

@@ -9,14 +9,16 @@ import 'package:idmitra/Widgets/shimmer_loader.dart';
 
 class AttendanceScreen extends StatelessWidget {
   final String schoolId;
-  /// When true, date is locked to today and date-picker is hidden.
-  /// Pass true for school_admin / super_admin roles.
   final bool todayOnly;
+  final bool presentOnly;
+  final List<int> allowedClassIds;
 
   const AttendanceScreen({
     super.key,
     required this.schoolId,
     this.todayOnly = false,
+    this.presentOnly = false,
+    this.allowedClassIds = const [],
   });
 
   @override
@@ -27,7 +29,12 @@ class AttendanceScreen extends StatelessWidget {
           schoolId: schoolId,
           date: todayOnly ? _todayStr() : null,
         ),
-      child: _AttendanceView(schoolId: schoolId, todayOnly: todayOnly),
+      child: _AttendanceView(
+        schoolId: schoolId,
+        todayOnly: todayOnly,
+        presentOnly: presentOnly,
+        allowedClassIds: allowedClassIds,
+      ),
     );
   }
 
@@ -40,7 +47,14 @@ class AttendanceScreen extends StatelessWidget {
 class _AttendanceView extends StatefulWidget {
   final String schoolId;
   final bool todayOnly;
-  const _AttendanceView({required this.schoolId, this.todayOnly = false});
+  final bool presentOnly;
+  final List<int> allowedClassIds;
+  const _AttendanceView({
+    required this.schoolId,
+    this.todayOnly = false,
+    this.presentOnly = false,
+    this.allowedClassIds = const [],
+  });
 
   @override
   State<_AttendanceView> createState() => _AttendanceViewState();
@@ -55,8 +69,37 @@ class _AttendanceViewState extends State<_AttendanceView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: widget.presentOnly ? 1 : 3,
+      vsync: this,
+    );
     _tabController.addListener(() => setState(() {}));
+
+    if (widget.allowedClassIds.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final cubit = context.read<AttendanceCubit>();
+        final state = cubit.state;
+        if (!state.loading && state.classes.isNotEmpty) {
+          _autoSelectFirstAllowedClass(cubit, state);
+        }
+      });
+    }
+  }
+
+  void _autoSelectFirstAllowedClass(AttendanceCubit cubit, AttendanceState state) {
+    if (widget.allowedClassIds.isEmpty) return;
+    final filtered = state.classes
+        .where((c) => widget.allowedClassIds.contains(c.id))
+        .toList();
+    if (filtered.isEmpty) return;
+    final first = filtered.first;
+    if (state.selectedClass?.id != first.id) {
+      cubit.selectClassAndFetch(
+        schoolId: widget.schoolId,
+        cls: first,
+        date: AttendanceScreen._todayStr(),
+      );
+    }
   }
 
   @override
@@ -78,15 +121,27 @@ class _AttendanceViewState extends State<_AttendanceView>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AttendanceCubit, AttendanceState>(
+    return BlocConsumer<AttendanceCubit, AttendanceState>(
+      listener: (context, state) {
+        if (!state.loading &&
+            state.classes.isNotEmpty &&
+            state.selectedClass == null &&
+            widget.allowedClassIds.isNotEmpty) {
+          _autoSelectFirstAllowedClass(
+              context.read<AttendanceCubit>(), state);
+        }
+      },
       builder: (context, state) {
         final students = state.students;
         final stats    = state.stats;
         final present  = students.where((s) => s.isPresent).toList();
         final absent   = students.where((s) => s.isAbsent).toList();
 
-        // current tab's visible list (for select-all)
-        final currentList = _tabController.index == 0
+        final displayList = widget.presentOnly ? present : students;
+
+        final currentList = widget.presentOnly
+            ? _filter(present)
+            : _tabController.index == 0
             ? _filter(students)
             : _tabController.index == 1
             ? _filter(present)
@@ -193,14 +248,15 @@ class _AttendanceViewState extends State<_AttendanceView>
               labelStyle: MyStyles.mediumText(size: 13, color: Colors.white),
               unselectedLabelStyle:
               MyStyles.regularText(size: 13, color: Colors.white),
-              tabs: [
+              tabs: widget.presentOnly
+                  ? [Tab(text: 'Present (${stats.present})')]
+                  : [
                 Tab(text: 'All (${stats.total})'),
                 Tab(text: 'Present (${stats.present})'),
                 Tab(text: 'Absent (${stats.absent})'),
               ],
             ),
           ),
-          // ── Bulk bottom action bar ──────────────────────────────────────
           bottomNavigationBar: state.bulkMode
               ? _bulkBottomBar(context, state)
               : null,
@@ -231,7 +287,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                   state.classes.isEmpty)
                 Expanded(child: _emptyClasses())
               else ...[
-                  //_statsRow(stats),
+                //  _statsRow(stats),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                     child: Row(
@@ -245,7 +301,11 @@ class _AttendanceViewState extends State<_AttendanceView>
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
-                      children: [
+                      children: widget.presentOnly
+                          ? [
+                        _list(_filter(present), context, state),
+                      ]
+                          : [
                         _list(_filter(students), context, state),
                         _list(_filter(present), context, state),
                         _list(_filter(absent), context, state),
@@ -260,7 +320,6 @@ class _AttendanceViewState extends State<_AttendanceView>
     );
   }
 
-  // ── Bulk bottom bar ─────────────────────────────────────────────────────
   Widget _bulkBottomBar(BuildContext context, AttendanceState state) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -353,7 +412,13 @@ class _AttendanceViewState extends State<_AttendanceView>
   );
 
   Widget _classDropdown(BuildContext context, AttendanceState state) {
-    if (state.classes.isEmpty) {
+    final filteredClasses = widget.allowedClassIds.isEmpty
+        ? state.classes
+        : state.classes
+        .where((c) => widget.allowedClassIds.contains(c.id))
+        .toList();
+
+    if (filteredClasses.isEmpty) {
       return Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -370,6 +435,11 @@ class _AttendanceViewState extends State<_AttendanceView>
       );
     }
 
+    final selectedClass = state.selectedClass != null &&
+        filteredClasses.any((c) => c.id == state.selectedClass!.id)
+        ? state.selectedClass
+        : null;
+
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -380,13 +450,13 @@ class _AttendanceViewState extends State<_AttendanceView>
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<AttendanceClassItem>(
-          value: state.selectedClass,
+          value: selectedClass,
           hint: Text('Class',
               style: MyStyles.regularText(
                   size: 12, color: AppTheme.graySubTitleColor)),
           icon: Icon(Icons.arrow_drop_down,
               color: AppTheme.graySubTitleColor, size: 20),
-          items: state.classes
+          items: filteredClasses
               .map((c) => DropdownMenuItem(
             value: c,
             child: Text(c.displayName,
@@ -492,7 +562,7 @@ class _AttendanceViewState extends State<_AttendanceView>
       return Center(
           child: Image.asset('assets/images/no_data.png', height: 200));
     }
-    final isAllTab = _tabController.index == 0;
+    final isAllTab = !widget.presentOnly && _tabController.index == 0;
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       itemCount: list.length,
@@ -642,7 +712,6 @@ class _AttendanceViewState extends State<_AttendanceView>
               ),
             ),
             const SizedBox(width: 8),
-            // Toggle (hidden in bulk mode, only on All tab)
             if (!state.bulkMode && showToggle)
               GestureDetector(
                 onTap: () => context
