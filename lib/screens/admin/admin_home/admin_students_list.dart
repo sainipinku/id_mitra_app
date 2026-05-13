@@ -1889,13 +1889,34 @@ class _CreateOrderDialog extends StatefulWidget {
 }
 
 class _CreateOrderDialogState extends State<_CreateOrderDialog> {
-  static const _listTypes = [
-    {'value': 'csc_wise', 'label': 'CSC Wise'},
-    {'value': 'cscs_wise', 'label': 'CSCS Wise'},
-    {'value': 'sle_session_wise', 'label': 'SLE Session Wise'},
+  static const _cardTypes = [
+    {'value': '', 'label': '-Select card Type-'},
+    {'value': 'pvc_card', 'label': 'Pvc Card'},
+    {'value': 'rfid_card', 'label': 'RFID Card'},
+    {'value': 'pasting_card', 'label': 'Pasting card'},
+    {'value': 'acrylic_card', 'label': 'Acrylic Card'},
+    {'value': 'nfc_card', 'label': 'NFC Card'},
+    {'value': 'my_fair_card', 'label': 'My Fair Card'},
   ];
 
-  String _selectedListType = 'csc_wise';
+  static const _cardForOptions = [
+    {'value': 'student_card', 'label': 'Student Card'},
+    {'value': 'parent_card', 'label': 'Parent Card'},
+    {'value': 'admit_card', 'label': 'Admit Card'},
+  ];
+
+  String _selectedCardType = '';
+  final Set<String> _selectedCardFor = {'student_card', 'parent_card'};
+
+  void _toggleCardFor(String value) {
+    setState(() {
+      if (_selectedCardFor.contains(value)) {
+        _selectedCardFor.remove(value);
+      } else {
+        _selectedCardFor.add(value);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1963,7 +1984,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                 ],
               ),
               const Divider(height: 24),
-              Text('List Type',
+              Text('Create Card Order For',
                   style: MyStyles.mediumText(
                       size: 13, color: AppTheme.black_Color)),
               const SizedBox(height: 8),
@@ -1976,27 +1997,67 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: _selectedListType,
+                    value: _selectedCardType,
                     isExpanded: true,
                     icon: const Icon(Icons.keyboard_arrow_down_rounded,
                         color: AppTheme.graySubTitleColor),
                     style: MyStyles.regularText(
                         size: 14, color: AppTheme.black_Color),
-                    items: _listTypes
+                    items: _cardTypes
                         .map((t) => DropdownMenuItem<String>(
                       value: t['value']!,
                       child: Text(t['label']!,
                           style: MyStyles.regularText(
                             size: 14,
-                            color: AppTheme.black_Color,
+                            color: t['value']!.isEmpty
+                                ? AppTheme.graySubTitleColor
+                                : AppTheme.black_Color,
                           )),
                     ))
                         .toList(),
                     onChanged: (v) =>
-                        setState(() => _selectedListType = v ?? 'csc_wise'),
+                        setState(() => _selectedCardType = v ?? ''),
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              ..._cardForOptions.map((opt) {
+                final isSelected = _selectedCardFor.contains(opt['value']);
+                return GestureDetector(
+                  onTap: () => _toggleCardFor(opt['value']!),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppTheme.btnColor
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppTheme.btnColor
+                                  : Colors.grey.shade400,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                              size: 14, color: Colors.white)
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(opt['label']!,
+                            style: MyStyles.regularText(
+                                size: 14, color: AppTheme.black_Color)),
+                      ],
+                    ),
+                  ),
+                );
+              }),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -2015,7 +2076,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.close,
+                          const Icon(Icons.refresh,
                               size: 14, color: Colors.white),
                           const SizedBox(width: 6),
                           Text('Cancel',
@@ -2030,10 +2091,36 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                     onTap: state.createOrderLoading
                         ? null
                         : () {
+                      if (_selectedCardType.isEmpty) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(
+                          content:
+                          const Text('Please select a card type'),
+                          backgroundColor: Colors.orange,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          margin: const EdgeInsets.all(12),
+                        ));
+                        return;
+                      }
+                      if (_selectedCardFor.isEmpty) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(
+                          content: const Text(
+                              'Please select at least one card for option'),
+                          backgroundColor: Colors.orange,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          margin: const EdgeInsets.all(12),
+                        ));
+                        return;
+                      }
                       context.read<CorrectionCubit>().createOrder(
                         schoolId: widget.schoolId,
-                     //   processType: 'correction_list',
-                      //  listType: _selectedListType,
+                        cardType: _selectedCardType,
+                        cardFor: _selectedCardFor.toList(),
                       );
                     },
                     child: Container(

@@ -2081,29 +2081,15 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
   Widget build(BuildContext context) {
     return BlocConsumer<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
-      p.createOrderLoading != c.createOrderLoading ||
-          p.createOrderSuccess != c.createOrderSuccess ||
-          p.createOrderError != c.createOrderError,
+      p.sendOrderLoading != c.sendOrderLoading ||
+          p.sendOrderSuccess != c.sendOrderSuccess ||
+          p.sendOrderError != c.sendOrderError,
       listener: (ctx, state) {
-        if (!state.createOrderLoading && state.createOrderSuccess) {
+        if (!state.sendOrderLoading && state.sendOrderSuccess) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: const Text('Order created successfully!'),
-            backgroundColor: AppTheme.btnColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
         }
-        if (!state.createOrderLoading && state.createOrderError != null) {
+        if (!state.sendOrderLoading && state.sendOrderError != null) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: Text(state.createOrderError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
         }
       },
       builder: (context, state) => Dialog(
@@ -2123,7 +2109,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                           size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
-                    onTap: state.createOrderLoading
+                    onTap: state.sendOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -2226,7 +2212,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: state.createOrderLoading
+                    onTap: state.sendOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -2251,7 +2237,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: state.createOrderLoading
+                    onTap: state.sendOrderLoading
                         ? null
                         : () {
                       if (_selectedCardType.isEmpty) {
@@ -2284,7 +2270,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       }
                       context
                           .read<CorrectionCubit>()
-                          .createOrder(
+                          .processOrder(
                         schoolId: widget.schoolId,
                         cardType: _selectedCardType,
                         cardFor: _selectedCardFor.toList(),
@@ -2294,12 +2280,12 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
-                        color: state.createOrderLoading
+                        color: state.sendOrderLoading
                             ? Colors.grey
                             : const Color(0xFF6C63FF),
                         borderRadius: BorderRadius.circular(25),
                       ),
-                      child: state.createOrderLoading
+                      child: state.sendOrderLoading
                           ? const SizedBox(
                         width: 18,
                         height: 18,

@@ -246,178 +246,101 @@ class CorrectionCubit extends Cubit<CorrectionState> {
 
   Future<void> createOrder({
     required String schoolId,
-    String processType = 'correction_list',
-    String listType = 'sle_class_wise',
-    String cardType = '',
+    String cardType = 'new',
     List<String> cardFor = const [],
     List<String>? studentUuids,
   }) async {
-
     List<String> selectedUuids = [];
 
     try {
-
       if (studentUuids != null && studentUuids.isNotEmpty) {
-
-        selectedUuids = studentUuids
-            .where((e) => e.trim().isNotEmpty)
-            .toList();
-
+        selectedUuids = studentUuids.where((e) => e.trim().isNotEmpty).toList();
       } else {
-
-        /// CHECK SELECTED IDS
         if (state.selectedStudentIds.isEmpty) {
-
-          emit(
-            state.copyWith(
-              createOrderLoading: false,
-              createOrderError: 'Please select students',
-            ),
-          );
-
+          emit(state.copyWith(
+            createOrderLoading: false,
+            createOrderError: 'Please select students',
+          ));
           return;
         }
-
-        /// CONVERT SELECTED IDS TO UUIDS
         selectedUuids = state.students
-            .where(
-              (s) =>
-          state.selectedStudentIds.contains(s.id) &&
-              s.student != null &&
-              s.student!.uuid != null &&
-              s.student!.uuid!.trim().isNotEmpty,
-        )
-            .map((s) => s.student!.uuid!.trim())
+            .where((s) =>
+        state.selectedStudentIds.contains(s.id) &&
+            s.uuid != null &&
+            s.uuid!.trim().isNotEmpty)
+            .map((s) => s.uuid!.trim())
             .toList();
+
+        // Debug: log what we have
+        print("=== createOrder debug ===");
+        for (final s in state.students.where((s) => state.selectedStudentIds.contains(s.id))) {
+          print("item.id=${s.id} item.uuid=${s.uuid} student.uuid=${s.student?.uuid}");
+        }
+        print("selectedUuids => $selectedUuids");
       }
 
-      /// REMOVE DUPLICATE UUIDS
       selectedUuids = selectedUuids.toSet().toList();
 
-      /// CHECK VALID UUIDS
       if (selectedUuids.isEmpty) {
-
-        emit(
-          state.copyWith(
-            createOrderLoading: false,
-            createOrderError:
-            'No valid students found for selected entries',
-          ),
-        );
-
+        emit(state.copyWith(
+          createOrderLoading: false,
+          createOrderError: 'No valid students found for selected entries',
+        ));
         return;
       }
 
-      emit(
-        state.copyWith(
-          createOrderLoading: true,
-          clearCreateOrderError: true,
-          createOrderSuccess: false,
-        ),
-      );
+      emit(state.copyWith(
+        createOrderLoading: true,
+        clearCreateOrderError: true,
+        createOrderSuccess: false,
+      ));
 
-      final String url =
-          '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/process';
+      // POST auth/school/{schoolId}/orders
+      final String url = '${Config.baseUrl}auth/school/$schoolId/orders';
 
-      /// API BODY
       final Map<String, dynamic> body = {
-        "students": selectedUuids,
-        "processType": "correction_list",
-        "listType": listType,
+        "card_users": selectedUuids,
+        "card_type": cardType.trim().isNotEmpty ? cardType.trim() : 'new',
+        "student_card": cardFor.contains('student_card') ? 1 : 0,
+        "parent_card": cardFor.contains('parent_card') ? 1 : 0,
+        "admit_card": cardFor.contains('admit_card') ? 1 : 0,
       };
 
-      /// OPTIONAL FIELDS
-      if (cardType.trim().isNotEmpty) {
-        body["card_type"] = cardType.trim();
-      }
-
-      if (cardFor.isNotEmpty) {
-        body["card_for"] = cardFor;
-      }
-
-      /// DEBUG LOGS
-      print("========== CREATE ORDER ==========");
-      print("URL => $url");
-      print("Selected Student IDs => ${state.selectedStudentIds}");
-
-      print(
-        "Students Data => ${state.students.map((e) => {
-          "id": e.id,
-          "uuid": e.student?.uuid,
-        }).toList()}",
-      );
-
-      print("Selected UUIDs => $selectedUuids");
-      print("Request Body => ${jsonEncode(body)}");
-
-      /// API CALL
       var response = await _api.postRequest(body, url);
 
-      /// PARTNER API IF 403
       if (response != null && response.statusCode == 403) {
-
         final String partnerUrl =
-            '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/process';
-
-        print("403 FOUND => TRYING PARTNER API");
-        print("Partner URL => $partnerUrl");
-
+            '${Config.baseUrl}auth/partner/school/$schoolId/orders';
         response = await _api.postRequest(body, partnerUrl);
       }
 
-      /// NULL RESPONSE
       if (response == null) {
-
-        emit(
-          state.copyWith(
-            createOrderLoading: false,
-            createOrderError: 'Failed to create order',
-          ),
-        );
-
+        emit(state.copyWith(
+          createOrderLoading: false,
+          createOrderError: 'Failed to create order',
+        ));
         return;
       }
 
-      print("STATUS CODE => ${response.statusCode}");
-      print("RESPONSE => ${response.body}");
-
       final dynamic jsonResponse = jsonDecode(response.body);
 
-      /// SUCCESS
-      if (response.statusCode == 200 ||
-          response.statusCode == 201 ||
-          jsonResponse['success'] == true) {
-
-        emit(
-          state.copyWith(
-            createOrderLoading: false,
-            createOrderSuccess: true,
-            selectedStudentIds: {},
-          ),
-        );
-
-      } else {
-
-        emit(
-          state.copyWith(
-            createOrderLoading: false,
-            createOrderError:
-            jsonResponse['message'] ??
-                'Failed to create order',
-          ),
-        );
-      }
-
-    } catch (e) {
-
-      print("CREATE ORDER ERROR => $e");
-
-      emit(
-        state.copyWith(
+      if (jsonResponse['success'] == true) {
+        emit(state.copyWith(
           createOrderLoading: false,
-          createOrderError: e.toString(),
-        ),
-      );
+          createOrderSuccess: true,
+          selectedStudentIds: {},
+        ));
+      } else {
+        emit(state.copyWith(
+          createOrderLoading: false,
+          createOrderError: jsonResponse['message'] ?? 'Failed to create order',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        createOrderLoading: false,
+        createOrderError: e.toString(),
+      ));
     }
   }
 

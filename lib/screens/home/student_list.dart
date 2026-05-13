@@ -1811,7 +1811,6 @@ class _CorrectionCardState extends State<_CorrectionCard> {
 }
 
 
-
 class _CreateOrderDialog extends StatefulWidget {
   final String schoolId;
   const _CreateOrderDialog({required this.schoolId});
@@ -1898,7 +1897,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                           size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -2051,7 +2050,6 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       }
                       context.read<CorrectionCubit>().createOrder(
                         schoolId: widget.schoolId,
-                        listType: 'sle_class_wise',
                         cardType: _selectedCardType,
                         cardFor: _selectedCardFor.toList(),
                       );
