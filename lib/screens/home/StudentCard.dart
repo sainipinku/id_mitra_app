@@ -111,8 +111,7 @@ class _StudentCardState extends State<StudentCard> {
 
       var response = await ApiManager().multiRequestRoute(
         fixedImage.path,
-        Config.baseUrl +
-            Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
+        Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
       );
 
       if (response.statusCode == 200) {

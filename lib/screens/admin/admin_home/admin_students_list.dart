@@ -213,11 +213,25 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
-        context.read<StudentsCubit>().fetchStudents(
+
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
+
+        final cubit = context.read<StudentsCubit>();
+
+        final state = cubit.state;
+        print('sectionsi id-----------${state.selectedSectionIds}');
+        cubit.fetchStudents(
+
+          /// SEARCH
           search: _searchCtrl.text.trim(),
-          gender: '',
-          classId: '',
+
+          /// FILTERS FROM STATE
+          gender: state.selectedGender,
+
+          classId: state.selectedClassId,
+
+          sectionIds: state.selectedSectionIds,
         );
       }
     });

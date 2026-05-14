@@ -143,7 +143,28 @@ class _StudentsTabState extends State<_StudentsTab> {
   final ScrollController _scrollCtrl = ScrollController();
   Timer? _debounce;
   bool _isGridView = false;
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 200) {
 
+      final cubit = context.read<StudentsCubit>();
+
+      final state = cubit.state;
+      print('sectionsi id-----------${state.selectedSectionIds}');
+      cubit.fetchStudents(
+
+        /// SEARCH
+        search: _searchCtrl.text.trim(),
+
+        /// FILTERS FROM STATE
+        gender: state.selectedGender,
+
+        classId: state.selectedClassId,
+
+        sectionIds: state.selectedSectionIds,
+      );
+    }
+  }
   void _navigateToAddStudent() {
     Navigator.push(
       context,
@@ -180,12 +201,13 @@ class _StudentsTabState extends State<_StudentsTab> {
     super.initState();
     final cubit = context.read<StudentsCubit>();
 
+    /// 🔥 Background sync
+    cubit.syncAllStudents(
+      schoolId: widget.schoolId,
+    );
 
-
-    /// 🔥 2. Background sync (no UI block)
-    cubit.syncAllStudents(schoolId: widget.schoolId);
-
-
+    /// 🔥 Pagination Listener
+    _scrollCtrl.addListener(_onScroll);
 
   }
 
@@ -237,16 +259,16 @@ class _StudentsTabState extends State<_StudentsTab> {
                         ),
                       );
                       if (result != null) {
-                        final String? classId = result['class'];
-                        final String? gender = result['gender']?.toString().toLowerCase();
+
                         _debounce?.cancel();
-                        _debounce = Timer(const Duration(milliseconds: 500), () {
-                          context.read<StudentsCubit>().fetchStudents(
-                            search: '',
-                            classId: classId ?? '',
-                            gender: gender ?? '',
-                            sectionIds: result['section'] ?? [],
+                        _debounce = Timer(const Duration(milliseconds: 300), () {
+                          context.read<StudentsCubit>().applyFilters(
+                            schoolId: widget.schoolId,
+                            classId: result["class"] ?? "",
+                            sectionIds: List<int>.from(result["section"] ?? []),
+                            gender: result["gender"] ?? "",
                           );
+
                         });
                       }
                     },

@@ -62,7 +62,6 @@ class StudentsCubit extends Cubit<StudentsState> {
         gender: gender,
         classId: classId,
         sectionIds: sectionIds,
-        isPagination: false, // 👈 important
       );
 
       print("FULL LOCAL DATA: ${localList.length}");
@@ -129,16 +128,20 @@ class StudentsCubit extends Cubit<StudentsState> {
         print("Sync count: $count");
         print("Sync total: $total");
         print("Sync stopped: $page");
+        /// 🔥 STOP LOADING
+
+
+        if(page == 2){
+          /// 🔥 refresh UI after sync
+          await fetchStudents();
+        }
+        emit(state.copyWith(isSyncing: false));
       } catch (e) {
         print("Sync stopped: $e");
         break;
       }
     }
-    /// 🔥 STOP LOADING
-    emit(state.copyWith(isSyncing: false));
 
-    /// 🔥 refresh UI after sync
-    await fetchStudents();
     print("✅ FULL DATA SYNC DONE");
   }
 

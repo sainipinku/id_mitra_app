@@ -5,49 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 class StudentLocalDS {
 
-  /// 🔥 INSERT SINGLE
-  Future<void> insertStudent(StudentDetailsData e) async {
-    final db = await DBHelper.db;
-
-    await db.insert(
-      'students',
-      {
-        "id": e.id,
-        "uuid": e.uuid ?? "",
-        "school_id": e.schoolId,
-
-        "name": e.name ?? "",
-        "email": e.email?.toString(),
-        "phone": e.phone?.toString(),
-        "gender": e.gender?.toString(),
-
-        "school_class_id": e.schoolClassId,
-        "school_class_section_id": e.schoolClassSectionId,
-
-        "father_name": e.fatherName ?? "",
-        "father_phone": e.fatherPhone,
-        "mother_name": e.motherName,
-        "mother_phone": e.motherPhone,
-
-        "profile_photo_url": e.profilePhotoUrl,
-        "address": e.address,
-        "status": e.status ?? 0,
-
-        /// JSON fields
-        "missing_fields": jsonEncode(e.missingFields ?? []),
-        "session_json": jsonEncode(e.session?.toJson() ?? {}),
-        "class_json": jsonEncode(e.datumClass?.toJson() ?? {}),
-        "section_json": jsonEncode(e.section?.toJson() ?? {}),
-        "house_json": jsonEncode(e.house ?? {}),
-
-        /// full backup
-        "raw_data": jsonEncode(e.toJson()),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  /// 🚀 INSERT BATCH (FAST)
+  /// 🚀 INSERT BATCH
   Future<void> insertStudents(List<StudentDetailsData> list) async {
     final db = await DBHelper.db;
     final batch = db.batch();
@@ -57,13 +15,34 @@ class StudentLocalDS {
         'students',
         {
           "id": e.id,
-          "name": e.name,
-          "father_name": e.fatherName ?? "",
+          "uuid": e.uuid ?? "",
+          "school_id": e.schoolId,
+
+          "name": e.name ?? "",
+          "email": e.email?.toString(),
+          "phone": e.phone?.toString(),
+          "gender": e.gender?.toString(),
+
           "school_class_id": e.schoolClassId,
           "school_class_section_id": e.schoolClassSectionId,
 
+          "father_name": e.fatherName ?? "",
+          "father_phone": e.fatherPhone,
+          "mother_name": e.motherName,
+          "mother_phone": e.motherPhone,
 
-          /// full backup
+          "profile_photo_url": e.profilePhotoUrl,
+          "address": e.address,
+          "status": e.status ?? 0,
+
+          /// Nested JSON
+          "missing_fields": jsonEncode(e.missingFields ?? []),
+          "session_json": jsonEncode(e.session?.toJson() ?? {}),
+          "class_json": jsonEncode(e.datumClass?.toJson() ?? {}),
+          "section_json": jsonEncode(e.section?.toJson() ?? {}),
+          "house_json": jsonEncode(e.house ?? {}),
+
+          /// Full Raw JSON
           "raw_data": jsonEncode(e.toJson()),
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -71,46 +50,78 @@ class StudentLocalDS {
     }
 
     await batch.commit(noResult: true);
+
+    print("Inserted Students: ${list.length}");
   }
 
-  /// 🔍 FETCH WITH FILTER + PAGINATION
+  /// 🔍 FETCH STUDENTS
   Future<List<StudentDetailsData>> getStudents({
     String search = "",
     String gender = "",
     String classId = "",
     List<int> sectionIds = const [],
-    bool isPagination = false,
   }) async {
     final db = await DBHelper.db;
+
     String where = "1=1";
     List<dynamic> args = [];
 
+    /// Search
     if (search.isNotEmpty) {
       where += " AND name LIKE ?";
       args.add("%$search%");
     }
 
+    /// Gender
     if (gender.isNotEmpty) {
       where += " AND gender = ?";
       args.add(gender);
     }
 
+    /// Class Filter
     if (classId.isNotEmpty) {
-      where += " AND class_id = ?";
-      args.add(classId);
+      where += " AND school_class_id = ?";
+      args.add(int.parse(classId));
+    }
+
+    /// Section Filter
+    if (sectionIds.isNotEmpty) {
+      where +=
+      " AND school_class_section_id IN (${sectionIds.map((e) => '?').join(',')})";
+
+      args.addAll(sectionIds);
     }
 
     final data = await db.query(
       "students",
       where: where,
       whereArgs: args,
-      /// 🔥 IMPORTANT: alphabetical order
       orderBy: "name COLLATE NOCASE ASC",
-      // ❌ NO LIMIT
-      // ❌ NO OFFSET
     );
 
-    return data.map((e) => StudentDetailsData.fromJson(e)).toList();
+    print("Fetched Students: ${data.length}");
+
+    return data.map((e) {
+      final map = Map<String, dynamic>.from(e);
+
+      /// Decode JSON Fields
+      map["missing_fields"] =
+          jsonDecode(map["missing_fields"] ?? "[]");
+
+      map["session"] =
+          jsonDecode(map["session_json"] ?? "{}");
+
+      map["class"] =
+          jsonDecode(map["class_json"] ?? "{}");
+
+      map["section"] =
+          jsonDecode(map["section_json"] ?? "{}");
+
+      map["house"] =
+          jsonDecode(map["house_json"] ?? "{}");
+
+      return StudentDetailsData.fromJson(map);
+    }).toList();
   }
 
   /// 🔢 COUNT
@@ -143,6 +154,7 @@ class StudentLocalDS {
     if (sectionIds.isNotEmpty) {
       where +=
       " AND school_class_section_id IN (${sectionIds.map((e) => '?').join(',')})";
+
       args.addAll(sectionIds);
     }
 
