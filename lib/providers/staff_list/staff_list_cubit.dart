@@ -38,7 +38,7 @@ class StaffListState {
 
   final bool signatureUploading;
   final String? signatureUploadError;
-  final String? signatureUploadSuccess;
+  final String? signatureUploadSuccess;  
 
   final bool deleting;
 
@@ -634,6 +634,12 @@ class StaffListCubit extends Cubit<StaffListState> {
         return;
       }
 
+      print("=== STAFF ORDERS RESPONSE ===");
+      print("URL: $url");
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
+      print("=============================");
+
       final json = jsonDecode(response.body);
       final isSuccess =
           json['status'] == true || json['success'] == true;
@@ -686,6 +692,8 @@ class StaffListCubit extends Cubit<StaffListState> {
       final newOrders = rawList
           .map((e) => OrderStaffItem.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      print("=== Parsed ${newOrders.length} StaffOrders, total=$total, page=$respPage/$lastPage ===");
 
       final statusMap = Map<String, String>.from(state.orderStatusMap);
 

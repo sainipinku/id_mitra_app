@@ -28,7 +28,6 @@ import 'package:idmitra/providers/orders/orders_state.dart';
 import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
-import 'package:printing/printing.dart';
 import 'package:idmitra/providers/students/students_state.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
@@ -36,6 +35,7 @@ import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
 import 'package:idmitra/screens/orders/order_detail_page.dart';
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class StudentListingPage extends StatefulWidget {
@@ -67,7 +67,8 @@ class _StudentListingPageState extends State<StudentListingPage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _ordersCubit = OrdersCubit()
-      ..fetchSchoolOrders(schoolId: widget.schoolId);
+      ..fetchOrders(schoolId: widget.schoolId, isSchool: false)
+      ..fetchSchoolClasses(widget.schoolId);
   }
 
   @override
@@ -266,6 +267,7 @@ class _StudentsTabState extends State<_StudentsTab> {
   final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
 
+  // Selection state for Process Checklist
   final Set<int> _selectedIds = {};
   final Map<int, String> _idToUuid = {};
 
@@ -315,6 +317,7 @@ class _StudentsTabState extends State<_StudentsTab> {
           studentUuids: uuids,
           onSuccess: () {
             _clearSelection();
+            // Refresh student list
             context.read<StudentsCubit>().fetchStudents(
               search: _searchCtrl.text.trim(),
               schoolId: widget.schoolId,
@@ -370,6 +373,7 @@ class _StudentsTabState extends State<_StudentsTab> {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
+          // Always fetch latest imageShape from API so changes reflect immediately
           context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
         }
       }
@@ -441,6 +445,12 @@ class _StudentsTabState extends State<_StudentsTab> {
                           ),
                           child: Row(
                             children: [
+                              Text(
+                                '${_selectedIds.length} selected',
+                                style: MyStyles.mediumText(
+                                    size: 13, color: AppTheme.btnColor),
+                              ),
+                              const Spacer(),
                               TextButton(
                                 onPressed: () =>
                                     _selectAll(studState.studentsList),
@@ -470,8 +480,7 @@ class _StudentsTabState extends State<_StudentsTab> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const SizedBox(width: 5),
-                                      Text('Process Checklist',
+                                      Text('Process checklist',
                                           style: MyStyles.mediumText(
                                               size: 12,
                                               color: Colors.white)),
@@ -510,22 +519,17 @@ class _StudentsTabState extends State<_StudentsTab> {
                               final String? gender = result['gender']
                                   ?.toString()
                                   .toLowerCase();
-                              final List<int> sectionIds = result['section'] is List
-                                  ? List<int>.from(
-                                  (result['section'] as List)
-                                      .map((e) => int.tryParse(e.toString()) ?? 0)
-                                      .where((e) => e != 0))
-                                  : [];
                               _debounce?.cancel();
                               _debounce = Timer(
                                   const Duration(milliseconds: 500), () {
                                 context
                                     .read<StudentsCubit>()
-                                    .applyFilters(
+                                    .fetchStudents(
+                                  search: '',
                                   schoolId: widget.schoolId,
                                   classId: classId ?? '',
                                   gender: gender ?? '',
-                                  sectionIds: sectionIds,
+                                  sectionIds: result['section'] ?? [],
                                 );
                               });
                             }
@@ -796,9 +800,7 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
         p.downloadUrl != c.downloadUrl ||
             p.downloadError != c.downloadError ||
             p.sendOrderSuccess != c.sendOrderSuccess ||
-            p.sendOrderError != c.sendOrderError ||
-            p.createOrderSuccess != c.createOrderSuccess ||
-            p.createOrderError != c.createOrderError,
+            p.sendOrderError != c.sendOrderError,
         listener: (context, state) async {
           if (state.sendOrderSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -809,42 +811,19 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                   borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(12),
             ));
+            // Refresh correction list (remove ordered students)
             context.read<CorrectionCubit>().fetchCorrectionStudents(
               schoolId: widget.schoolId,
             );
-            widget.ordersCubit?.fetchSchoolOrders(
+            // Refresh orders tab so new order appears
+            widget.ordersCubit?.fetchOrders(
               schoolId: widget.schoolId,
+              isSchool: false,
             );
           }
           if (state.sendOrderError != null) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(state.sendOrderError!),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(12),
-            ));
-          }
-          if (state.createOrderSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: const Text('Order created successfully!'),
-              backgroundColor: AppTheme.btnColor,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(12),
-            ));
-            context.read<CorrectionCubit>().fetchCorrectionStudents(
-              schoolId: widget.schoolId,
-            );
-            widget.ordersCubit?.fetchSchoolOrders(
-              schoolId: widget.schoolId,
-            );
-          }
-          if (state.createOrderError != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.createOrderError!),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -1811,6 +1790,7 @@ class _CorrectionCardState extends State<_CorrectionCard> {
 }
 
 
+
 class _CreateOrderDialog extends StatefulWidget {
   final String schoolId;
   const _CreateOrderDialog({required this.schoolId});
@@ -2150,40 +2130,7 @@ class _DownloadChecklistDialogState
                 state.downloadColumns.map((c) => c.key).toSet();
           });
         }
-        if (!state.downloadLoading &&
-            state.downloadUrl != null &&
-            state.downloadUrl!.isNotEmpty) {
-          Navigator.of(context).pop();
-          final url = state.downloadUrl!;
-          if (url.startsWith('file://')) {
-            // Binary PDF saved locally — open with printing viewer
-            final filePath = url.replaceFirst('file://', '');
-            final bytes = await File(filePath).readAsBytes();
-            if (context.mounted) {
-              await Printing.layoutPdf(onLayout: (_) async => bytes);
-            }
-          } else {
-            final uri = Uri.tryParse(url);
-            if (uri != null) {
-              try {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Download URL: $url'),
-                    backgroundColor: AppTheme.btnColor,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    margin: const EdgeInsets.all(12),
-                  ));
-                }
-              }
-            }
-          }
-        }
         if (!state.downloadLoading && state.downloadError != null) {
-          Navigator.of(context).pop();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(state.downloadError!),
@@ -2402,7 +2349,16 @@ class _DownloadChecklistDialogState
                           selected:
                           _selectedColumns.toList(),
                           listType: _printType,
-                        );
+                        ).then((pdfBytes) async {
+                          if (pdfBytes != null && pdfBytes.isNotEmpty) {
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                            await Printing.layoutPdf(
+                              onLayout: (_) async => pdfBytes,
+                            );
+                          }
+                        });
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -2738,12 +2694,13 @@ class _OrdersTabState extends State<_OrdersTab> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<OrdersCubit>().fetchSchoolOrders(
+        context.read<OrdersCubit>().fetchOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
           status: _selectedStatus,
-          classFilter: _selectedClass,
+          classId: _selectedClass,
           schoolId: widget.schoolId,
+          isSchool: false,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -2762,11 +2719,12 @@ class _OrdersTabState extends State<_OrdersTab> {
   }
 
   void _resetAndFetch() {
-    context.read<OrdersCubit>().fetchSchoolOrders(
+    context.read<OrdersCubit>().fetchOrders(
       search: _searchCtrl.text.trim(),
       status: _selectedStatus,
-      classFilter: _selectedClass,
+      classId: _selectedClass,
       schoolId: widget.schoolId,
+      isSchool: false,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -3002,18 +2960,19 @@ class _OrdersTabState extends State<_OrdersTab> {
   Widget _classDropdown() =>
       BlocBuilder<OrdersCubit, OrdersState>(
         buildWhen: (p, c) =>
-        p.schoolClassesWithSections != c.schoolClassesWithSections ||
-            p.loading != c.loading,
+        p.availableClasses != c.availableClasses ||
+            p.classesLoading != c.classesLoading,
         builder: (_, state) => _dropdown(
           value: _selectedClass.isEmpty ? '' : _selectedClass,
           hint: 'All Classes',
+          loading: state.classesLoading,
           items: [
             const DropdownMenuItem(
                 value: '', child: Text('All Classes')),
-            ...state.schoolClassesWithSections.map(
+            ...state.availableClasses.map(
                   (c) => DropdownMenuItem(
-                value: c.value,
-                child: Text(c.label,
+                value: c.classId.toString(),
+                child: Text(c.nameWithprefix ?? c.name,
                     overflow: TextOverflow.ellipsis),
               ),
             ),

@@ -351,11 +351,15 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
     });
   }
 
+
   void _showProcessChecklistDialog(BuildContext ctx) {
     final uuids = _selectedIds
         .where((id) => _idToUuid.containsKey(id))
         .map((id) => _idToUuid[id]!)
         .toList();
+    print("=== _showProcessChecklistDialog ===");
+    print("selectedIds: $_selectedIds");
+    print("uuids to pass: $uuids");
     showDialog(
       context: ctx,
       barrierDismissible: false,
@@ -366,7 +370,6 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
           studentUuids: uuids,
           onSuccess: () {
             _clearSelection();
-            // Refresh student list
             context.read<StudentsCubit>().fetchStudents(
               search: _searchCtrl.text.trim(),
               schoolId: widget.schoolId,

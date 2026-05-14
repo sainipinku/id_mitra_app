@@ -144,10 +144,10 @@ class StaffListModel {
       address: json['address'],
       profilePhotoUrl: _fixUrl(json['profile_photo_url']),
       roleName: role?['name'] ?? '',
-      roleId: role?['id'] is int ? role!['id'] : int.tryParse(role?['id']?.toString() ?? ''),
+      roleId: role?['id'] is int ? role!['id'] : (int.tryParse(role?['id']?.toString() ?? '') ?? (json['role_id'] is int ? json['role_id'] : int.tryParse(json['role_id']?.toString() ?? ''))),
       status: json['status'] ?? 1,
       assignedClasses: classes.map((c) {
-        if (c is Map) return c['name_withprefix']?.toString() ?? c['name']?.toString() ?? '';
+        if (c is Map) return c['name_withprefix']?.toString() ?? c['class_name']?.toString() ?? c['name']?.toString() ?? '';
         return c.toString();
       }).where((s) => s.isNotEmpty).toList(),
       dob: json['dob'],

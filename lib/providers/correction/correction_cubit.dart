@@ -161,7 +161,7 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     String listType = 'class_wise',
     String cardType = '',
     List<String> cardFor = const [],
-    List<String>? studentUuids,
+    List<String>? studentUuids, // optional: pass directly from Students tab
   }) async {
     List<String> selectedUuids;
 
@@ -169,35 +169,28 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       selectedUuids = studentUuids;
     } else {
       if (state.selectedStudentIds.isEmpty) return;
-
       selectedUuids = state.students
-          .where(
-            (s) =>
-        state.selectedStudentIds.contains(s.id) &&
-            s.student?.uuid != null &&
-            s.student!.uuid!.isNotEmpty,
-      )
+          .where((s) =>
+      state.selectedStudentIds.contains(s.id) &&
+          s.student?.uuid != null &&
+          s.student!.uuid!.isNotEmpty)
           .map((s) => s.student!.uuid!)
           .toList();
     }
 
     if (selectedUuids.isEmpty) {
       emit(state.copyWith(
-        sendOrderError: 'No valid items found for selected entries',
-      ));
+          sendOrderError: 'No valid items found for selected entries'));
       return;
     }
 
     emit(state.copyWith(
-      sendOrderLoading: true,
-      clearSendOrderError: true,
-      sendOrderSuccess: false,
-    ));
-
+        sendOrderLoading: true,
+        clearSendOrderError: true,
+        sendOrderSuccess: false));
     try {
       final url =
           '${Config.baseUrl}auth/school/$schoolId/orders/correction-lists/process';
-
       final body = <String, dynamic>{
         'processType': processType,
         'listType': listType,
@@ -205,25 +198,19 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         if (cardType.isNotEmpty) 'card_type': cardType,
         if (cardFor.isNotEmpty) 'card_for': cardFor,
       };
-
-      var response = await _api.postRequest(body, url);
-
-      if (response != null && response.statusCode == 403) {
-        final partnerUrl =
-            '${Config.baseUrl}auth/partner/school/$schoolId/orders/correction-lists/process';
-        response = await _api.postRequest(body, partnerUrl);
-      }
-
+      final response = await _api.postRequest(body, url);
+      print("=== processOrder RESPONSE ===");
+      print("URL: $url");
+      print("BODY: ${jsonEncode(body)}");
+      print("STATUS: ${response?.statusCode}");
+      print("BODY: ${response?.body}");
       if (response == null) {
         emit(state.copyWith(
-          sendOrderLoading: false,
-          sendOrderError: 'Failed to process order',
-        ));
+            sendOrderLoading: false,
+            sendOrderError: 'Failed to process order'));
         return;
       }
-
       final json = jsonDecode(response.body);
-
       if (json['success'] == true) {
         emit(state.copyWith(
           sendOrderLoading: false,
@@ -238,9 +225,7 @@ class CorrectionCubit extends Cubit<CorrectionState> {
       }
     } catch (e) {
       emit(state.copyWith(
-        sendOrderLoading: false,
-        sendOrderError: e.toString(),
-      ));
+          sendOrderLoading: false, sendOrderError: e.toString()));
     }
   }
 
@@ -273,8 +258,10 @@ class CorrectionCubit extends Cubit<CorrectionState> {
 
         // Debug: log what we have
         print("=== createOrder debug ===");
+        print("state.students count: ${state.students.length}");
+        print("selectedStudentIds: ${state.selectedStudentIds}");
         for (final s in state.students.where((s) => state.selectedStudentIds.contains(s.id))) {
-          print("item.id=${s.id} item.uuid=${s.uuid} student.uuid=${s.student?.uuid}");
+          print("item.id=${s.id} item.uuid=${s.uuid} student=${s.student} student.uuid=${s.student?.uuid}");
         }
         print("selectedUuids => $selectedUuids");
       }
@@ -305,6 +292,10 @@ class CorrectionCubit extends Cubit<CorrectionState> {
         "parent_card": cardFor.contains('parent_card') ? 1 : 0,
         "admit_card": cardFor.contains('admit_card') ? 1 : 0,
       };
+
+      print("=== createOrder REQUEST ===");
+      print("URL: $url");
+      print("BODY: ${jsonEncode(body)}");
 
       var response = await _api.postRequest(body, url);
 

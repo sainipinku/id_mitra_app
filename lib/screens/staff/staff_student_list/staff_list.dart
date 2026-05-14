@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1510,10 +1510,33 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
     showDialog(
       context: ctx,
       barrierDismissible: false,
-      builder: (_) => BlocProvider(
-        create: (_) => CorrectionCubit()
-          ..fetchDownloadColumns(schoolId: widget.schoolId),
+      builder: (_) => BlocProvider.value(
+        value: ctx.read<StaffCorrectionCubit>(),
         child: _StaffDownloadChecklistDialog(schoolId: widget.schoolId),
+      ),
+    );
+  }
+
+  void _showCreateOrderDialog(BuildContext ctx) {
+    final staffState = ctx.read<StaffCorrectionCubit>().state;
+    // API expects correction item uuids in card_users, not staff uuids
+    final selectedUuids = staffState.items
+        .where((item) =>
+    staffState.selectedIds.contains(item.id) &&
+        item.uuid != null &&
+        item.uuid!.trim().isNotEmpty)
+        .map((item) => item.uuid!.trim())
+        .toList();
+
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => BlocProvider.value(
+        value: ctx.read<StaffCorrectionCubit>(),
+        child: _CreateOrderDialog(
+          schoolId: widget.schoolId,
+          studentUuids: selectedUuids,
+        ),
       ),
     );
   }
@@ -1556,6 +1579,74 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
         },
         child: Column(
           children: [
+            // ── CHANGE 1: Process Checklist banner search ke UPAR aata hai ──
+            BlocBuilder<StaffCorrectionCubit, StaffCorrectionState>(
+              buildWhen: (p, c) =>
+              p.selectedIds != c.selectedIds ||
+                  p.sendOrderLoading != c.sendOrderLoading,
+              builder: (ctx, s) {
+                if (s.selectedIds.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  color: AppTheme.btnColor.withOpacity(0.08),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Text('${s.selectedIds.length} selected',
+                          style: MyStyles.mediumText(
+                              size: 13, color: AppTheme.btnColor)),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () =>
+                            ctx.read<StaffCorrectionCubit>().selectAll(),
+                        child: Text('Select All',
+                            style: MyStyles.mediumText(
+                                size: 12, color: AppTheme.btnColor)),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            ctx.read<StaffCorrectionCubit>().clearSelection(),
+                        child: Text('Clear',
+                            style: MyStyles.mediumText(
+                                size: 12, color: Colors.grey)),
+                      ),
+                      const SizedBox(width: 4),
+                      s.sendOrderLoading
+                          ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.btnColor))
+                          : GestureDetector(
+                        onTap: () => _showCreateOrderDialog(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                              color: AppTheme.btnColor,
+                              borderRadius:
+                              BorderRadius.circular(20)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.send_rounded,
+                                  size: 13, color: Colors.white),
+                              const SizedBox(width: 5),
+                              Text('Create Order',
+                                  style: MyStyles.mediumText(
+                                      size: 12,
+                                      color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            // ── Search field ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: TextField(
@@ -1667,106 +1758,34 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
                       schoolId: widget.schoolId,
                       search: _searchCtrl.text.trim(),
                     ),
-                    child: Column(
-                      children: [
-                        if (state.selectedIds.isNotEmpty)
-                          Container(
-                            color: AppTheme.btnColor.withOpacity(0.08),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            child: Row(
-                              children: [
-                                Text('${state.selectedIds.length} selected',
-                                    style: MyStyles.mediumText(
-                                        size: 13,
-                                        color: AppTheme.btnColor)),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: () => context
-                                      .read<StaffCorrectionCubit>()
-                                      .selectAll(),
-                                  child: Text('Select All',
-                                      style: MyStyles.mediumText(
-                                          size: 12,
-                                          color: AppTheme.btnColor)),
-                                ),
-                                TextButton(
-                                  onPressed: () => context
-                                      .read<StaffCorrectionCubit>()
-                                      .clearSelection(),
-                                  child: Text('Clear',
-                                      style: MyStyles.mediumText(
-                                          size: 12, color: Colors.grey)),
-                                ),
-                                const SizedBox(width: 4),
-                                state.sendOrderLoading
-                                    ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppTheme.btnColor))
-                                    : GestureDetector(
-                                  onTap: () =>
-                                      _showCreateOrderDialog(context),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 7),
-                                    decoration: BoxDecoration(
-                                        color: AppTheme.btnColor,
-                                        borderRadius:
-                                        BorderRadius.circular(20)),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.send_rounded,
-                                            size: 13,
-                                            color: Colors.white),
-                                        const SizedBox(width: 5),
-                                        Text('Create Order',
-                                            style: MyStyles.mediumText(
-                                                size: 12,
-                                                color: Colors.white)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Expanded(
-                          child: ListView.builder(
-                            controller: _scrollCtrl,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding:
-                            const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            itemCount: state.items.length +
-                                (state.hasMore ? 1 : 0),
-                            itemBuilder: (_, i) {
-                              if (i < state.items.length) {
-                                final item = state.items[i];
-                                final isSelected =
-                                state.selectedIds.contains(item.id);
-                                return _StaffCorrectionItemCard(
-                                  item: item,
-                                  schoolId: widget.schoolId,
-                                  isSelected: isSelected,
-                                  onToggle: () => context
-                                      .read<StaffCorrectionCubit>()
-                                      .toggleSelection(item.id),
-                                );
-                              }
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: Center(
-                                    child: CircularProgressIndicator(
-                                        color: AppTheme.btnColor,
-                                        strokeWidth: 2)),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                    child: ListView.builder(
+                      controller: _scrollCtrl,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      itemCount:
+                      state.items.length + (state.hasMore ? 1 : 0),
+                      itemBuilder: (_, i) {
+                        if (i < state.items.length) {
+                          final item = state.items[i];
+                          final isSelected =
+                          state.selectedIds.contains(item.id);
+                          return _StaffCorrectionItemCard(
+                            item: item,
+                            schoolId: widget.schoolId,
+                            isSelected: isSelected,
+                            onToggle: () => context
+                                .read<StaffCorrectionCubit>()
+                                .toggleSelection(item.id),
+                          );
+                        }
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                              child: CircularProgressIndicator(
+                                  color: AppTheme.btnColor,
+                                  strokeWidth: 2)),
+                        );
+                      },
                     ),
                   );
                 },
@@ -1774,17 +1793,6 @@ class _StaffCorrectionTabState extends State<_StaffCorrectionTab> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showCreateOrderDialog(BuildContext ctx) {
-    showDialog(
-      context: ctx,
-      barrierDismissible: false,
-      builder: (_) => BlocProvider.value(
-        value: ctx.read<StaffCorrectionCubit>(),
-        child: _CreateOrderDialog(schoolId: widget.schoolId),
       ),
     );
   }
@@ -1803,13 +1811,14 @@ class _StaffDownloadChecklistDialog extends StatefulWidget {
 class __StaffDownloadChecklistDialogState
     extends State<_StaffDownloadChecklistDialog> {
   Set<String> _selectedColumns = {};
+  bool _downloading = false;
 
   @override
   void initState() {
     super.initState();
     context
-        .read<CorrectionCubit>()
-        .fetchDownloadColumns(schoolId: widget.schoolId);
+        .read<StaffCorrectionCubit>()
+        .fetchStaffDownloadColumns(schoolId: widget.schoolId);
   }
 
   void _toggleColumn(String key) {
@@ -1822,14 +1831,63 @@ class __StaffDownloadChecklistDialogState
     });
   }
 
+  Future<void> _printNow(BuildContext context) async {
+    if (_selectedColumns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please select at least one column'),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
+
+    // Get all correction item uuids (all items, not just selected)
+    final correctionState = context.read<StaffCorrectionCubit>().state;
+    final ids = correctionState.items
+        .where((item) => item.uuid != null && item.uuid!.isNotEmpty)
+        .map((item) => item.uuid!)
+        .toList();
+
+    if (ids.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No correction items found'),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
+
+    setState(() => _downloading = true);
+
+    final pdfBytes = await context
+        .read<StaffCorrectionCubit>()
+        .downloadStaffCorrectionList(
+      schoolId: widget.schoolId,
+      ids: ids,
+      selected: _selectedColumns.toList(),
+    );
+
+    if (!mounted) return;
+    setState(() => _downloading = false);
+
+    if (pdfBytes != null && pdfBytes.isNotEmpty) {
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: 'Staff_Correction_List_${DateTime.now().millisecondsSinceEpoch}',
+      );
+      if (mounted) Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Failed to generate PDF'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<CorrectionCubit, CorrectionState>(
+    return BlocConsumer<StaffCorrectionCubit, StaffCorrectionState>(
       listenWhen: (p, c) =>
-      p.downloadLoading != c.downloadLoading ||
-          p.downloadError != c.downloadError ||
-          (p.columnsLoading && !c.columnsLoading),
-      listener: (ctx, state) async {
+      p.columnsLoading != c.columnsLoading,
+      listener: (ctx, state) {
         if (!state.columnsLoading &&
             state.downloadColumns.isNotEmpty &&
             _selectedColumns.isEmpty) {
@@ -1837,18 +1895,6 @@ class __StaffDownloadChecklistDialogState
             _selectedColumns =
                 state.downloadColumns.map((c) => c.key).toSet();
           });
-        }
-
-        if (!state.downloadLoading && state.downloadError != null) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.downloadError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
         }
       },
       builder: (context, state) => Dialog(
@@ -1861,6 +1907,7 @@ class __StaffDownloadChecklistDialogState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Header ──
               Row(
                 children: [
                   Text('Download Checklist',
@@ -1868,19 +1915,21 @@ class __StaffDownloadChecklistDialogState
                           size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: _downloading
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(colors: [
                           Color(0xFFFF6B6B),
                           Color(0xFFFF8E53)
                         ]),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.close,
-                          color: Colors.white, size: 18),
+                          color: Colors.white, size: 20),
                     ),
                   ),
                 ],
@@ -1893,6 +1942,7 @@ class __StaffDownloadChecklistDialogState
               ),
               const SizedBox(height: 16),
 
+              // ── Columns grid ──
               if (state.columnsLoading)
                 const Center(
                   child: Padding(
@@ -1960,83 +2010,75 @@ class __StaffDownloadChecklistDialogState
 
               const SizedBox(height: 20),
 
-              BlocBuilder<CorrectionCubit, CorrectionState>(
-                buildWhen: (p, c) =>
-                p.downloadLoading != c.downloadLoading,
-                builder: (ctx, state) => Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    GestureDetector(
-                      onTap: state.downloadLoading
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B6B),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Text('Cancel',
-                            style: MyStyles.mediumText(
-                                size: 14, color: Colors.white)),
+              // ── Buttons ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: _downloading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFFFF6B6B), Color(0xFFFF4E50)]),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.replay_rounded,
+                              size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text('Cancel',
+                              style: MyStyles.mediumText(
+                                  size: 14, color: Colors.white)),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: state.downloadLoading
-                          ? null
-                          : () async {
-                        if (_selectedColumns.isEmpty) {
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(const SnackBar(
-                            content: Text(
-                                'Please select at least one column'),
-                            backgroundColor: Colors.orange,
-                          ));
-                          return;
-                        }
-
-                        final pdfBytes = await context
-                            .read<CorrectionCubit>()
-                            .downloadCorrectionList(
-                          schoolId: widget.schoolId,
-                          selected: _selectedColumns.toList(),
-                          listType: '',
-                        );
-
-                        if (pdfBytes != null && pdfBytes.isNotEmpty) {
-                          await Printing.layoutPdf(
-                            onLayout: (PdfPageFormat format) async => pdfBytes,
-                            name: 'Correction_List_${DateTime.now().millisecondsSinceEpoch}',
-                          );
-                          if (mounted) Navigator.of(context).pop();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: state.downloadLoading
-                              ? Colors.grey
-                              : const Color(0xFF6C63FF),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: state.downloadLoading
-                            ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white),
-                        )
-                            : Text('Print Now',
-                            style: MyStyles.mediumText(
-                                size: 14, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: _downloading
+                        ? null
+                        : () => _printNow(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: _downloading
+                            ? null
+                            : const LinearGradient(
+                            colors: [
+                              Color(0xFF6C63FF),
+                              Color(0xFF3B2FBF)
+                            ]),
+                        color: _downloading ? Colors.grey : null,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: _downloading
+                          ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                          : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.print_rounded,
+                              size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text('Print Now',
+                              style: MyStyles.mediumText(
+                                  size: 14, color: Colors.white)),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -2045,7 +2087,6 @@ class __StaffDownloadChecklistDialogState
     );
   }
 }
-
 
 
 class _StaffCorrectionItemCard extends StatefulWidget {
@@ -2084,7 +2125,7 @@ class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
   }
 
   String? get _currentPhotoUrl =>
-      _uploadedPhotoUrl ?? widget.item.staff?.profilePhotoUrl;
+      _uploadedPhotoUrl ?? widget.item.effectiveStaff?.profilePhotoUrl;
 
   Future<void> _fromCamera() async {
     final picked =
@@ -2121,7 +2162,7 @@ class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
   }
 
   Future<void> _uploadPhoto(String path) async {
-    final staff = widget.item.staff;
+    final staff = widget.item.effectiveStaff;
     if (staff == null) return;
     final newUrl =
     await context.read<StaffCorrectionCubit>().uploadStaffPhoto(
@@ -2256,7 +2297,7 @@ class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final staff = widget.item.staff;
+    final staff = widget.item.effectiveStaff;
     final photoUrl = _currentPhotoUrl;
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final initials = (staff?.name ?? '').trim().isNotEmpty
@@ -2275,15 +2316,9 @@ class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: widget.isSelected
-              ? AppTheme.btnColor.withOpacity(0.06)
-              : Colors.white,
+          // ── CHANGE 2: Card hamesha white — select hone par sirf checkbox filled hoga ──
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color:
-            widget.isSelected ? AppTheme.btnColor : Colors.transparent,
-            width: 1.5,
-          ),
         ),
         child: Row(
           children: [
@@ -2400,21 +2435,23 @@ class _StaffCorrectionItemCardState extends State<_StaffCorrectionItemCard> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color:
-                _statusColor(widget.item.status).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
+            if ((widget.item.status ?? '').isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                  _statusColor(widget.item.status).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  widget.item.status!.toUpperCase(),
+                  style: MyStyles.mediumText(
+                      size: 10, color: _statusColor(widget.item.status)),
+                ),
               ),
-              child: Text(
-                (widget.item.status ?? 'N/A').toUpperCase(),
-                style: MyStyles.mediumText(
-                    size: 10, color: _statusColor(widget.item.status)),
-              ),
-            ),
+            ],
           ],
         ),
       ),
@@ -2502,7 +2539,6 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
       builder: (context, state) {
         return Column(
           children: [
-            // Search
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -2560,7 +2596,6 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
                 ],
               ),
             ),
-            // Total count
             if (!state.ordersLoading && state.ordersTotal > 0)
               Container(
                 color: Colors.white,
@@ -2693,41 +2728,53 @@ class _StaffOrdersTabState extends State<_StaffOrdersTab> {
     ),
   );
 
-  Widget _statusDropdown(StaffListState state) => Container(
-    height: 44,
-    padding: const EdgeInsets.symmetric(horizontal: 10),
-    decoration: BoxDecoration(
-      color: AppTheme.appBackgroundColor,
-      border: Border.all(
-          color: AppTheme.backBtnBgColor.withOpacity(0.5)),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: state.ordersSelectedStatus,
-        isExpanded: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-            size: 18, color: AppTheme.graySubTitleColor),
-        style: MyStyles.regularText(
-            size: 13, color: AppTheme.black_Color),
-        items: kOrderFilterStatuses
-            .map((s) => DropdownMenuItem<String>(
-            value: s.value,
-            child: Text(s.label,
-                overflow: TextOverflow.ellipsis)))
-            .toList(),
-        onChanged: (v) {
-          context.read<StaffListCubit>().setOrdersFilter(
-            schoolId: widget.schoolId,
-            status: v ?? '',
-            dateFrom: _dateFromCtrl.text.trim(),
-            dateTo: _dateToCtrl.text.trim(),
-            search: _searchCtrl.text.trim(),
-          );
-        },
+  Widget _statusDropdown(StaffListState state) {
+    const _staffOrderFilterStatuses = [
+      OrderStatusOption('', 'Filter By Status'),
+      OrderStatusOption('re_order', 'Re-Order'),
+      OrderStatusOption('printing_issue', 'Printing Issue'),
+      OrderStatusOption('order_created', 'Order Created'),
+      OrderStatusOption('work_in_process', 'Work In Process'),
+    ];
+
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.appBackgroundColor,
+        border: Border.all(
+            color: AppTheme.backBtnBgColor.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(10),
       ),
-    ),
-  );
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _staffOrderFilterStatuses.any((s) => s.value == state.ordersSelectedStatus)
+              ? state.ordersSelectedStatus
+              : '',
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              size: 18, color: AppTheme.graySubTitleColor),
+          style: MyStyles.regularText(
+              size: 13, color: AppTheme.black_Color),
+          items: _staffOrderFilterStatuses
+              .map((s) => DropdownMenuItem<String>(
+              value: s.value,
+              child: Text(s.label,
+                  overflow: TextOverflow.ellipsis)))
+              .toList(),
+          onChanged: (v) {
+            context.read<StaffListCubit>().setOrdersFilter(
+              schoolId: widget.schoolId,
+              status: v ?? '',
+              dateFrom: _dateFromCtrl.text.trim(),
+              dateTo: _dateToCtrl.text.trim(),
+              search: _searchCtrl.text.trim(),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   Widget _dateField(TextEditingController ctrl, String hint) {
     return StatefulBuilder(
@@ -2956,54 +3003,55 @@ class _StaffOrderItemCard extends StatelessWidget {
                         color: AppTheme.btnColor),
                   ),
                 )
-                    : PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert,
-                      color: Colors.grey),
-                  offset: const Offset(0, 32),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 8,
-                  onSelected: (newStatus) async {
-                    final success = await context
-                        .read<StaffListCubit>()
-                        .updateOrderStatus(
-                      orderUuid: order.uuid,
-                      newStatus: newStatus,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(
-                        content: Text(success
-                            ? 'Status updated successfully'
-                            : 'Failed to update status'),
-                        backgroundColor: success
-                            ? AppTheme.btnColor
-                            : Colors.red,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius:
-                            BorderRadius.circular(10)),
-                        margin: const EdgeInsets.all(12),
-                      ));
-                    }
-                  },
-                  itemBuilder: (_) => kOrderStatuses
-                      .where((s) => s.value != currentStatus)
-                      .map((s) => PopupMenuItem<String>(
-                    value: s.value,
-                    child: Row(
-                      children: [
-                        Icon(_statusIcon(s.value),
-                            size: 16,
-                            color: AppTheme
-                                .graySubTitleColor),
-                        const SizedBox(width: 10),
-                        Text(s.label),
-                      ],
-                    ),
-                  ))
-                      .toList(),
-                ),
+                // : PopupMenuButton<String>(
+                //   icon: const Icon(Icons.more_vert,
+                //       color: Colors.grey),
+                //   offset: const Offset(0, 32),
+                //   shape: RoundedRectangleBorder(
+                //       borderRadius: BorderRadius.circular(12)),
+                //   elevation: 8,
+                //   onSelected: (newStatus) async {
+                //     final success = await context
+                //         .read<StaffListCubit>()
+                //         .updateOrderStatus(
+                //       orderUuid: order.uuid,
+                //       newStatus: newStatus,
+                //     );
+                //     if (context.mounted) {
+                //       ScaffoldMessenger.of(context)
+                //           .showSnackBar(SnackBar(
+                //         content: Text(success
+                //             ? 'Status updated successfully'
+                //             : 'Failed to update status'),
+                //         backgroundColor: success
+                //             ? AppTheme.btnColor
+                //             : Colors.red,
+                //         behavior: SnackBarBehavior.floating,
+                //         shape: RoundedRectangleBorder(
+                //             borderRadius:
+                //             BorderRadius.circular(10)),
+                //         margin: const EdgeInsets.all(12),
+                //       ));
+                //     }
+                //   },
+                //   itemBuilder: (_) => kOrderStatuses
+                //       .where((s) => s.value != currentStatus)
+                //       .map((s) => PopupMenuItem<String>(
+                //     value: s.value,
+                //     child: Row(
+                //       children: [
+                //         Icon(_statusIcon(s.value),
+                //             size: 16,
+                //             color: AppTheme
+                //                 .graySubTitleColor),
+                //         const SizedBox(width: 10),
+                //         Text(s.label),
+                //       ],
+                //     ),
+                //   ))
+                //       .toList(),
+                // ),
+                    : const SizedBox.shrink(),
               ],
             ),
           ),
@@ -3097,7 +3145,11 @@ class _StaffListDotDateFormatter extends TextInputFormatter {
 
 class _CreateOrderDialog extends StatefulWidget {
   final String schoolId;
-  const _CreateOrderDialog({required this.schoolId});
+  final List<String> studentUuids;
+  const _CreateOrderDialog({
+    required this.schoolId,
+    this.studentUuids = const [],
+  });
 
   @override
   State<_CreateOrderDialog> createState() => _CreateOrderDialogState();
@@ -3114,263 +3166,186 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
     {'value': 'my_fair_card', 'label': 'My Fair Card'},
   ];
 
-  static const _cardForOptions = [
-    {'value': 'student_card', 'label': 'Student Card'},
-    {'value': 'parent_card', 'label': 'Parent Card'},
-    {'value': 'admit_card', 'label': 'Admit Card'},
-  ];
-
   String _selectedCardType = '';
-  final Set<String> _selectedCardFor = {'student_card', 'parent_card'};
+  bool _loading = false;
 
-  void _toggleCardFor(String value) {
-    setState(() {
-      if (_selectedCardFor.contains(value)) {
-        _selectedCardFor.remove(value);
-      } else {
-        _selectedCardFor.add(value);
+  Future<void> _submit(BuildContext context) async {
+    if (_selectedCardType.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Please select a card type'),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final cubit = context.read<StaffCorrectionCubit>();
+      await cubit.createStaffOrder(
+        schoolId: widget.schoolId,
+        cardType: _selectedCardType,
+        cardUsers: widget.studentUuids,
+      );
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        final state = cubit.state;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(state.sendOrderError ?? 'Order created successfully!'),
+          backgroundColor: state.sendOrderError != null ? Colors.red : AppTheme.btnColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
+        ));
       }
-    });
+    } catch (e) {
+      if (context.mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
+        ));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<CorrectionCubit, CorrectionState>(
-      listenWhen: (p, c) =>
-      p.createOrderLoading != c.createOrderLoading ||
-          p.createOrderSuccess != c.createOrderSuccess ||
-          p.createOrderError != c.createOrderError,
-      listener: (ctx, state) {
-        if (!state.createOrderLoading && state.createOrderSuccess) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: const Text('Order created successfully!'),
-            backgroundColor: AppTheme.btnColor,
-            behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
-        }
-        if (!state.createOrderLoading && state.createOrderError != null) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: Text(state.createOrderError!),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ));
-        }
-      },
-      builder: (context, state) => Dialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text('Create Order',
-                      style: MyStyles.boldText(
-                          size: 18, color: AppTheme.black_Color)),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: state.createOrderLoading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.close,
-                          color: Colors.white, size: 18),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──
+            Row(
+              children: [
+                Text('Create Order',
+                    style: MyStyles.boldText(size: 18, color: AppTheme.black_Color)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _loading ? null : () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              Text('Create Card Order For',
-                  style: MyStyles.mediumText(
-                      size: 13, color: AppTheme.black_Color)),
-              const SizedBox(height: 8),
-              Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedCardType,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: AppTheme.graySubTitleColor),
-                    style: MyStyles.regularText(
-                        size: 14, color: AppTheme.black_Color),
-                    items: _cardTypes
-                        .map((t) => DropdownMenuItem<String>(
-                      value: t['value']!,
-                      child: Text(t['label']!,
-                          style: MyStyles.regularText(
-                            size: 14,
-                            color: t['value']!.isEmpty
-                                ? AppTheme.graySubTitleColor
-                                : AppTheme.black_Color,
-                          )),
-                    ))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedCardType = v ?? ''),
+                    child: const Icon(Icons.close, color: Colors.white, size: 20),
                   ),
                 ),
+              ],
+            ),
+            const Divider(height: 24),
+            // ── Dropdown label ──
+            Text('Create Card Order For',
+                style: MyStyles.mediumText(size: 13, color: AppTheme.black_Color)),
+            const SizedBox(height: 10),
+            // ── Card type dropdown ──
+            Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(height: 16),
-              ..._cardForOptions.map((opt) {
-                final isSelected = _selectedCardFor.contains(opt['value']);
-                return GestureDetector(
-                  onTap: () => _toggleCardFor(opt['value']!),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCardType,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                      color: AppTheme.graySubTitleColor),
+                  style: MyStyles.regularText(size: 14, color: AppTheme.black_Color),
+                  items: _cardTypes
+                      .map((t) => DropdownMenuItem<String>(
+                    value: t['value']!,
+                    child: Text(t['label']!,
+                        style: MyStyles.regularText(
+                          size: 14,
+                          color: t['value']!.isEmpty
+                              ? AppTheme.graySubTitleColor
+                              : AppTheme.black_Color,
+                        )),
+                  ))
+                      .toList(),
+                  onChanged: _loading
+                      ? null
+                      : (v) => setState(() => _selectedCardType = v ?? ''),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // ── Buttons ──
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Cancel
+                GestureDetector(
+                  onTap: _loading ? null : () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFFF4E50)]),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppTheme.btnColor
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppTheme.btnColor
-                                  : Colors.grey.shade400,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: isSelected
-                              ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(opt['label']!,
-                            style: MyStyles.regularText(
-                                size: 14, color: AppTheme.black_Color)),
+                        const Icon(Icons.replay_rounded, size: 15, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text('Cancel',
+                            style: MyStyles.mediumText(size: 14, color: Colors.white)),
                       ],
                     ),
                   ),
-                );
-              }),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  GestureDetector(
-                    onTap: state.createOrderLoading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B6B),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.refresh,
-                              size: 14, color: Colors.white),
-                          const SizedBox(width: 6),
-                          Text('Cancel',
-                              style: MyStyles.mediumText(
-                                  size: 14, color: Colors.white)),
-                        ],
-                      ),
+                ),
+                const SizedBox(width: 12),
+                // Create
+                GestureDetector(
+                  onTap: _loading ? null : () => _submit(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: _loading
+                          ? null
+                          : const LinearGradient(
+                          colors: [Color(0xFF6C63FF), Color(0xFF3B2FBF)]),
+                      color: _loading ? Colors.grey : null,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                        : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_circle_outline,
+                            size: 15, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text('Create',
+                            style: MyStyles.mediumText(
+                                size: 14, color: Colors.white)),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: state.createOrderLoading
-                        ? null
-                        : () {
-                      if (_selectedCardType.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content:
-                          const Text('Please select a card type'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      if (_selectedCardFor.isEmpty) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select at least one card for option'),
-                          backgroundColor: Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          margin: const EdgeInsets.all(12),
-                        ));
-                        return;
-                      }
-                      context.read<CorrectionCubit>().createOrder(
-                        schoolId: widget.schoolId,
-                        cardType: _selectedCardType,
-                        cardFor: _selectedCardFor.toList(),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: state.createOrderLoading
-                            ? Colors.grey
-                            : const Color(0xFF6C63FF),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: state.createOrderLoading
-                          ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                          : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.add_circle_outline,
-                              size: 14, color: Colors.white),
-                          const SizedBox(width: 6),
-                          Text('Create',
-                              style: MyStyles.mediumText(
-                                  size: 14, color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
