@@ -8,7 +8,8 @@ import 'package:idmitra/providers/home/home_cubit.dart';
 import 'package:idmitra/screens/dashboard/home.dart';
 // import 'package:idmitra/screens/dashboard/reports.dart';
 import 'package:idmitra/screens/dashboard/users/users.dart';
-
+import 'package:idmitra/screens/dashboard/setting.dart';
+import 'package:idmitra/screens/home/student_list.dart';
 
 class Dashboard extends StatefulWidget {
   int index;

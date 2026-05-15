@@ -3,9 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
-import 'package:idmitra/db_helper.dart';
 import 'package:idmitra/models/student_form/StudentFormFieldsModel.dart';
-import 'package:sqflite/sqflite.dart';
 
 class StaffRole {
   final int id;
@@ -27,9 +25,9 @@ class StaffFormState {
   final List<StudentFormField> fields;
   final List<StudentFormField> availableFields;
   final List<StaffRole> roles;
+  final String schoolName;
   final String? error;
   final String? successMessage;
-  final String schoolName;
 
   const StaffFormState({
     this.loading = false,
@@ -37,9 +35,9 @@ class StaffFormState {
     this.fields = const [],
     this.availableFields = const [],
     this.roles = const [],
+    this.schoolName = '',
     this.error,
     this.successMessage,
-    this.schoolName = '',
   });
 
   StaffFormState copyWith({
@@ -48,22 +46,210 @@ class StaffFormState {
     List<StudentFormField>? fields,
     List<StudentFormField>? availableFields,
     List<StaffRole>? roles,
+    String? schoolName,
     String? error,
     String? successMessage,
-    String? schoolName,
-    bool clearError = false,
-    bool clearSuccess = false,
-  }) => StaffFormState(
-    loading: loading ?? this.loading,
-    saving: saving ?? this.saving,
-    fields: fields ?? this.fields,
-    availableFields: availableFields ?? this.availableFields,
-    roles: roles ?? this.roles,
-    error: clearError ? null : (error ?? this.error),
-    successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
-    schoolName: schoolName ?? this.schoolName,
-  );
+  }) =>
+      StaffFormState(
+        loading: loading ?? this.loading,
+        saving: saving ?? this.saving,
+        fields: fields ?? this.fields,
+        availableFields: availableFields ?? this.availableFields,
+        roles: roles ?? this.roles,
+        schoolName: schoolName ?? this.schoolName,
+        error: error,
+        successMessage: successMessage,
+      );
 }
+
+const List<Map<String, dynamic>> _kAllAvailableStaffFields = [
+  {
+    'name': 'designation',
+    'label': 'Designation',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 1,
+  },
+  {
+    'name': 'department',
+    'label': 'Department',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 2,
+  },
+  {
+    'name': 'name',
+    'label': 'Name',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': true,
+    'order': 3,
+  },
+  {
+    'name': 'phone',
+    'label': 'Phone',
+    'type': 'phone',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': true,
+    'order': 4,
+  },
+  {
+    'name': 'email',
+    'label': 'Email',
+    'type': 'email',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 5,
+  },
+  {
+    'name': 'role',
+    'label': 'Role',
+    'type': 'select',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': true,
+    'order': 6,
+  },
+  {
+    'name': 'password',
+    'label': 'Password',
+    'type': 'password',
+    'group': 'login',
+    'group_label': 'Login Details',
+    'required': false,
+    'order': 7,
+  },
+  {
+    'name': 'password_confirmation',
+    'label': 'Confirm Password',
+    'type': 'password',
+    'group': 'login',
+    'group_label': 'Login Details',
+    'required': false,
+    'order': 8,
+  },
+  {
+    'name': 'whatsapp_phone',
+    'label': 'WhatsApp Phone',
+    'type': 'phone',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 9,
+  },
+  {
+    'name': 'date_of_birth',
+    'label': 'Date of Birth',
+    'type': 'date',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 10,
+  },
+  {
+    'name': 'date_of_joining',
+    'label': 'Date of Joining',
+    'type': 'date',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 11,
+  },
+  {
+    'name': 'gender',
+    'label': 'Gender',
+    'type': 'select',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 12,
+  },
+  {
+    'name': 'blood_group',
+    'label': 'Blood Group',
+    'type': 'select',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 13,
+  },
+  {
+    'name': 'address',
+    'label': 'Address',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 14,
+  },
+  {
+    'name': 'pincode',
+    'label': 'Pincode',
+    'type': 'digits',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 15,
+  },
+  {
+    'name': 'employee_id',
+    'label': 'Employee ID',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 16,
+  },
+  {
+    'name': 'national_code',
+    'label': 'National Code',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Staff Details',
+    'required': false,
+    'order': 17,
+  },
+  {
+    'name': 'father_name',
+    'label': 'Father Name',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Personal Details',
+    'required': false,
+    'order': 18,
+  },
+  {
+    'name': 'mother_name',
+    'label': 'Mother Name',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Personal Details',
+    'required': false,
+    'order': 19,
+  },
+  {
+    'name': 'husband_name',
+    'label': 'Husband Name',
+    'type': 'text',
+    'group': 'staff',
+    'group_label': 'Personal Details',
+    'required': false,
+    'order': 20,
+  },
+
+];
+
+List<StudentFormField> get _masterAvailableStaffFields =>
+    _kAllAvailableStaffFields
+        .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
 
 class StaffFormCubit extends Cubit<StaffFormState> {
   StaffFormCubit() : super(const StaffFormState());
@@ -71,141 +257,93 @@ class StaffFormCubit extends Cubit<StaffFormState> {
   String _schoolId = '';
 
   void clearMessages() {
-    emit(state.copyWith(clearError: true, clearSuccess: true));
+    emit(StaffFormState(
+      loading: state.loading,
+      saving: state.saving,
+      fields: state.fields,
+      availableFields: state.availableFields,
+      roles: state.roles,
+      schoolName: state.schoolName,
+      error: null,
+      successMessage: null,
+    ));
   }
 
-  Future<void> loadFields(String schoolId) async {
+  Future<void> loadFields(String schoolId, {String schoolName = ''}) async {
     _schoolId = schoolId;
-    emit(state.copyWith(loading: true, clearError: true));
+    emit(state.copyWith(loading: true, error: null, schoolName: schoolName));
 
-    // Step 1: Try local DB first (instant)
-    final local = await _loadFromLocal(schoolId);
-    if (local != null) {
-      emit(state.copyWith(
-        loading: false,
-        fields: local.$1,
-        availableFields: local.$2,
-        roles: local.$3,
-      ));
-      // Background sync
-      _syncFromApi(schoolId);
-      return;
-    }
-
-    // Step 2: No local data — fetch from API
-    await _syncFromApi(schoolId, emitStates: true);
-  }
-
-  /// Load staff form fields + roles from local DB
-  Future<(List<StudentFormField>, List<StudentFormField>, List<StaffRole>)?> _loadFromLocal(String schoolId) async {
-    try {
-      final db = await DBHelper.db;
-      final rows = await db.query(
-        'school_form_fields',
-        where: 'school_id = ?',
-        whereArgs: ['staff_$schoolId'],
-        limit: 1,
-      );
-      if (rows.isEmpty) return null;
-
-      final row = rows.first;
-      final rawFields = jsonDecode(row['fields_json'] as String? ?? '[]') as List;
-      final rawAvailable = jsonDecode(row['available_fields_json'] as String? ?? '[]') as List;
-      final rawRoles = jsonDecode(row['roles_json'] as String? ?? '[]') as List;
-
-      final fields = rawFields
-          .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-      final available = rawAvailable.isNotEmpty
-          ? rawAvailable.map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e))).toList()
-          : fields;
-      final roles = rawRoles
-          .map((e) => StaffRole.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-
-      print('[StaffForm] Loaded from local DB — fields: ${fields.length}, roles: ${roles.length}');
-      return (fields, available, roles);
-    } catch (e) {
-      print('[StaffForm] Local load error: $e');
-      return null;
-    }
-  }
-
-  /// Fetch from API and save to local DB
-  Future<void> _syncFromApi(String schoolId, {bool emitStates = false}) async {
     try {
       final token = await UserSecureStorage.fetchToken();
-      final role = await UserSecureStorage.fetchRole();
-      final isPartner = role == 'partner';
-
-      print('[StaffForm] Syncing from API — schoolId: $schoolId, isPartner: $isPartner');
-
       final headers = {
         'Authorization': 'Bearer $token',
         'Accept': 'application/json',
       };
 
-      List<StudentFormField> fields = [];
-      List<StudentFormField> availableFields = [];
-      List<StaffRole> roles = [];
+      final fieldsUrl =
+          '${Config.baseUrl}auth/school/$schoolId/form-fields/staff';
+      print('Staff Fields Api Url: $fieldsUrl');
 
-      // Fetch staff form fields
-      final fieldsUrl = Config.url(Routes.getStaffFormFields(schoolId, isPartner: isPartner));
-      print('[StaffForm] Fields URL: $fieldsUrl');
+      final fieldsResp =
+      await http.get(Uri.parse(fieldsUrl), headers: headers);
+      print('STAFF FIELDS API STATUS: ${fieldsResp.statusCode}');
+      print('STAFF FIELDS BODY: ${fieldsResp.body}');
 
-      try {
-        final fieldsResp = await http.get(Uri.parse(fieldsUrl), headers: headers);
-        print('[StaffForm] Fields status: ${fieldsResp.statusCode}');
-
-        if (fieldsResp.statusCode == 200) {
-          final fJson = jsonDecode(fieldsResp.body);
-          final formData = _extractFormFieldsData(fJson);
-
-          if (formData != null) {
-            final List currentFields = formData['staff_form_fields'] ?? [];
-            final List availableFieldsList = formData['available_staff_form_fields'] ?? [];
-
-            fields = currentFields
-                .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
-                .toList();
-            availableFields = availableFieldsList
-                .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
-                .toList();
-          }
-        }
-      } catch (e) {
-        print('[StaffForm] Fields API error: $e');
-        if (isPartner && emitStates) {
-          fields = _partnerDefaultFields();
-          availableFields = List.from(fields);
-        }
+      if (fieldsResp.statusCode != 200) {
+        emit(state.copyWith(
+          loading: false,
+          error: 'Failed to load staff form fields (${fieldsResp.statusCode})',
+        ));
+        return;
       }
 
-      // Fetch roles
+      final json = jsonDecode(fieldsResp.body);
+      final data = json['data'] ?? {};
+
+      final List rawFields = data['fields'] ?? [];
+      final fields = rawFields
+          .map((e) =>
+          StudentFormField.fromJson(Map<String, dynamic>.from(e)))
+          .toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+
+      final List rawAvailable =
+          data['available_fields'] ?? data['available_staff_form_fields'] ?? [];
+
+      final availableFields = rawAvailable.isNotEmpty
+          ? (rawAvailable
+          .map((e) =>
+          StudentFormField.fromJson(Map<String, dynamic>.from(e)))
+          .toList()
+        ..sort((a, b) => a.order.compareTo(b.order)))
+          : _masterAvailableStaffFields; // ← static fallback
+
+      List<StaffRole> roles = [];
+      final role = await UserSecureStorage.fetchRole();
+      final isPartner = role == 'partner';
+
       final rolesUrls = [
         Config.url(Routes.getStaffRoles(schoolId, isPartner: isPartner)),
         Config.url(Routes.getStaffRoles(schoolId, isPartner: !isPartner)),
       ];
 
       for (final rolesUrl in rolesUrls) {
+        print('=== ROLES API URL: $rolesUrl');
         try {
-          final rolesResp = await http.get(Uri.parse(rolesUrl), headers: headers);
+          final rolesResp =
+          await http.get(Uri.parse(rolesUrl), headers: headers);
           if (rolesResp.statusCode == 200) {
             final rJson = jsonDecode(rolesResp.body);
-            List rawRoles = _extractRolesList(rJson);
+            final rawRoles = _extractRolesList(rJson);
             roles = rawRoles
-                .map((e) => StaffRole.fromJson(Map<String, dynamic>.from(e)))
+                .map((e) =>
+                StaffRole.fromJson(Map<String, dynamic>.from(e)))
                 .toList();
             if (roles.isNotEmpty) break;
           }
         } catch (e) {
-          print('[StaffForm] Roles API error: $e');
+          print('Roles fetch error: $e');
         }
-      }
-
-      // Save to local DB
-      if (fields.isNotEmpty || roles.isNotEmpty) {
-        await _saveToLocal(schoolId, fields, availableFields, roles);
       }
 
       emit(state.copyWith(
@@ -215,97 +353,63 @@ class StaffFormCubit extends Cubit<StaffFormState> {
         roles: roles,
       ));
     } catch (e) {
-      print('[StaffForm] Sync error: $e');
-      if (emitStates) {
-        emit(state.copyWith(loading: false, error: e.toString()));
-      }
+      print('STAFF FIELDS EXCEPTION: $e');
+      emit(state.copyWith(loading: false, error: e.toString()));
     }
   }
 
-  /// Save staff form fields + roles to local DB
-  Future<void> _saveToLocal(
-      String schoolId,
-      List<StudentFormField> fields,
-      List<StudentFormField> availableFields,
-      List<StaffRole> roles,
-      ) async {
+  Future<void> updateStaffFormFields(
+      List<StudentFormField> updatedFields) async {
+    emit(state.copyWith(saving: true, error: null, successMessage: null));
+
     try {
-      final db = await DBHelper.db;
+      final token = await UserSecureStorage.fetchToken();
+      final url =
+          '${Config.baseUrl}auth/school/$_schoolId/form-fields/staff';
+      print('UPDATE STAFF FORM FIELDS URL: $url');
 
-      final fieldsJson = jsonEncode(fields.map((f) => {
-        'name': f.name, 'label': f.label, 'type': f.type,
-        'group': f.group, 'group_label': f.groupLabel,
-        'required': f.required, 'order': f.order,
-      }).toList());
-
-      final availableJson = jsonEncode(availableFields.map((f) => {
-        'name': f.name, 'label': f.label, 'type': f.type,
-        'group': f.group, 'group_label': f.groupLabel,
-        'required': f.required, 'order': f.order,
-      }).toList());
-
-      final rolesJson = jsonEncode(roles.map((r) => {
-        'id': r.id, 'uuid': r.uuid, 'name': r.name,
-      }).toList());
-
-      await db.insert(
-        'school_form_fields',
-        {
-          'school_id': 'staff_$schoolId',
-          'fields_json': fieldsJson,
-          'available_fields_json': availableJson,
-          'roles_json': rolesJson,
-          'updated_at': DateTime.now().millisecondsSinceEpoch,
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        body: jsonEncode({
+          'fields': updatedFields
+              .map((f) => {
+            'name': f.name,
+            'label': f.label,
+            'group': f.group,
+            'group_label': f.groupLabel,
+            'type': f.type,
+            'required': f.required,
+            'order': f.order,
+          })
+              .toList(),
+        }),
       );
-      print('[StaffForm] Saved to local DB — school: $schoolId');
+
+      print(
+          'UPDATE STAFF RESPONSE: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        emit(state.copyWith(
+          saving: false,
+          successMessage:
+          json['message'] ?? 'Staff form fields updated successfully',
+          fields: updatedFields,
+        ));
+      } else {
+        emit(state.copyWith(
+          saving: false,
+          error: 'Update failed: ${response.statusCode}',
+        ));
+      }
     } catch (e) {
-      print('[StaffForm] Local save error: $e');
-    }
-  }
-
-  Future<void> updateStaffFormFields(List<StudentFormField> updatedFields) async {
-    emit(state.copyWith(saving: true, clearError: true, clearSuccess: true));
-
-    final token = await UserSecureStorage.fetchToken();
-    final url = Config.url('auth/school/$_schoolId/form-fields/staff');
-    print('Update Staff URL: $url');
-
-    final response = await http.put(
-      Uri.parse(url),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
-        'fields': updatedFields
-            .map((f) => {
-          'name': f.name,
-          'label': f.label,
-          'group': f.group,
-          'group_label': f.groupLabel,
-          'type': f.type,
-          'required': f.required,
-          'order': f.order,
-        })
-            .toList(),
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      emit(state.copyWith(
-        saving: false,
-        successMessage: json['message'] ?? 'Staff form fields updated successfully',
-        fields: updatedFields,
-      ));
-    } else {
-      emit(state.copyWith(
-        saving: false,
-        error: 'Update failed: ${response.statusCode}',
-      ));
+      print('UPDATE STAFF EXCEPTION: $e');
+      emit(state.copyWith(saving: false, error: e.toString()));
     }
   }
 
@@ -317,123 +421,19 @@ class StaffFormCubit extends Cubit<StaffFormState> {
       final val = json[key];
       if (val is List && val.isNotEmpty) return val;
       if (val is Map) {
-        for (final innerKey in ['data', 'roles', 'items', 'result', 'results', 'list']) {
+        for (final innerKey in [
+          'data',
+          'roles',
+          'items',
+          'result',
+          'results',
+          'list'
+        ]) {
           final inner = val[innerKey];
           if (inner is List && inner.isNotEmpty) return inner;
         }
       }
     }
     return [];
-  }
-
-  Map<String, dynamic>? _extractFormFieldsData(dynamic json) {
-    if (json == null) return null;
-    if (json is! Map) return null;
-
-    // Check for nested data structures
-    if (json.containsKey('props')) {
-      final props = json['props'];
-      if (props is Map && props.containsKey('school')) {
-        return Map<String, dynamic>.from(props['school']);
-      }
-    }
-
-    if (json.containsKey('data')) {
-      final data = json['data'];
-      if (data is Map) {
-        // API returns "fields" key, we need to map it to expected structure
-        if (data.containsKey('fields')) {
-          return {
-            'staff_form_fields': data['fields'],
-            'available_staff_form_fields': data['fields'], // Same fields for available
-          };
-        }
-        return Map<String, dynamic>.from(data);
-      }
-    }
-
-    // Return the json itself if it contains the expected fields
-    if (json.containsKey('staff_form_fields') || json.containsKey('available_staff_form_fields')) {
-      return Map<String, dynamic>.from(json);
-    }
-
-    return null;
-  }
-
-  List<StudentFormField> _partnerDefaultFields() {
-    return [
-      StudentFormField(
-        name: 'designation',
-        label: 'Designation',
-        type: 'text',
-        required: false,
-        order: 1,
-        group: 'staff_details',
-        groupLabel: 'Staff Details',
-      ),
-      StudentFormField(
-        name: 'department',
-        label: 'Department',
-        type: 'text',
-        required: false,
-        order: 2,
-        group: 'staff_details',
-        groupLabel: 'Staff Details',
-      ),
-      StudentFormField(
-        name: 'name',
-        label: 'Name',
-        type: 'text',
-        required: true,
-        order: 3,
-        group: 'staff_details',
-        groupLabel: 'Staff Details',
-      ),
-      StudentFormField(
-        name: 'phone',
-        label: 'Phone',
-        type: 'phone',
-        required: true,
-        order: 4,
-        group: 'staff_details',
-        groupLabel: 'Staff Details',
-      ),
-      StudentFormField(
-        name: 'email',
-        label: 'Email',
-        type: 'email',
-        required: false,
-        order: 5,
-        group: 'staff_details',
-        groupLabel: 'Staff Details',
-      ),
-      StudentFormField(
-        name: 'role',
-        label: 'Role',
-        type: 'select',
-        required: true,
-        order: 6,
-        group: 'staff_details',
-        groupLabel: 'Staff Details',
-      ),
-      StudentFormField(
-        name: 'password',
-        label: 'Password',
-        type: 'password',
-        required: false,
-        order: 7,
-        group: 'login_details',
-        groupLabel: 'Login Details',
-      ),
-      StudentFormField(
-        name: 'password_confirmation',
-        label: 'Confirm Password',
-        type: 'password',
-        required: false,
-        order: 8,
-        group: 'login_details',
-        groupLabel: 'Login Details',
-      ),
-    ];
   }
 }

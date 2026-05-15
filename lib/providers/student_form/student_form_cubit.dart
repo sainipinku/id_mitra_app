@@ -4,9 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
-import 'package:idmitra/db_helper.dart';
 import 'package:idmitra/models/student_form/StudentFormFieldsModel.dart';
-import 'package:sqflite/sqflite.dart';
 
 part 'student_form_state.dart';
 
@@ -257,20 +255,8 @@ const List<Map<String, dynamic>> _kCoreFields = [
 List<StudentFormField> _ensureCoreFields(List<StudentFormField> fields) {
   final result = List<StudentFormField>.from(fields);
 
-  if (!result.any((f) => f.name == 'class_section')) {
-    final classIndex = result.indexWhere((f) => f.name == 'class');
-    final sectionField = StudentFormField.fromJson(
-      Map<String, dynamic>.from(
-        _kCoreFields.firstWhere((c) => c['name'] == 'class_section'),
-      ),
-    );
-    if (classIndex >= 0) {
-      result.insert(classIndex + 1, sectionField);
-    } else {
-      result.add(sectionField);
-    }
-  }
-
+  // class_section is NOT injected by default — it only shows if the API returns it
+  // Only ensure student_name, session, and class are present
   for (final core in _kCoreFields.where((c) => c['name'] != 'class_section')) {
     final name = core['name'] as String;
     if (!result.any((f) => f.name == name)) {
@@ -311,144 +297,44 @@ class StudentFormCubit extends Cubit<StudentFormState> {
     _schoolId = schoolId;
     emit(state.copyWith(loading: true, error: null, successMessage: null));
 
-    // Step 1: Try local DB first (instant load)
-    final localFields = await _loadFieldsFromLocal(schoolId);
-    if (localFields != null) {
-      emit(state.copyWith(
-        loading: false,
-        fields: _ensureCoreFields(localFields.$1),
-        availableFields: localFields.$2,
-        schoolName: schoolName,
-      ));
-      // Background sync
-      _syncFieldsFromApi(schoolId, schoolName);
-      return;
-    }
+    final token = await UserSecureStorage.fetchToken();
+    final formFieldsUrl = '${Config.baseUrl}auth/school/$schoolId/form-fields';
+    print('Form fields URL: $formFieldsUrl');
+    final response = await http.get(
+      Uri.parse(formFieldsUrl),
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+    );
 
-    // Step 2: No local data — fetch from API
-    await _syncFieldsFromApi(schoolId, schoolName, emitStates: true);
-  }
+    print('Form fields API: ${response.statusCode}');
 
-  /// Load form fields from local DB
-  Future<(List<StudentFormField>, List<StudentFormField>)?> _loadFieldsFromLocal(String schoolId) async {
-    try {
-      final db = await DBHelper.db;
-      final rows = await db.query(
-        'school_form_fields',
-        where: 'school_id = ?',
-        whereArgs: [schoolId],
-        limit: 1,
-      );
-      if (rows.isEmpty) return null;
-
-      final row = rows.first;
-      final rawFields = jsonDecode(row['fields_json'] as String? ?? '[]') as List;
-      final rawAvailable = jsonDecode(row['available_fields_json'] as String? ?? '[]') as List;
-
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final data = json['data'] ?? {};
+      final List rawFields = data['student_form_fields'] ?? [];
       final fields = rawFields
           .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
           .toList();
-      final available = rawAvailable.isNotEmpty
-          ? rawAvailable.map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e))).toList()
+
+      final List rawAvailable = data['available_student_form_fields'] ?? [];
+      final availableFields = rawAvailable.isNotEmpty
+          ? rawAvailable
+                .map(
+                  (e) =>
+                      StudentFormField.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList()
           : _masterAvailableFields;
 
-      print('[FormFields] Loaded from local DB — fields: ${fields.length}');
-      return (fields, available);
-    } catch (e) {
-      print('[FormFields] Local load error: $e');
-      return null;
-    }
-  }
-
-  /// Fetch form fields from API and save to local DB
-  Future<void> _syncFieldsFromApi(String schoolId, String schoolName, {bool emitStates = false}) async {
-    try {
-      final token = await UserSecureStorage.fetchToken();
-      final formFieldsUrl = '${Config.baseUrl}auth/school/$schoolId/form-fields';
-      print('[FormFields] API URL: $formFieldsUrl');
-
-      final response = await http.get(
-        Uri.parse(formFieldsUrl),
-        headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
-      );
-
-      print('[FormFields] API status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        final data = json['data'] ?? {};
-        final List rawFields = data['student_form_fields'] ?? [];
-        final fields = rawFields
-            .map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-
-        final List rawAvailable = data['available_student_form_fields'] ?? [];
-        final availableFields = rawAvailable.isNotEmpty
-            ? rawAvailable.map((e) => StudentFormField.fromJson(Map<String, dynamic>.from(e))).toList()
-            : _masterAvailableFields;
-
-        // Save to local DB
-        await _saveFieldsToLocal(schoolId, fields, availableFields);
-
-        emit(state.copyWith(
+      emit(
+        state.copyWith(
           loading: false,
           fields: _ensureCoreFields(fields),
           availableFields: availableFields,
           schoolName: schoolName,
-        ));
-      } else {
-        if (emitStates) {
-          emit(state.copyWith(loading: false, error: 'Failed to load form fields'));
-        }
-      }
-    } catch (e) {
-      print('[FormFields] API sync error: $e');
-      if (emitStates) {
-        emit(state.copyWith(loading: false, error: e.toString()));
-      }
-    }
-  }
-
-  /// Save form fields to local DB
-  Future<void> _saveFieldsToLocal(
-    String schoolId,
-    List<StudentFormField> fields,
-    List<StudentFormField> availableFields,
-  ) async {
-    try {
-      final db = await DBHelper.db;
-      final fieldsJson = jsonEncode(fields.map((f) => {
-        'name': f.name,
-        'label': f.label,
-        'type': f.type,
-        'group': f.group,
-        'group_label': f.groupLabel,
-        'required': f.required,
-        'order': f.order,
-      }).toList());
-      final availableJson = jsonEncode(availableFields.map((f) => {
-        'name': f.name,
-        'label': f.label,
-        'type': f.type,
-        'group': f.group,
-        'group_label': f.groupLabel,
-        'required': f.required,
-        'order': f.order,
-      }).toList());
-
-      await db.insert(
-        'school_form_fields',
-        {
-          'school_id': schoolId,
-          'fields_json': fieldsJson,
-          'available_fields_json': availableJson,
-          'updated_at': DateTime.now().millisecondsSinceEpoch,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        ),
       );
-      print('[FormFields] Saved to local DB — school: $schoolId');
-    } catch (e) {
-      print('[FormFields] Local save error: $e');
+    } else {
+      emit(state.copyWith(loading: false, error: 'Failed to load form fields'));
     }
   }
 

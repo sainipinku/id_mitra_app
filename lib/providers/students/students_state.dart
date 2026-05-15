@@ -7,8 +7,9 @@ class StudentsState {
   final List<StudentDetailsData> studentsList;
   final int page;
   final bool hasMore;
+  final int total;
   final String? error;
-  final bool isSyncing;
+
   // Extra (moved) students
   final bool extraLoading;
   final List<StudentDetailsData> extraStudentsList;
@@ -24,8 +25,8 @@ class StudentsState {
     this.studentsList = const [],
     this.page = 1,
     this.hasMore = true,
+    this.total = 0,
     this.error,
-    this.isSyncing = false,
     this.extraLoading = false,
     this.extraStudentsList = const [],
     this.selectedClassId = "",
@@ -39,8 +40,8 @@ class StudentsState {
     List<StudentDetailsData>? studentsList,
     int? page,
     bool? hasMore,
+    int? total,
     String? error,
-    bool? isSyncing,
     bool? extraLoading,
     List<StudentDetailsData>? extraStudentsList,
     String? selectedClassId,
@@ -53,8 +54,8 @@ class StudentsState {
       studentsList: studentsList ?? this.studentsList,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
+      total: total ?? this.total,
       error: error ?? this.error,
-      isSyncing: isSyncing ?? this.isSyncing,
       extraLoading: extraLoading ?? this.extraLoading,
       extraStudentsList: extraStudentsList ?? this.extraStudentsList,
       selectedClassId: selectedClassId ?? this.selectedClassId,
