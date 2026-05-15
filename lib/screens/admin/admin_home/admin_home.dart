@@ -16,15 +16,13 @@ import 'package:idmitra/utils/MyStyles.dart';
 
 import '../../../models/schools/SchoolListModel.dart';
 import '../../staff/staff_student_list/add_staff_form.dart';
-import '../attendance/attendance_screen.dart';
-import '../holidays/holidays_screen.dart';
 
 class AdminHome extends StatelessWidget {
   final VoidCallback? onStudentAdded;
   final VoidCallback? onStudentsTap;
   final VoidCallback? onStaffTap;
   SchoolDetailsModel? schoolDetailsModel;
-  AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
+   AdminHome({super.key, this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +36,7 @@ class _AdminHomeView extends StatelessWidget {
   final VoidCallback? onStaffTap;
   SchoolDetailsModel? schoolDetailsModel;
 
-  _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
+   _AdminHomeView({this.onStudentAdded, this.onStudentsTap, this.onStaffTap,this.schoolDetailsModel});
 
   @override
   Widget build(BuildContext context) {
@@ -136,8 +134,7 @@ class _AdminHomeView extends StatelessWidget {
 
                 if (data != null) _AttendanceCard(attendance: data.attendance),
                 const SizedBox(height: 20),
-                _HolidaysTile(),
-                const SizedBox(height: 20),
+
                 Text(
                   "Quick Actions",
                   style: MyStyles.boldTxt(AppTheme.black_Color, 16),
@@ -224,88 +221,82 @@ class _AttendanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final school = await UserLocal.getSchool();
-        final schoolId = school['schoolId']?.toString() ?? '';
-        if (!context.mounted || schoolId.isEmpty) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AttendanceScreen(schoolId: schoolId),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.how_to_reg_outlined,
+                color: AppTheme.btnColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Today's Attendance",
+                style: MyStyles.boldTxt(AppTheme.black_Color, 15),
+              ),
+              const Spacer(),
+              if (attendance.attendanceDate.isNotEmpty)
+                Text(
+                  attendance.attendanceDate,
+                  style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11),
+                ),
+            ],
           ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          const SizedBox(height: 12),
+          if (!attendance.hasAttendance)
             Row(
               children: [
-                Icon(
-                  Icons.how_to_reg_outlined,
-                  color: AppTheme.btnColor,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "Today's Attendance",
-                  style: MyStyles.boldTxt(AppTheme.black_Color, 15),
-                ),
-                const Spacer(),
-                if (attendance.attendanceDate.isNotEmpty)
-                  Text(
-                    attendance.attendanceDate,
-                    style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 11),
-                  ),
+                const Icon(Icons.info_outline, size: 16, color: Colors.orange),
                 const SizedBox(width: 6),
-                Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.graySubTitleColor),
+                Expanded(
+                  child: Text(
+                    attendance.message,
+                    style: MyStyles.regularTxt(Colors.orange, 13),
+                  ),
+                ),
               ],
+            )
+          else ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: attendance.attendancePercentage / 100,
+                minHeight: 8,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  attendance.attendancePercentage >= 75
+                      ? Colors.green
+                      : Colors.orange,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${attendance.attendancePercentage.toStringAsFixed(1)}% attendance',
+              style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
             ),
             const SizedBox(height: 12),
-            if (!attendance.hasAttendance)
-              Row(
-                children: [
-                  const Icon(Icons.info_outline, size: 16, color: Colors.orange),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      attendance.message,
-                      style: MyStyles.regularTxt(Colors.orange, 13),
-                    ),
-                  ),
-                ],
-              )
-            else ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: attendance.attendancePercentage / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    attendance.attendancePercentage >= 75
-                        ? Colors.green
-                        : Colors.orange,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${attendance.attendancePercentage.toStringAsFixed(1)}% attendance',
-                style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
-              ),
-            ],
+            Row(
+              children: [
+                _AttStat('Present', attendance.present, Colors.green),
+                _AttStat('Absent', attendance.absent, Colors.red),
+                _AttStat('Late', attendance.late, Colors.orange),
+                _AttStat('Leave', attendance.leave, Colors.blue),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -348,8 +339,8 @@ class _QuickActions extends StatelessWidget {
           providers: [
             BlocProvider(
               create: (_) =>
-              StudentFormCubit()
-                ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
+                  StudentFormCubit()
+                    ..loadFromSchoolId(schoolId: schoolId, schoolName: ''),
             ),
             BlocProvider(create: (_) => StudentFormDataCubit()..load(schoolId)),
             BlocProvider(create: (_) => AddStudentCubit()),
@@ -453,56 +444,3 @@ class _ActionTile extends StatelessWidget {
     );
   }
 }
-class _HolidaysTile extends StatelessWidget {
-  const _HolidaysTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final school = await UserLocal.getSchool();
-        final schoolId = school['schoolId']?.toString() ?? '';
-        if (!context.mounted || schoolId.isEmpty) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => HolidaysScreen(schoolId: schoolId)),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
-          ],
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: AppTheme.btnColor.withOpacity(0.12),
-              child: Icon(Icons.calendar_month, color: AppTheme.btnColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Holidays', style: MyStyles.boldTxt(AppTheme.black_Color, 15)),
-                  Text(
-                    'View & manage school holidays',
-                    style: MyStyles.regularTxt(AppTheme.graySubTitleColor, 12),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.graySubTitleColor),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-

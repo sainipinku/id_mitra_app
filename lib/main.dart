@@ -20,6 +20,10 @@ void main() async{
 
   MaintenanceService.instance.init(Config.proBaseUrl);
 
+  await MaintenanceService.instance.checkOnStartup();
+
+  // NoInternetService will be initialized after MaterialApp is built
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.white,
@@ -43,9 +47,9 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    // Initialize NoInternetService after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NoInternetService.instance.init();
-      MaintenanceService.instance.checkOnStartup();
     });
   }
 

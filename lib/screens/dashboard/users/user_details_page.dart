@@ -9,7 +9,6 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/screens/edit_profile/student_form.dart';
 import 'package:idmitra/screens/home/student_list.dart';
 import 'package:idmitra/screens/orders/orders_page.dart';
-import 'package:idmitra/screens/staff/staff_student_list/staff_student_list.dart';
 import 'package:idmitra/utils/navigation_utils.dart';
 import '../../edit_profile/image_setting.dart';
 import '../../staff/staff_student_list/staff_list.dart';
@@ -251,9 +250,7 @@ class _UserDetailsContent extends StatelessWidget {
                     value: "${schoolDetailsModel?.staffCount ?? ''}",
                     callBtn: () => navigateWithTransition(
                       context: context,
-                      page: StaffListingPage(
-                        schoolId: schoolDetailsModel?.id.toString() ?? '',
-                        schoolDetailsModel: schoolDetailsModel,),
+                      page: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
                     ),
                   ),
                   // statCard(

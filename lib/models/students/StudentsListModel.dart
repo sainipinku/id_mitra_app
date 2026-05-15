@@ -296,8 +296,6 @@ class StudentDetailsData {
     dynamic motherEmail,
     dynamic motherWphone,
     dynamic fatherWphoneNew,
-    dynamic schoolClassId,
-    dynamic schoolClassSectionId,
   }) {
     return StudentDetailsData(
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
@@ -337,14 +335,14 @@ class StudentDetailsData {
       // unchanged fields:
       id: id,
       uuid: uuid,
-      schoolId: this.schoolId,
+      schoolId: schoolId,
       photo: photo,
       signature: signature,
       barcodePhoto: barcodePhoto,
       dobTimestamp: dobTimestamp,
-      schoolClassId: schoolClassId ?? this.schoolClassId,
+      schoolClassId: schoolClassId,
       schoolSessionId: schoolSessionId,
-      schoolClassSectionId: schoolClassSectionId ?? this.schoolClassSectionId,
+      schoolClassSectionId: schoolClassSectionId,
       countryId: countryId,
       stateId: stateId,
       cityId: cityId,

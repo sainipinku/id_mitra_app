@@ -8,12 +8,7 @@ import 'package:idmitra/providers/orders/orders_state.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final String schoolId;
-  final List<int> allowedClassIds;
-  const FilterBottomSheet({
-    super.key,
-    required this.schoolId,
-    this.allowedClassIds = const [],
-  });
+  const FilterBottomSheet({super.key, required this.schoolId});
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -23,16 +18,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   final Set<String> _selectedClassIds = {};
   final Map<String, String> _selectedClassNames = {};
   String? selectedGender;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final cubit = context.read<OrdersCubit>();
-      // Always fetch fresh — school may have changed
-      cubit.fetchSchoolClasses(widget.schoolId);
-    });
-  }
 
   static const _classOrder = [
     'pre nursery', 'prenursery', 'pre-nursery',
@@ -157,32 +142,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     style: MyStyles.regularText(size: 13, color: AppTheme.graySubTitleColor),
                   );
                 }
-                final rawClasses = widget.allowedClassIds.isEmpty
-                    ? state.availableClasses
-                    : state.availableClasses
-                    .where((c) => widget.allowedClassIds.contains(c.classId))
-                    .toList();
-                final classes = _sorted(rawClasses);
-
-                if (classes.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset('assets/images/no_data.png', height: 120),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No assigned classes to filter',
-                            style: MyStyles.regularText(
-                                size: 13, color: AppTheme.graySubTitleColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+                final classes = _sorted(state.availableClasses);
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.35,
@@ -194,13 +154,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         Divider(height: 1, color: AppTheme.LineColor),
                     itemBuilder: (context, index) {
                       final cls = classes[index];
+                      final clsId = cls.classId.toString();
                       final clsName = cls.nameWithprefix ?? cls.name;
-                      final displayName = cls.sectionName.isNotEmpty
-                          ? '$clsName (${cls.sectionName})'
-                          : clsName;
-                      final clsKey = "${cls.classId}_${cls.sectionId}";
+                      final clsKey = "${cls.classId}_${cls.sectionIds}";
                       final isSelected = _selectedClassIds.contains(clsKey);
                       return InkWell(
+
+
                         onTap: () {
                           setState(() {
                             if (isSelected) {
@@ -208,7 +168,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                               _selectedClassNames.remove(clsKey);
                             } else {
                               _selectedClassIds.add(clsKey);
-                              _selectedClassNames[clsKey] = displayName;
+                              _selectedClassNames[clsKey] = cls.nameWithprefix ?? cls.name;
                             }
                           });
                         },
@@ -220,7 +180,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  displayName,
+                                  clsName,
                                   style: MyStyles.regularText(
                                     size: 14,
                                     color: isSelected
@@ -250,6 +210,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
             const SizedBox(height: 20),
 
+            // Buttons
             Row(
               children: [
                 Expanded(

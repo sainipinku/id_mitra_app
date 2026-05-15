@@ -1,4 +1,8 @@
+
+
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,14 +11,22 @@ import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
+import 'package:idmitra/local_db/student_local_ds/student_local_ds.dart';
+import 'package:idmitra/models/LoginModel.dart';
+import 'package:idmitra/models/LogoutModel.dart';
+import 'package:idmitra/models/home/PartnerDashboardModel.dart';
+import 'package:idmitra/models/home/UserDetailsModel.dart';
+import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
+import 'package:idmitra/providers/school/school_state.dart';
 import 'package:idmitra/providers/students/students_state.dart';
+
 
 class StudentsCubit extends Cubit<StudentsState> {
   StudentsCubit() : super(StudentsState());
 
   ApiManager apiManager = ApiManager();
-
+  final localDS = StudentLocalDS();
   void applyFilters({
     String classId = "",
     List<int> sectionIds = const [],
@@ -30,92 +42,106 @@ class StudentsCubit extends Cubit<StudentsState> {
     ));
 
     fetchStudents(
-      schoolId: schoolId,
       classId: classId,
       sectionIds: sectionIds,
       gender: gender,
     );
   }
-
   Future<void> fetchStudents({
-    bool isLoadMore = false,
     String search = "",
-    String schoolId = "",
     String gender = "",
     String classId = "",
     List<int> sectionIds = const [],
   }) async {
-    print('setionids-------------$sectionIds');
-    if (state.isPaginationLoading || (!state.hasMore && isLoadMore)) return;
 
-    int currentPage = isLoadMore ? state.page : 1;
-
-    if (!isLoadMore) {
-      emit(state.copyWith(
-        loading: true,
-        page: 1,
-        hasMore: true,
-      ));
-    } else {
-      emit(state.copyWith(isPaginationLoading: true));
-    }
+    emit(state.copyWith(loading: true));
 
     try {
-      final usedClassId = classId.isEmpty ? state.selectedClassId : classId;
-      final usedSectionIds = sectionIds.isEmpty ? state.selectedSectionIds : sectionIds;
-      final usedGender = gender.isEmpty ? state.selectedGender : gender;
+      final localList = await localDS.getStudents(
+        search: search,
+        gender: gender,
+        classId: classId,
+        sectionIds: sectionIds,
+      );
 
-      String url =
-          "${Config.baseUrl}auth/school/$schoolId"
-          "?perPage=10"
-          "&search=$search"
-          "&page=$currentPage"
-          "&gender=$usedGender"
-          "&class_filters=$usedClassId";
-
-      String sectionQuery = "";
-      if (usedSectionIds.isNotEmpty) {
-        sectionQuery = usedSectionIds
-            .asMap()
-            .entries
-            .map((entry) => "sectionsIds[${entry.key}]=${entry.value}")
-            .join("&");
-      }
-      if (sectionQuery.isNotEmpty) {
-        url += "&$sectionQuery";
-      }
-
-      final response = await apiManager.getRequest(url);
-      debugPrint("===== STUDENT LIST RESPONSE BODY =====");
-      debugPrint(response.body);
-      debugPrint("======================================");
-      final jsonData = jsonDecode(response.body);
-
-      List list = jsonData["data"]?["data"] ?? [];
-      final total = jsonData["data"]?["total"] ?? 0;
-
-      List<StudentDetailsData> newList =
-          list.map((e) => StudentDetailsData.fromJson(e)).toList();
-
-      List<StudentDetailsData> updatedList = isLoadMore
-          ? [...state.studentsList, ...newList]
-          : newList;
+      print("FULL LOCAL DATA: ${localList.length}");
 
       emit(state.copyWith(
         loading: false,
-        isPaginationLoading: false,
-        studentsList: updatedList,
-        page: currentPage + 1,
-        hasMore: updatedList.length < total,
-        total: isLoadMore ? state.total : (total as int),
+        studentsList: localList,
+        hasMore: false, // ❌ no pagination
+        page: 1,
       ));
     } catch (e) {
       emit(state.copyWith(
         loading: false,
-        isPaginationLoading: false,
+        error: e.toString(),
       ));
-      debugPrint("Fetch Error: $e");
     }
+  }
+  Future<void> syncAllStudents({
+    required String schoolId,
+    String search = "",
+    String gender = "",
+    String classId = "",
+    List<int> sectionIds = const [],
+  }) async {
+    /// 🔥 START LOADING
+    emit(state.copyWith(isSyncing: true));
+    await localDS.clearStudents(); // 🔥 MUST
+    int page = 1;
+    bool hasMore = true;
+
+    while (hasMore) {
+      String url =
+          "${Config.baseUrl}auth/school/$schoolId"
+          "?perPage=50"
+          "&search=$search"
+          "&page=$page"
+          "&gender=$gender"
+          "&class_filters=$classId";
+
+      if (sectionIds.isNotEmpty) {
+        url += "&" + sectionIds
+            .asMap()
+            .entries
+            .map((e) => "sectionsIds[${e.key}]=${e.value}")
+            .join("&");
+      }
+
+      try {
+        final response = await apiManager.getRequest(url);
+        final jsonData = jsonDecode(response.body);
+
+        List list = jsonData["data"]?["data"] ?? [];
+        int total = jsonData["data"]["total"] ?? 0;
+
+        List<StudentDetailsData> newList =
+        list.map((e) => StudentDetailsData.fromJson(e)).toList();
+
+        await localDS.insertStudents(newList);
+
+        int count = await localDS.getCount();
+
+        hasMore = count < total;
+        page++;
+        print("Sync count: $count");
+        print("Sync total: $total");
+        print("Sync stopped: $page");
+        /// 🔥 STOP LOADING
+
+
+        if(page == 2){
+          await fetchStudents();
+        }
+        emit(state.copyWith(isSyncing: false));
+      } catch (e) {
+        print("Sync stopped: $e");
+        break;
+      }
+    }
+
+    print("✅ FULL DATA SYNC DONE");
   }
 
   void prependStudent(StudentDetailsData student) {
@@ -163,8 +189,7 @@ class StudentsCubit extends Cubit<StudentsState> {
       final response = await apiManager.postWithoutRequest(
         "${Config.baseUrl}${Routes.moveStudentToExtra(schoolId, studentUuid)}",
       );
-      if (response != null &&
-          (response.statusCode == 200 || response.statusCode == 201)) {
+      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
         return true;
       }
     } catch (e) {
@@ -173,12 +198,10 @@ class StudentsCubit extends Cubit<StudentsState> {
     return false;
   }
 
-  Future<bool> toggleStudentStatus(
-      String studentUuid, String schoolId, int currentStatus) async {
+  Future<bool> toggleStudentStatus(String studentUuid, String schoolId, int currentStatus) async {
     try {
       final token = await UserSecureStorage.fetchToken();
-      final url =
-          "${Config.baseUrl}${Routes.toggleStudentStatus(schoolId, studentUuid)}";
+      final url = "${Config.baseUrl}${Routes.toggleStudentStatus(schoolId, studentUuid)}";
       final newStatusStr = currentStatus == 1 ? false : true;
 
       final result = await http.patch(
@@ -195,8 +218,7 @@ class StudentsCubit extends Cubit<StudentsState> {
 
       if (result.statusCode == 200 || result.statusCode == 201) {
         final json = jsonDecode(result.body);
-        final newStatus =
-            (json['data']['status'] as int?) ?? (currentStatus == 1 ? 0 : 1);
+        final newStatus = (json['data']['status'] as int?) ?? (currentStatus == 1 ? 0 : 1);
         final updated = state.studentsList.map((s) {
           if (s.uuid == studentUuid) return s.copyWith(status: newStatus);
           return s;

@@ -20,9 +20,7 @@ import '../staff_student_list/staff_student_list.dart';
 
 class StaffUserDetailsPage extends StatefulWidget {
   SchoolDetailsModel? schoolDetailsModel;
-  final List<int> assignedClassIds;
-
-  StaffUserDetailsPage({super.key, this.schoolDetailsModel, this.assignedClassIds = const [],});
+  StaffUserDetailsPage({super.key, this.schoolDetailsModel});
 
   @override
   State<StaffUserDetailsPage> createState() => _StaffUserDetailsPageState();
@@ -48,15 +46,12 @@ class _StaffUserDetailsContent extends StatefulWidget {
   final List<String> tabs;
   final int selectedIndex;
   final void Function(int) onTabChanged;
-  final List<int> assignedClassIds;
 
   const _StaffUserDetailsContent({
     this.schoolDetailsModel,
     required this.tabs,
     required this.selectedIndex,
     required this.onTabChanged,
-    this.assignedClassIds = const [],
-
   });
 
   @override
@@ -90,10 +85,7 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ImageSettingsScreen(
-                    schoolId: schoolId,
-                    schoolIntId: schoolDetailsModel?.id,
-                  )),
+                  MaterialPageRoute(builder: (context) => ImageSettingsScreen(schoolId: schoolId)),
                 );
               } else if (value == 'student_form') {
                 final schoolId = schoolDetailsModel?.id?.toString() ?? '';
@@ -120,10 +112,10 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                 value: 'image_settings',
                 child: Row(children: [Icon(Icons.image), SizedBox(width: 10), Text('Image Settings')]),
               ),
-              // PopupMenuItem(
-              //   value: 'profile_settings',
-              //   child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
-              // ),
+              PopupMenuItem(
+                value: 'profile_settings',
+                child: Row(children: [Icon(Icons.person), SizedBox(width: 10), Text('Profile Settings')]),
+              ),
               PopupMenuItem(
                 value: 'student_form',
                 child: Row(children: [Icon(Icons.assignment), SizedBox(width: 10), Text('Student Form')]),
@@ -270,28 +262,24 @@ class _StaffUserDetailsContentState extends State<_StaffUserDetailsContent> {
                       page: BlocProvider(
                         create: (_) => StudentsCubit(),
                         child: StaffStudentsScreen(
-                          schoolId: schoolDetailsModel?.id?.toString() ?? '',
-                          schoolDetailsModel: schoolDetailsModel,
+                          schoolId: schoolDetailsModel?.id.toString() ?? '',
                           showAppBar: true,
-                          assignedClassIds: widget.assignedClassIds,
+                          schoolDetailsModel: schoolDetailsModel,
                         ),
                       ),
                     ),
                   ),
-                  // statCard(
-                  //   title: "STAFF",
-                  //   value: "${schoolDetailsModel?.staffCount ?? ''}",
-                  //   callBtn: () => navigateWithTransition(
-                  //     context: context,
-                  //     page: BlocProvider(
-                  //       create: (_) => StaffCubit(),
-                  //       child: StaffListingPage(
-                  //           schoolId: schoolDetailsModel?.id.toString() ?? '',
-                  //         schoolDetailsModel: schoolDetailsModel,
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
+                  statCard(
+                    title: "STAFF",
+                    value: "${schoolDetailsModel?.staffCount ?? ''}",
+                    callBtn: () => navigateWithTransition(
+                      context: context,
+                      page: BlocProvider(
+                        create: (_) => StaffCubit(),
+                        child: StaffListingPage(schoolId: schoolDetailsModel?.id.toString() ?? ''),
+                      ),
+                    ),
+                  ),
                   // statCard(
                   //   title: "TOTAL ORDERS",
                   //   value: "${schoolDetailsModel?.orderCount ?? 0}",

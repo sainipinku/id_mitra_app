@@ -34,6 +34,7 @@ class _StudentAssignClassSheetState extends State<StudentAssignClassSheet> {
 
   _ClassRow? _selectedClass;
 
+  // same sort order as FilterBottomSheet
   static const _classOrder = [
     'pre nursery', 'prenursery', 'pre-nursery',
     'nursery', 'nur',

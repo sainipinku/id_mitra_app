@@ -40,7 +40,7 @@ class _EmployeeStudentsScreenState extends State<EmployeeStudentsScreen> {
       _schoolLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.read<StudentsCubit>().fetchStudents(search: '', schoolId: _schoolId);
+          context.read<StudentsCubit>().fetchStudents(search: '',);
         }
       });
     }
@@ -57,7 +57,7 @@ class _EmployeeStudentsScreenState extends State<EmployeeStudentsScreen> {
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.read<StudentsCubit>().fetchStudents(search: '', schoolId: _schoolId);
+          context.read<StudentsCubit>().fetchStudents(search: '',);
         }
       });
     }
@@ -103,9 +103,9 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels == _scrollCtrl.position.maxScrollExtent) {
         context.read<StudentsCubit>().fetchStudents(
-          isLoadMore: true,
+
           search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
+
           gender: '',
           classId: '',
         );
@@ -145,7 +145,7 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
       } else {
         context.read<StudentsCubit>().fetchStudents(
           search: _searchCtrl.text.trim(),
-          schoolId: widget.schoolId,
+
           gender: '',
           classId: '',
         );
@@ -156,7 +156,7 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
   Future<void> _refresh() async {
     context.read<StudentsCubit>().fetchStudents(
       search: _searchCtrl.text.trim(),
-      schoolId: widget.schoolId,
+
       gender: '',
       classId: '',
     );
@@ -203,7 +203,7 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
                         _debounce = Timer(const Duration(milliseconds: 300), () {
                           context.read<StudentsCubit>().fetchStudents(
                             search: '',
-                            schoolId: widget.schoolId,
+
                             classId: result['class'] ?? '',
                             gender: result['gender']?.toString().toLowerCase() ?? '',
                           );
@@ -341,7 +341,6 @@ class _EmployeeStudentListBodyState extends State<_EmployeeStudentListBody> {
         _debounce = Timer(const Duration(milliseconds: 500), () {
           context.read<StudentsCubit>().fetchStudents(
             search: value.trim(),
-            schoolId: widget.schoolId,
           );
         });
       },

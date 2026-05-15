@@ -15,22 +15,15 @@ import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:idmitra/models/schools/SchoolListModel.dart';
-import 'package:idmitra/providers/add_student/add_student_cubit.dart';
-import 'package:idmitra/providers/school/school_cubit.dart';
-import 'package:idmitra/providers/student_form/student_form_cubit.dart';
-import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
-import 'package:idmitra/screens/add_student/add_student_form.dart';
+import 'package:idmitra/screens/home/student_profile_page.dart';
 import 'package:idmitra/utils/common_widgets/app_button.dart';
 import '../../providers/students/students_state.dart';
 
 class StudentCard extends StatefulWidget {
   StudentDetailsData studentData;
   final String schoolId;
-  final String? imageShape;
-  final int? schoolIntId; // for live imageShape lookup from SchoolCubit
   final VoidCallback? onEdit;
-  StudentCard({super.key, required this.studentData, required this.schoolId, this.imageShape, this.schoolIntId, this.onEdit});
+  StudentCard({super.key, required this.studentData, required this.schoolId, this.onEdit});
 
   @override
   State<StudentCard> createState() => _StudentCardState();
@@ -50,19 +43,18 @@ class _StudentCardState extends State<StudentCard> {
       imageQuality: 100,
     );
 
-    if (pickedFile != null && mounted) {
+    if (pickedFile != null) {
       File rotatedImage = await FlutterExifRotation.rotateImage(
         path: pickedFile.path,
       );
 
-      if (mounted) await _uploadImage(rotatedImage.path);
+      await _uploadImage(rotatedImage.path);
     }
   }
-
   /// 🖼 Gallery — crop then upload
   Future<void> _fromGallery() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null && mounted) {
+    if (pickedFile != null) {
       studentProfileImageFile = File(pickedFile.path);
       await _cropAndUpload();
     }
@@ -70,7 +62,7 @@ class _StudentCardState extends State<StudentCard> {
 
   /// ✂️ Crop (gallery only)
   Future<void> _cropAndUpload() async {
-    if (studentProfileImageFile == null || !mounted) return;
+    if (studentProfileImageFile == null) return;
 
     CroppedFile? croppedFile = await ImageCropper().cropImage(
       sourcePath: studentProfileImageFile!.path,
@@ -87,7 +79,7 @@ class _StudentCardState extends State<StudentCard> {
       ],
     );
 
-    if (croppedFile != null && mounted) {
+    if (croppedFile != null) {
       await _uploadImage(croppedFile.path);
     }
   }
@@ -112,7 +104,6 @@ class _StudentCardState extends State<StudentCard> {
 
   /// ⬆️ Upload image
   Future<void> _uploadImage(String path) async {
-    if (!mounted) return;
     setState(() => isUploading = true);
 
     try {
@@ -120,11 +111,8 @@ class _StudentCardState extends State<StudentCard> {
 
       var response = await ApiManager().multiRequestRoute(
         fixedImage.path,
-        Config.baseUrl +
-            Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
+        Config.baseUrl + Routes.updateStudentProfile(studentDetailsData.uuid ?? ''),
       );
-
-      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
@@ -139,7 +127,6 @@ class _StudentCardState extends State<StudentCard> {
       debugPrint("Upload error: $e");
     }
 
-    if (!mounted) return;
     setState(() => isUploading = false);
   }
 
@@ -184,7 +171,7 @@ class _StudentCardState extends State<StudentCard> {
                 },
               ),
 
-              _divider(),
+       /*       _divider(),
 
               _pickerItem(
                 icon: 'assets/icons/remove_image.svg',
@@ -199,7 +186,7 @@ class _StudentCardState extends State<StudentCard> {
                   });
                   Navigator.pop(context);
                 },
-              ),
+              ),*/
             ],
           ),
         );
@@ -251,50 +238,15 @@ class _StudentCardState extends State<StudentCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Resolve imageShape live from SchoolCubit so it reacts to updates
-    String? resolvedShape = widget.imageShape;
-    try {
-      final schoolState = context.watch<SchoolCubit>().state;
-      final schoolId = widget.schoolIntId ?? int.tryParse(widget.schoolId);
-      if (schoolId != null) {
-        if (schoolState.imageShapeMap.containsKey(schoolId)) {
-          resolvedShape = schoolState.imageShapeMap[schoolId];
-        } else {
-          final match = schoolState.students.firstWhere(
-                (s) => s.id == schoolId,
-            orElse: () => SchoolDetailsModel(),
-          );
-          if (match.imageShape != null && match.imageShape!.isNotEmpty) {
-            resolvedShape = match.imageShape;
-          }
-        }
-      }
-    } catch (_) {}
-
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider(
-                  create: (_) => StudentFormCubit()
-                    ..loadFromSchoolId(
-                      schoolId: widget.schoolId,
-                      schoolName: '',
-                    ),
-                ),
-                BlocProvider(
-                  create: (_) => StudentFormDataCubit()..load(widget.schoolId),
-                ),
-                BlocProvider(create: (_) => AddStudentCubit()),
-              ],
-              child: AddStudentFormPage(
+            builder: (_) => StudentProfilePage(
+                student: studentDetailsData,
                 schoolId: widget.schoolId,
-                editStudent: studentDetailsData,
               ),
-            ),
           ),
         ).then((updated) {
           if (updated is StudentDetailsData && mounted) {
@@ -303,230 +255,247 @@ class _StudentCardState extends State<StudentCard> {
         });
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            /// 👤 PROFILE IMAGE
-            Stack(
-              children: [
-                GestureDetector(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          /// 👤 PROFILE IMAGE
+          Stack(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  final url = studentDetailsData.profilePhotoUrl;
+                  if (url != null && url.isNotEmpty) {
+                    _showImagePreview(context, url);
+                  } else {
+                    showPicker(context);
+                  }
+                },
+                child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: isUploading
+                    ? const SizedBox(
+                        height: 60,
+                        width: 60,
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : (studentDetailsData.profilePhotoUrl != null &&
+                          studentDetailsData.profilePhotoUrl!.isNotEmpty)
+                    ? Image.network(
+                        studentDetailsData.profilePhotoUrl!,
+                        height: 60,
+                        width: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholder(),
+                      )
+                    : _placeholder(),
+              ),
+              ),
+
+              /// 📸 Edit Icon
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: InkWell(
                   onTap: () {
-                    final url = studentDetailsData.profilePhotoUrl?.trim();
-                    final hasRealPhoto = url != null &&
-                        url.isNotEmpty &&
-                        !url.contains('ui-avatars.com');
-                    if (hasRealPhoto) {
-                      _showImagePreview(context, url!, resolvedShape: resolvedShape);
+
+                    final urlPhoto = studentDetailsData.photo;
+                    if (urlPhoto != null) {
+                      _showImagePreview(context, studentDetailsData.profilePhotoUrl ?? '');
                     } else {
-                      _fromCamera();
+                      showPicker(context);
                     }
                   },
-                  child: _buildPhoto(context, resolvedShape: resolvedShape),
-                ),
-
-                /// 📸 Edit Icon
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: InkWell(
-                    onTap: () {
-
-                      final urlPhoto = studentDetailsData.photo;
-                      if (urlPhoto != null) {
-                        _showImagePreview(context, studentDetailsData.profilePhotoUrl ?? '', resolvedShape: resolvedShape);
-                      } else {
-                        showPicker(context);
-                      }
-                    },
-                    child: Container(
-                      height: 22,
-                      width: 22,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Icon(
-                        (studentDetailsData.photo != null && studentDetailsData.photo!.isNotEmpty)
-                            ? Icons.preview
-                            : Icons.camera_alt,
-                        size: 12,
-                        color: Colors.white,
-                      ),
+                  child: Container(
+                    height: 22,
+                    width: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      (studentDetailsData.photo != null && studentDetailsData.photo!.isNotEmpty)
+                          ? Icons.preview
+                          : Icons.camera_alt,
+                      size: 12,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          studentDetailsData.name ?? '',
-                          style: MyStyles.boldText(
-                            size: 16,
-                            color: AppTheme.black_Color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          "• ${studentDetailsData.datumClass?.nameWithprefix ?? ''}-${studentDetailsData.section?.name ?? ''}",
-                          style: MyStyles.boldText(
-                            size: 16,
-                            color: AppTheme.btnColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    "Father name : ${studentDetailsData.fatherName ?? ''}",
-                    style: MyStyles.regularText(
-                      size: 12,
-                      color: AppTheme.graySubTitleColor,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  studentDetailsData.missingFields!.isNotEmpty ?
-                  Text(
-                    "Missing details: ${studentDetailsData.missingFields?.map((e) => _formatField(e.toString())).join(', ') ?? ''}",
-                    style: MyStyles.regularText(
-                      size: 12,
-                      color: AppTheme.redBtnBgColor,
-                    ),
-                  ) : SizedBox(),
-                ],
               ),
-            ),
+            ],
+          ),
 
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.grey),
-              onSelected: (value) async {
-                if (value == 'edit') {
-                  widget.onEdit?.call();
-                } else if (value == 'delete') {
-                  _confirmDelete(context);
-                } else if (value == 'extra') {
-                  final success = await _moveToExtra();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success
-                              ? 'Student moved to extra list'
-                              : 'Failed to move student to extra',
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        studentDetailsData.name ?? '',
+                        style: MyStyles.boldText(
+                          size: 16,
+                          color: AppTheme.black_Color,
                         ),
-                        backgroundColor: success ? Colors.green : Colors.red,
-                        duration: const Duration(seconds: 2),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    );
-                  }
-                } else if (value == 'toggle') {
-                  final success = await context
-                      .read<StudentsCubit>()
-                      .toggleStudentStatus(
-                    studentDetailsData.uuid ?? '',
-                    studentDetailsData.schoolId?.toString() ?? '',
-                    studentDetailsData.status ?? 0,
-                  );
-                  if (success) {
-                    final updated = context
-                        .read<StudentsCubit>()
-                        .state
-                        .studentsList
-                        .firstWhere(
-                          (s) => s.uuid == studentDetailsData.uuid,
-                      orElse: () => studentDetailsData,
-                    );
-                    setState(() => studentDetailsData = updated);
-                  }
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success ? 'Status updated' : 'Failed to update status',
+                    ),
+                    SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        "• ${studentDetailsData.datumClass?.nameWithprefix ?? ''}-${studentDetailsData.section?.name ?? ''}",
+                        style: MyStyles.boldText(
+                          size: 16,
+                          color: AppTheme.btnColor,
                         ),
-                        backgroundColor: success ? Colors.green : Colors.red,
-                        duration: const Duration(seconds: 1),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    );
-                  }
-                }
-              },
-              itemBuilder: (_) => [
-                // const PopupMenuItem(
-                //   value: 'edit',
-                //   child: Row(
-                //     children: [
-                //       Icon(Icons.edit, size: 18, color: Colors.blue),
-                //       SizedBox(width: 8),
-                //       Text('Edit'),
-                //     ],
-                //   ),
-                // ),
-                const PopupMenuItem(
-                  value: 'extra',
-                  child: Row(
-                    children: [
-                      Icon(Icons.move_to_inbox, size: 18, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Text('Extra'),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  "Father name : ${studentDetailsData.fatherName ?? ''}",
+                  style: MyStyles.regularText(
+                    size: 12,
+                    color: AppTheme.graySubTitleColor,
                   ),
                 ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 18, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete'),
-                    ],
+                const SizedBox(height: 3),
+                studentDetailsData.missingFields!.isNotEmpty ?
+                Text(
+                  "Missing details: ${studentDetailsData.missingFields?.map((e) => _formatField(e.toString())).join(', ') ?? ''}",
+                  style: MyStyles.regularText(
+                    size: 12,
+                    color: AppTheme.redBtnBgColor,
                   ),
-                ),
-                PopupMenuItem(
-                  value: 'toggle',
-                  child: Row(
-                    children: [
-                      Icon(
-                        (studentDetailsData.status ?? 0) == 1
-                            ? Icons.toggle_on
-                            : Icons.toggle_off,
-                        size: 22,
-                        color: (studentDetailsData.status ?? 0) == 1
-                            ? Colors.green
-                            : Colors.red,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        (studentDetailsData.status ?? 0) == 1
-                            ? 'Deactivate'
-                            : 'Activate',
-                      ),
-                    ],
-                  ),
-                ),
+                ) : SizedBox(),
               ],
             ),
-          ],
-        ),
+          ),
+
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.grey),
+            onSelected: (value) async {
+              if (value == 'edit') {
+                widget.onEdit?.call();
+              } else if (value == 'delete') {
+                _confirmDelete(context);
+              } else if (value == 'extra') {
+                final success = await _moveToExtra();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success
+                            ? 'Student moved to extra list'
+                            : 'Failed to move student to extra',
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } else if (value == 'toggle') {
+                final success = await context
+                    .read<StudentsCubit>()
+                    .toggleStudentStatus(
+                      studentDetailsData.uuid ?? '',
+                      studentDetailsData.schoolId?.toString() ?? '',
+                      studentDetailsData.status ?? 0,
+                    );
+                if (success) {
+                  final updated = context
+                      .read<StudentsCubit>()
+                      .state
+                      .studentsList
+                      .firstWhere(
+                        (s) => s.uuid == studentDetailsData.uuid,
+                        orElse: () => studentDetailsData,
+                      );
+                  setState(() => studentDetailsData = updated);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? 'Status updated' : 'Failed to update status',
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                }
+              }
+            },
+            itemBuilder: (_) => [
+              // const PopupMenuItem(
+              //   value: 'edit',
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.edit, size: 18, color: Colors.blue),
+              //       SizedBox(width: 8),
+              //       Text('Edit'),
+              //     ],
+              //   ),
+              // ),
+              const PopupMenuItem(
+                value: 'extra',
+                child: Row(
+                  children: [
+                    Icon(Icons.move_to_inbox, size: 18, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Extra'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'toggle',
+                child: Row(
+                  children: [
+                    Icon(
+                      (studentDetailsData.status ?? 0) == 1
+                          ? Icons.toggle_on
+                          : Icons.toggle_off,
+                      size: 22,
+                      color: (studentDetailsData.status ?? 0) == 1
+                          ? Colors.green
+                          : Colors.red,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      (studentDetailsData.status ?? 0) == 1
+                          ? 'Deactivate'
+                          : 'Activate',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
+    ),
     );
   }
 
@@ -536,9 +505,9 @@ class _StudentCardState extends State<StudentCard> {
         .split(' ')
         .map(
           (word) => word.isNotEmpty
-          ? word[0].toUpperCase() + word.substring(1).toLowerCase()
-          : '',
-    )
+              ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+              : '',
+        )
         .join(' ');
   }
 
@@ -605,9 +574,9 @@ class _StudentCardState extends State<StudentCard> {
                         final success = await context
                             .read<StudentsCubit>()
                             .deleteStudent(
-                          studentDetailsData.uuid ?? '',
-                          studentDetailsData.schoolId?.toString() ?? '',
-                        );
+                              studentDetailsData.uuid ?? '',
+                              studentDetailsData.schoolId?.toString() ?? '',
+                            );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -651,195 +620,74 @@ class _StudentCardState extends State<StudentCard> {
     );
   }
 
-  Widget _buildPhoto(BuildContext context, {String? resolvedShape}) {
-    final shape = resolvedShape ?? widget.imageShape ?? 'rectangle';
-    Widget content;
-    if (isUploading) {
-      content = const SizedBox(
-        height: 60,
-        width: 60,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    } else if (studentDetailsData.profilePhotoUrl != null &&
-        studentDetailsData.profilePhotoUrl!.trim().isNotEmpty &&
-        !studentDetailsData.profilePhotoUrl!.contains('ui-avatars.com')) {
-      content = Image.network(
-        studentDetailsData.profilePhotoUrl!.trim(),
-        height: 60,
-        width: 60,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _placeholder(),
-      );
-    } else {
-      content = _placeholder();
-    }
-
-    switch (shape) {
-      case 'round':
-      case 'oval':
-        return ClipOval(
-          child: SizedBox(width: 60, height: 60, child: content),
-        );
-      case 'square':
-        return ClipRRect(
-          borderRadius: BorderRadius.zero,
-          child: SizedBox(width: 60, height: 60, child: content),
-        );
-      case 'rectangle':
-      default:
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: SizedBox(width: 60, height: 60, child: content),
-        );
-    }
-  }
-
-  void _showImagePreview(BuildContext context, String imageUrl, {String? resolvedShape}) {
-    // Resolve shape live from SchoolCubit at the time of preview open
-    String shape = resolvedShape ?? widget.imageShape ?? 'rectangle';
-    try {
-      final schoolState = context.read<SchoolCubit>().state;
-      final schoolId = widget.schoolIntId ?? int.tryParse(widget.schoolId);
-      if (schoolId != null) {
-        if (schoolState.imageShapeMap.containsKey(schoolId)) {
-          shape = schoolState.imageShapeMap[schoolId] ?? shape;
-        } else {
-          final match = schoolState.students.firstWhere(
-                (s) => s.id == schoolId,
-            orElse: () => SchoolDetailsModel(),
-          );
-          if (match.imageShape != null && match.imageShape!.isNotEmpty) {
-            shape = match.imageShape!;
-          }
-        }
-      }
-    } catch (_) {}
-
+  void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            color: Colors.black,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: InteractiveViewer(
-                    panEnabled: true,
-                    minScale: 0.8,
-                    maxScale: 4,
-                    child: _buildShapedPreview(studentDetailsData.profilePhotoUrl?.trim().isNotEmpty == true &&
-                        !studentDetailsData.profilePhotoUrl!.contains('ui-avatars.com')
-                        ? studentDetailsData.profilePhotoUrl!
-                        : imageUrl, shape),
+      builder: (_) {
+        return Dialog(
+          backgroundColor: Colors.black,
+          insetPadding: const EdgeInsets.all(16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              color: Colors.black,
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  /// IMAGE
+                  Flexible(
+                    child: InteractiveViewer(
+                      panEnabled: true,
+                      minScale: 0.8,
+                      maxScale: 4,
+                      child: Image.network(
+                        imageUrl,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 300,
+                          width: double.infinity,
+                          color: Colors.grey.shade300,
+                          child: const Icon(
+                            Icons.person,
+                            size: 80,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _fromCamera();
-                        },
-                        icon: const Icon(Icons.camera_alt, size: 18),
-                        label: const Text("Camera"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.btnColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
+
+                  const SizedBox(height: 12),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        showPicker(context);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text("Edit Profile Image"),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _fromGallery();
-                        },
-                        icon: const Icon(Icons.photo_library, size: 18),
-                        label: const Text("Gallery"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.btnColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          setState(() {
-                            studentProfileImageFile = null;
-                            studentDetailsData = studentDetailsData.copyWith(
-                              profilePhotoUrl: "",
-                            );
-                          });
-                        },
-                        icon: const Icon(Icons.delete, size: 18),
-                        label: const Text("Retake"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
-  }
-
-}
-
-Widget _buildShapedPreview(String imageUrl, String shape) {
-  final imageWidget = Image.network(
-    imageUrl,
-    width: double.infinity,
-    fit: BoxFit.contain,
-    loadingBuilder: (context, child, progress) {
-      if (progress == null) return child;
-      return const SizedBox(
-        height: 300,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    },
-    errorBuilder: (_, __, ___) => Container(
-      height: 300,
-      width: double.infinity,
-      color: Colors.grey.shade300,
-      child: const Icon(Icons.person, size: 80, color: Colors.grey),
-    ),
-  );
-
-  switch (shape) {
-    case 'round':
-    case 'oval':
-      return ClipOval(child: imageWidget);
-    case 'square':
-      return ClipRRect(
-        borderRadius: BorderRadius.zero,
-        child: imageWidget,
-      );
-    case 'rectangle':
-    default:
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: imageWidget,
-      );
   }
 }
