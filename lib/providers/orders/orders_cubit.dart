@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
@@ -33,102 +34,110 @@ class OrdersCubit extends Cubit<OrdersState> {
 
   static int _classSortIndex(String name) {
     final lower = name.trim().toLowerCase();
+    // Exact match first
     for (int i = 0; i < _classOrder.length; i++) {
       if (lower == _classOrder[i]) return i;
     }
+    // Then starts-with match (e.g. "class 1 a" → "class 1")
     for (int i = 0; i < _classOrder.length; i++) {
       if (lower.startsWith(_classOrder[i])) return i;
     }
     return 999;
   }
 
+  static List<OrderClass> _sortClasses(List<OrderClass> classes) {
+    final sorted = [...classes];
+    sorted.sort((a, b) {
+      final aName = a.nameWithprefix ?? a.name;
+      final bName = b.nameWithprefix ?? b.name;
+      final ai = _classSortIndex(aName);
+      final bi = _classSortIndex(bName);
+      if (ai != bi) return ai.compareTo(bi);
+      return aName.toLowerCase().compareTo(bName.toLowerCase());
+    });
+    return sorted;
+  }
+
 
   Future<void> fetchSchoolClasses(String schoolId) async {
     if (schoolId.isEmpty) return;
-
     emit(state.copyWith(classesLoading: true));
-
     try {
-      final url =
-          '${Config.baseUrl}auth/school/$schoolId/students/form-data';
+      final url = '${Config.baseUrl}auth/school/$schoolId/students/form-data';
       final response = await _api.getRequest(url);
-
       if (response == null) {
         emit(state.copyWith(classesLoading: false));
         return;
       }
-
       final json = jsonDecode(response.body);
+      print('fetchSchoolClasses STATUS: ${response.statusCode}');
+      print('fetchSchoolClasses BODY: ${response.body}');
       final data = json['data'] ?? json;
       final List rawClasses = data['classes'] ?? [];
 
-      List<OrderClass> classes = [];
+      final List<OrderClass> classes = [];
+      for (final e in rawClasses) {
+        final int classId = e['id'] is int
+            ? e['id'] as int
+            : int.tryParse(e['id']?.toString() ?? '') ?? 0;
+        final String name = e['name']?.toString() ?? '';
+        final String? nameWithprefix = e['name_withprefix']?.toString() ??
+            e['name_with_prefix']?.toString();
 
-      for (var item in rawClasses) {
-        final int classId = item['id'] ?? 0;
+        // Try all possible section keys
+        final List sections = e['sections'] as List? ??
+            e['class_sections'] as List? ??
+            e['classSections'] as List? ??
+            [];
 
-        final String className =
-            item['name_withprefix']?.toString() ??
-                item['name']?.toString() ??
-                '';
+        print('CLASS: $classId | name: $name | nameWithprefix: $nameWithprefix | sections count: ${sections.length}');
 
-        final List sections = item['sections'] ?? [];
-
-        //  If sections exist → create multiple entries
         if (sections.isNotEmpty) {
-          for (var sec in sections) {
-            final int sectionId = sec['id'] ?? 0;
-
-            final String sectionName = sec['name']
-                ?.toString()
-                .replaceAll('.', '')
-                .trim() ??
-                '';
-
-            final fullName = '$className - $sectionName';
-
-            classes.add(
-              OrderClass(
-                classId: classId,
-                sectionIds: sectionId,
-                name: fullName,
-                nameWithprefix: fullName,
-              ),
-            );
+          for (final sec in sections) {
+            final rawId = sec['id'] ?? sec['section_id'] ?? sec['class_section_id'];
+            final int? sectionId = rawId is int
+                ? rawId
+                : int.tryParse(rawId?.toString() ?? '');
+            final String sectionName = (sec['name']?.toString().trim().isNotEmpty == true)
+                ? sec['name'].toString().trim()
+                : (sec['section_name']?.toString().trim() ??
+                sec['title']?.toString().trim() ?? '');
+            print('  SECTION: id=$sectionId name=$sectionName raw=$sec');
+            classes.add(OrderClass(
+              classId: classId,
+              sectionId: sectionId,
+              name: name,
+              nameWithprefix: nameWithprefix,
+              sectionName: sectionName,
+            ));
           }
         } else {
-          classes.add(
-            OrderClass(
-              classId: classId,
-              sectionIds: 0,
-              name: className,
-              nameWithprefix: className,
-            ),
-          );
+          classes.add(OrderClass(
+            classId: classId,
+            sectionId: null,
+            name: name,
+            nameWithprefix: nameWithprefix,
+          ));
         }
       }
 
-      emit(
-        state.copyWith(
-          availableClasses: classes,
-          classesLoading: false,
-        ),
-      );
+      print('TOTAL OrderClass items: ${classes.length}');
+      emit(state.copyWith(availableClasses: _sortClasses(classes), classesLoading: false));
     } catch (e) {
       print('fetchSchoolClasses error: $e');
       emit(state.copyWith(classesLoading: false));
     }
   }
 
-  Future<void> fetchOrders({
+  // ─── Fetch school-specific orders (auth/school/{id}/orders) ─────────────
+  Future<void> fetchSchoolOrders({
     bool isLoadMore = false,
     String search = '',
     String status = '',
-    String classId = '',
+    String classFilter = '',  // value like "2486-1246" (classId-sectionId)
     String dateFrom = '',
     String dateTo = '',
-    String schoolId = '',
-    bool isSchool = false,
+    required String schoolId,
   }) async {
     if (isLoadMore && (state.isPaginationLoading || !state.hasMore)) return;
 
@@ -142,6 +151,97 @@ class OrdersCubit extends Cubit<OrdersState> {
         ordersList: [],
         hasMore: true,
         clearError: true,
+        schoolId: schoolId,
+      ));
+    } else {
+      emit(state.copyWith(isPaginationLoading: true));
+    }
+
+    try {
+      String url = '${Config.baseUrl}auth/school/$schoolId/orders?page=$currentPage&per_page=20';
+      if (search.isNotEmpty) url += '&search=$search';
+      if (status.isNotEmpty) url += '&status=$status';
+      if (classFilter.isNotEmpty) url += '&class_filters=$classFilter';
+      if (dateFrom.isNotEmpty) url += '&start_date=$dateFrom';
+      if (dateTo.isNotEmpty) url += '&end_date=$dateTo';
+      print('fetchSchoolOrders URL: $url');
+
+      final response = await _api.getRequest(url);
+      if (response == null) {
+        emit(state.copyWith(loading: false, isPaginationLoading: false, error: 'Failed to load orders'));
+        return;
+      }
+
+      final json = jsonDecode(response.body);
+      final data = json['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        emit(state.copyWith(loading: false, isPaginationLoading: false, error: 'Invalid response'));
+        return;
+      }
+
+      final ordersData = data['orders'] as Map<String, dynamic>?;
+      if (ordersData == null) {
+        emit(state.copyWith(loading: false, isPaginationLoading: false, ordersList: [], hasMore: false, total: 0));
+        return;
+      }
+
+      final List rawList = ordersData['data'] ?? [];
+      final int total = ordersData['total'] ?? 0;
+      final int lastPage = ordersData['last_page'] ?? 1;
+      final int respPage = ordersData['current_page'] ?? 1;
+
+      final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
+      final updatedList = isLoadMore ? [...state.ordersList, ...newOrders] : newOrders;
+
+      // Extract classes_with_sections for dropdown (only on first page)
+      List<SchoolOrderClass> classesWithSections = state.schoolClassesWithSections;
+      if (!isLoadMore && data['classes_with_sections'] != null) {
+        final List rawClasses = data['classes_with_sections'] as List;
+        classesWithSections = rawClasses
+            .map((e) => SchoolOrderClass(value: e['value'] ?? '', label: e['label'] ?? ''))
+            .toList();
+      }
+
+      emit(state.copyWith(
+        loading: false,
+        isPaginationLoading: false,
+        ordersList: updatedList,
+        page: respPage + 1,
+        hasMore: respPage < lastPage,
+        total: total,
+        schoolClassesWithSections: classesWithSections,
+      ));
+    } catch (e) {
+      print('fetchSchoolOrders error: $e');
+      emit(state.copyWith(loading: false, isPaginationLoading: false, error: e.toString()));
+    }
+  }
+
+  // ─── Fetch orders list ────────────────────────────────────────────────────
+  Future<void> fetchOrders({
+    bool isLoadMore = false,
+    String search = '',
+    String status = '',
+    String classId = '',
+    String dateFrom = '',
+    String dateTo = '',
+    String schoolId = '',
+    bool isSchool = false,
+  }) async {
+    // For fresh fetch (not load more), always allow — reset any stuck state
+    if (isLoadMore && (state.isPaginationLoading || !state.hasMore)) return;
+
+    final currentPage = isLoadMore ? state.page : 1;
+
+    if (!isLoadMore) {
+      emit(state.copyWith(
+        loading: true,
+        isPaginationLoading: false,
+        page: 1,
+        ordersList: [],
+        hasMore: true,
+        clearError: true,
+        schoolId: schoolId,
       ));
     } else {
       emit(state.copyWith(isPaginationLoading: true));
@@ -149,32 +249,33 @@ class OrdersCubit extends Cubit<OrdersState> {
 
     try {
       String url;
-      if (isSchool && schoolId.isNotEmpty) {
-        url = '${Config.baseUrl}auth/school/$schoolId/orders?page=$currentPage&per_page=20';
+      if (schoolId.isNotEmpty) {
+        // Both school admin and partner viewing a school: use partner orders endpoint with school_id filter
+        url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20&school_id=$schoolId';
       } else {
+        // Partner: all orders without school filter
         url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20';
-        if (schoolId.isNotEmpty) url += '&school_id=$schoolId';
       }
-
       if (status.isNotEmpty) url += '&status=$status';
       if (search.isNotEmpty) url += '&search=$search';
       if (dateFrom.isNotEmpty) url += '&date_from=$dateFrom';
       if (dateTo.isNotEmpty) url += '&date_to=$dateTo';
-
+      // class_id filtered on frontend
       print('fetchOrders URL: $url');
 
       final response = await _api.getRequest(url);
       if (response == null) {
-        emit(state.copyWith(
-          loading: false,
-          isPaginationLoading: false,
-          error: 'Failed to load orders',
-        ));
+        emit(state.copyWith(loading: false, isPaginationLoading: false, error: 'Failed to load orders'));
         return;
       }
+      print('fetchOrders status: ${response.statusCode}, body length: ${response.body.length}');
 
       final json = jsonDecode(response.body);
-      final data = json['data'] as Map<String, dynamic>;
+      final data = (json['data'] as Map<String, dynamic>?);
+      if (data == null) {
+        emit(state.copyWith(loading: false, isPaginationLoading: false, error: 'Invalid response format'));
+        return;
+      }
 
       List rawList = [];
       int total = 0;
@@ -197,14 +298,31 @@ class OrdersCubit extends Cubit<OrdersState> {
 
       final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
 
-      final filtered = classId.isNotEmpty
-          ? newOrders.where((o) => o.student?.classId?.toString() == classId).toList()
-          : newOrders;
+      // Frontend class filter — backend does not support class_id param
+      // classId may be "classId_sectionId" or plain "classId"
+      List<OrderModel> filtered;
+      if (classId.isNotEmpty) {
+        final parts = classId.split('_');
+        final filterClassId = parts[0];
+        final filterSectionId = parts.length > 1 ? parts[1] : null;
+        filtered = newOrders.where((o) {
+          final matchClass = o.student?.classId?.toString() == filterClassId;
+          if (!matchClass) return false;
+          if (filterSectionId != null && filterSectionId.isNotEmpty) {
+            // sectionName comparison not available on OrderStudent, skip section filter on frontend
+            return true;
+          }
+          return true;
+        }).toList();
+      } else {
+        filtered = newOrders;
+      }
 
       final updatedList = isLoadMore ? [...state.ordersList, ...filtered] : filtered;
 
       final hasMore = respPage < lastPage;
 
+      // If class filter active and no results on this page but more pages exist, auto-load next
       if (classId.isNotEmpty && filtered.isEmpty && hasMore) {
         emit(state.copyWith(
           isPaginationLoading: false,
@@ -227,36 +345,37 @@ class OrdersCubit extends Cubit<OrdersState> {
         return;
       }
 
+      // Extract unique classes from orders (only on first page load)
+      List<OrderClass> classes = state.availableClasses;
+
       emit(state.copyWith(
         loading: false,
         isPaginationLoading: false,
         ordersList: updatedList,
         page: respPage + 1,
-        hasMore: hasMore,
+        hasMore: respPage < lastPage,
         total: total,
-        availableClasses: state.availableClasses,
+        availableClasses: classes,
       ));
     } catch (e) {
-      print('fetchOrders error: $e');
-      emit(state.copyWith(
-        loading: false,
-        isPaginationLoading: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(loading: false, isPaginationLoading: false, error: e.toString()));
     }
   }
 
-  Future<bool> updateOrderStatus(String uuid, String newStatus) async {
+  // ─── Update order status
+
+  Future<bool> updateOrderStatus(String uuid, String newStatus, {String schoolId = '', bool isSchool = false}) async {
     try {
-      final url = Config.baseUrl + Routes.updateOrderStatus(uuid);
+      // Always use partner endpoint — school-scoped route does not exist on backend
+      final url = '${Config.baseUrl}auth/partner/orders/$uuid/status';
+      print('updateOrderStatus URL: $url');
+      print('Body: {status: $newStatus}');
       final response = await _api.patchRequestWithBody(url, {'status': newStatus});
-
       if (response == null) return false;
-
       final json = jsonDecode(response.body);
       print('updateOrderStatus response: ${response.body}');
-
       if (json['success'] == true) return true;
+      // show validation errors if any
       final errors = json['errors'];
       if (errors != null) print('Validation errors: $errors');
       return false;
@@ -266,48 +385,75 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
+  // ─── Re-Order with printing_issue status (school-scoped bulk API)
+  Future<bool> reOrderWithPrintingIssue({
+    required String schoolId,
+    required List<String> uuids,
+    String issueNote = '',
+  }) async {
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/orders/status';
+      final body = <String, dynamic>{
+        'uuids': uuids,
+        'status': {
+          'status': 'printing_issue',
+          if (issueNote.isNotEmpty) 'issueNote': issueNote,
+        },
+      };
+      print('reOrderWithPrintingIssue URL: $url');
+      print('reOrderWithPrintingIssue Body: $body');
+      final response = await _api.patchRequestWithBody(url, body);
+      if (response == null) return false;
+      final json = jsonDecode(response.body);
+      print('reOrderWithPrintingIssue response: ${response.body}');
+      return json['success'] == true;
+    } catch (e) {
+      print('reOrderWithPrintingIssue error: $e');
+      return false;
+    }
+  }
+
+
+
   Future<void> fetchStaffOrdersTotal({required String schoolId}) async {
     if (schoolId.isEmpty) return;
-
     emit(state.copyWith(staffTotalLoading: true));
     try {
       final url = '${Config.baseUrl}auth/school/$schoolId/staff/orders?page=1&per_page=1';
+      print('fetchStaffOrdersTotal URL: $url');
       final response = await _api.getRequest(url);
-
       if (response == null) {
         emit(state.copyWith(staffTotalLoading: false));
         return;
       }
-
-      print('StaffOrdersTotal URL: $url');
-      print('StaffOrdersTotal body: ${response.body}');
-
+      print('fetchStaffOrdersTotal status: ${response.statusCode}, body: ${response.body}');
       final json = jsonDecode(response.body);
       final data = json['data'] as Map<String, dynamic>?;
       int total = 0;
-
       if (data != null) {
+        // Format: { list: { data: [...], total: N, ... } }
         if (data['list'] is Map) {
           final listData = data['list'] as Map<String, dynamic>;
           total = listData['total'] ?? 0;
         }
+        // Format: { orders: [...], pagination: { total: N } }
         else if (data['orders'] is List) {
           final pagination = data['pagination'] as Map<String, dynamic>?;
-          total = pagination?['total'] ?? 0;
+          total = pagination?['total'] ?? (data['orders'] as List).length;
         }
+        // Format: { orders: { data: [...], total: N } }
         else if (data['orders'] is Map) {
           final ordersData = data['orders'] as Map<String, dynamic>;
           total = ordersData['total'] ?? 0;
         }
-        else if (data['data'] is List) {
+        // Format: { data: [...], total: N }
+        else if (data['total'] != null) {
           total = data['total'] ?? 0;
         }
       }
-
-      print('StaffOrdersTotal: $total');
       emit(state.copyWith(staffTotalLoading: false, staffTotal: total));
     } catch (e) {
-      print('StaffOrdersTotal error: $e');
+      print('fetchStaffOrdersTotal error: $e');
       emit(state.copyWith(staffTotalLoading: false));
     }
   }

@@ -14,6 +14,7 @@ class OrdersState {
   final List<OrderClass> availableClasses;
   final bool classesLoading;
   final String schoolId;
+  final List<SchoolOrderClass> schoolClassesWithSections;
 
   const OrdersState({
     this.loading = false,
@@ -29,6 +30,7 @@ class OrdersState {
     this.availableClasses = const [],
     this.classesLoading = true,
     this.schoolId = '',
+    this.schoolClassesWithSections = const [],
   });
 
   OrdersState copyWith({
@@ -46,6 +48,7 @@ class OrdersState {
     List<OrderClass>? availableClasses,
     bool? classesLoading,
     String? schoolId,
+    List<SchoolOrderClass>? schoolClassesWithSections,
   }) {
     return OrdersState(
       loading: loading ?? this.loading,
@@ -61,20 +64,30 @@ class OrdersState {
       availableClasses: availableClasses ?? this.availableClasses,
       classesLoading: classesLoading ?? this.classesLoading,
       schoolId: schoolId ?? this.schoolId,
+      schoolClassesWithSections: schoolClassesWithSections ?? this.schoolClassesWithSections,
     );
   }
 }
 
 class OrderClass {
   final int classId;
-  final int sectionIds;
+  final int? sectionId;
   final String name;
   final String? nameWithprefix;
+  final String sectionName;
 
   const OrderClass({
     required this.classId,
-    required this.sectionIds,
+    this.sectionId,
     required this.name,
     this.nameWithprefix,
+    this.sectionName = '',
   });
+}
+
+/// Used for school-specific orders endpoint classes_with_sections
+class SchoolOrderClass {
+  final String value; // e.g. "2486-1246"
+  final String label; // e.g. "1st (Section A)"
+  const SchoolOrderClass({required this.value, required this.label});
 }

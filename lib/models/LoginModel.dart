@@ -396,10 +396,28 @@ class AssignedClass {
 
   const AssignedClass({required this.id, required this.className});
 
-  factory AssignedClass.fromJson(Map<String, dynamic> json) => AssignedClass(
-        id: json["id"] ?? 0,
-        className: json["class_name"] ?? '',
-      );
+  factory AssignedClass.fromJson(Map<String, dynamic> json) {
+    // Handle nested "class" object (from assigned-classes API response)
+    final classObj = json["class"] as Map<String, dynamic>?;
+    
+    // Handle both "id"/"school_class_id" for the class ID
+    final classId = classObj?["id"] 
+        ?? json["school_class_id"] 
+        ?? json["id"] 
+        ?? 0;
+    
+    // Handle both "name"/"class_name" for the class name
+    final name = classObj?["name"] 
+        ?? classObj?["name_withprefix"]
+        ?? json["class_name"] 
+        ?? json["name"] 
+        ?? '';
+    
+    return AssignedClass(
+      id: classId is int ? classId : int.tryParse(classId.toString()) ?? 0,
+      className: name.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {"id": id, "class_name": className};
 }

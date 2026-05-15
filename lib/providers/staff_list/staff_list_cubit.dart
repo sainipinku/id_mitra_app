@@ -38,7 +38,7 @@ class StaffListState {
 
   final bool signatureUploading;
   final String? signatureUploadError;
-  final String? signatureUploadSuccess;
+  final String? signatureUploadSuccess;  
 
   final bool deleting;
 
@@ -437,20 +437,26 @@ class StaffListCubit extends Cubit<StaffListState> {
       final token = await UserSecureStorage.fetchToken();
       final url =
           '${Config.baseUrl}${Routes.staffAssignClass(schoolId, uuid)}';
+      final body = jsonEncode({'class': classId, 'section': sectionIds});
+      print('AssignClass URL: $url');
+      print('AssignClass Body: $body');
       final response = await http.post(
         Uri.parse(url),
-        body: jsonEncode({'class': classId, 'section': sectionIds}),
+        body: body,
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
       );
+      print('AssignClass Status: ${response.statusCode}');
+      print('AssignClass Response: ${response.body}');
       final success =
           response.statusCode == 200 || response.statusCode == 201;
       emit(state.copyWith(assigningClass: false));
       return success;
-    } catch (_) {
+    } catch (e) {
+      print('AssignClass Error: $e');
       emit(state.copyWith(assigningClass: false));
       return false;
     }
@@ -628,6 +634,12 @@ class StaffListCubit extends Cubit<StaffListState> {
         return;
       }
 
+      print("=== STAFF ORDERS RESPONSE ===");
+      print("URL: $url");
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
+      print("=============================");
+
       final json = jsonDecode(response.body);
       final isSuccess =
           json['status'] == true || json['success'] == true;
@@ -680,6 +692,8 @@ class StaffListCubit extends Cubit<StaffListState> {
       final newOrders = rawList
           .map((e) => OrderStaffItem.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      print("=== Parsed ${newOrders.length} StaffOrders, total=$total, page=$respPage/$lastPage ===");
 
       final statusMap = Map<String, String>.from(state.orderStatusMap);
 

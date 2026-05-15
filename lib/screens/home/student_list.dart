@@ -29,6 +29,7 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
+import 'package:printing/printing.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
@@ -66,8 +67,7 @@ class _StudentListingPageState extends State<StudentListingPage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _ordersCubit = OrdersCubit()
-      ..fetchOrders(schoolId: widget.schoolId, isSchool: false)
-      ..fetchSchoolClasses(widget.schoolId);
+      ..fetchSchoolOrders(schoolId: widget.schoolId);
   }
 
   @override
@@ -266,7 +266,6 @@ class _StudentsTabState extends State<_StudentsTab> {
   final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
 
-  // Selection state for Process Checklist
   final Set<int> _selectedIds = {};
   final Map<int, String> _idToUuid = {};
 
@@ -306,6 +305,9 @@ class _StudentsTabState extends State<_StudentsTab> {
         .where((id) => _idToUuid.containsKey(id))
         .map((id) => _idToUuid[id]!)
         .toList();
+    print("=== _showProcessChecklistDialog ===");
+    print("selectedIds: $_selectedIds");
+    print("uuids to pass: $uuids");
     showDialog(
       context: ctx,
       barrierDismissible: false,
@@ -316,7 +318,6 @@ class _StudentsTabState extends State<_StudentsTab> {
           studentUuids: uuids,
           onSuccess: () {
             _clearSelection();
-            // Refresh student list
             context.read<StudentsCubit>().fetchStudents(
               search: _searchCtrl.text.trim(),
               schoolId: widget.schoolId,
@@ -372,7 +373,6 @@ class _StudentsTabState extends State<_StudentsTab> {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
-          // Always fetch latest imageShape from API so changes reflect immediately
           context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
         }
       }
@@ -444,12 +444,6 @@ class _StudentsTabState extends State<_StudentsTab> {
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                '${_selectedIds.length} selected',
-                                style: MyStyles.mediumText(
-                                    size: 13, color: AppTheme.btnColor),
-                              ),
-                              const Spacer(),
                               TextButton(
                                 onPressed: () =>
                                     _selectAll(studState.studentsList),
@@ -479,7 +473,8 @@ class _StudentsTabState extends State<_StudentsTab> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text('Process checklist',
+                                      const SizedBox(width: 5),
+                                      Text('Process Checklist',
                                           style: MyStyles.mediumText(
                                               size: 12,
                                               color: Colors.white)),
@@ -518,17 +513,22 @@ class _StudentsTabState extends State<_StudentsTab> {
                               final String? gender = result['gender']
                                   ?.toString()
                                   .toLowerCase();
+                              final List<int> sectionIds = result['section'] is List
+                                  ? List<int>.from(
+                                  (result['section'] as List)
+                                      .map((e) => int.tryParse(e.toString()) ?? 0)
+                                      .where((e) => e != 0))
+                                  : [];
                               _debounce?.cancel();
                               _debounce = Timer(
                                   const Duration(milliseconds: 500), () {
                                 context
                                     .read<StudentsCubit>()
-                                    .fetchStudents(
-                                  search: '',
+                                    .applyFilters(
                                   schoolId: widget.schoolId,
                                   classId: classId ?? '',
                                   gender: gender ?? '',
-                                  sectionIds: result['section'] ?? [],
+                                  sectionIds: sectionIds,
                                 );
                               });
                             }
@@ -799,7 +799,9 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
         p.downloadUrl != c.downloadUrl ||
             p.downloadError != c.downloadError ||
             p.sendOrderSuccess != c.sendOrderSuccess ||
-            p.sendOrderError != c.sendOrderError,
+            p.sendOrderError != c.sendOrderError ||
+            p.createOrderSuccess != c.createOrderSuccess ||
+            p.createOrderError != c.createOrderError,
         listener: (context, state) async {
           if (state.sendOrderSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -810,19 +812,42 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                   borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(12),
             ));
-            // Refresh correction list (remove ordered students)
             context.read<CorrectionCubit>().fetchCorrectionStudents(
               schoolId: widget.schoolId,
             );
-            // Refresh orders tab so new order appears
-            widget.ordersCubit?.fetchOrders(
+            widget.ordersCubit?.fetchSchoolOrders(
               schoolId: widget.schoolId,
-              isSchool: false,
             );
           }
           if (state.sendOrderError != null) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(state.sendOrderError!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(12),
+            ));
+          }
+          if (state.createOrderSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: const Text('Order created successfully!'),
+              backgroundColor: AppTheme.btnColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(12),
+            ));
+            context.read<CorrectionCubit>().fetchCorrectionStudents(
+              schoolId: widget.schoolId,
+            );
+            widget.ordersCubit?.fetchSchoolOrders(
+              schoolId: widget.schoolId,
+            );
+          }
+          if (state.createOrderError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.createOrderError!),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -1832,20 +1857,36 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
   Widget build(BuildContext context) {
     return BlocConsumer<CorrectionCubit, CorrectionState>(
       listenWhen: (p, c) =>
-      p.sendOrderLoading != c.sendOrderLoading ||
-          p.sendOrderSuccess != c.sendOrderSuccess ||
-          p.sendOrderError != c.sendOrderError,
+      p.createOrderLoading != c.createOrderLoading ||
+          p.createOrderSuccess != c.createOrderSuccess ||
+          p.createOrderError != c.createOrderError,
       listener: (ctx, state) {
-        if (!state.sendOrderLoading && state.sendOrderSuccess) {
+        if (!state.createOrderLoading && state.createOrderSuccess) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: const Text('Order created successfully!'),
+            backgroundColor: AppTheme.btnColor,
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
-        if (!state.sendOrderLoading && state.sendOrderError != null) {
+        if (!state.createOrderLoading && state.createOrderError != null) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+            content: Text(state.createOrderError!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ));
         }
       },
       builder: (context, state) => Dialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -1860,17 +1901,15 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                           size: 18, color: AppTheme.black_Color)),
                   const Spacer(),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [
-                          Color(0xFFFF6B6B),
-                          Color(0xFFFF8E53)
-                        ]),
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)]),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.close,
@@ -1886,8 +1925,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
               const SizedBox(height: 8),
               Container(
                 height: 48,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(10),
@@ -1896,8 +1934,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                   child: DropdownButton<String>(
                     value: _selectedCardType,
                     isExpanded: true,
-                    icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
                         color: AppTheme.graySubTitleColor),
                     style: MyStyles.regularText(
                         size: 14, color: AppTheme.black_Color),
@@ -1920,8 +1957,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
               ),
               const SizedBox(height: 16),
               ..._cardForOptions.map((opt) {
-                final isSelected =
-                _selectedCardFor.contains(opt['value']);
+                final isSelected = _selectedCardFor.contains(opt['value']);
                 return GestureDetector(
                   onTap: () => _toggleCardFor(opt['value']!),
                   child: Padding(
@@ -1951,8 +1987,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                         const SizedBox(width: 10),
                         Text(opt['label']!,
                             style: MyStyles.regularText(
-                                size: 14,
-                                color: AppTheme.black_Color)),
+                                size: 14, color: AppTheme.black_Color)),
                       ],
                     ),
                   ),
@@ -1963,7 +1998,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: Container(
@@ -1988,19 +2023,18 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: state.sendOrderLoading
+                    onTap: state.createOrderLoading
                         ? null
                         : () {
                       if (_selectedCardType.isEmpty) {
                         ScaffoldMessenger.of(context)
                             .showSnackBar(SnackBar(
-                          content: const Text(
-                              'Please select a card type'),
+                          content:
+                          const Text('Please select a card type'),
                           backgroundColor: Colors.orange,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(10)),
                           margin: const EdgeInsets.all(12),
                         ));
                         return;
@@ -2009,19 +2043,16 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                         ScaffoldMessenger.of(context)
                             .showSnackBar(SnackBar(
                           content: const Text(
-                              'Please select at least one card option'),
+                              'Please select at least one card for option'),
                           backgroundColor: Colors.orange,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(10)),
                           margin: const EdgeInsets.all(12),
                         ));
                         return;
                       }
-                      context
-                          .read<CorrectionCubit>()
-                          .processOrder(
+                      context.read<CorrectionCubit>().createOrder(
                         schoolId: widget.schoolId,
                         cardType: _selectedCardType,
                         cardFor: _selectedCardFor.toList(),
@@ -2031,18 +2062,17 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
-                        color: state.sendOrderLoading
+                        color: state.createOrderLoading
                             ? Colors.grey
                             : const Color(0xFF6C63FF),
                         borderRadius: BorderRadius.circular(25),
                       ),
-                      child: state.sendOrderLoading
+                      child: state.createOrderLoading
                           ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white),
+                            strokeWidth: 2, color: Colors.white),
                       )
                           : Row(
                         mainAxisSize: MainAxisSize.min,
@@ -2052,8 +2082,7 @@ class _CreateOrderDialogState extends State<_CreateOrderDialog> {
                           const SizedBox(width: 6),
                           Text('Create',
                               style: MyStyles.mediumText(
-                                  size: 14,
-                                  color: Colors.white)),
+                                  size: 14, color: Colors.white)),
                         ],
                       ),
                     ),
@@ -2125,32 +2154,7 @@ class _DownloadChecklistDialogState
                 state.downloadColumns.map((c) => c.key).toSet();
           });
         }
-        if (!state.downloadLoading &&
-            state.downloadUrl != null &&
-            state.downloadUrl!.isNotEmpty) {
-          Navigator.of(context).pop();
-          final uri = Uri.tryParse(state.downloadUrl!);
-          if (uri != null) {
-            try {
-              await launchUrl(uri,
-                  mode: LaunchMode.externalApplication);
-            } catch (_) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                  Text('Download URL: ${state.downloadUrl}'),
-                  backgroundColor: AppTheme.btnColor,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  margin: const EdgeInsets.all(12),
-                ));
-              }
-            }
-          }
-        }
         if (!state.downloadLoading && state.downloadError != null) {
-          Navigator.of(context).pop();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(state.downloadError!),
@@ -2366,10 +2370,19 @@ class _DownloadChecklistDialogState
                             .read<CorrectionCubit>()
                             .downloadCorrectionList(
                           schoolId: widget.schoolId,
-                          columns:
+                          selected:
                           _selectedColumns.toList(),
-                          printType: _printType,
-                        );
+                          listType: _printType,
+                        ).then((pdfBytes) async {
+                          if (pdfBytes != null && pdfBytes.isNotEmpty) {
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                            await Printing.layoutPdf(
+                              onLayout: (_) async => pdfBytes,
+                            );
+                          }
+                        });
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -2463,10 +2476,13 @@ class _ProcessChecklistDialogState extends State<_ProcessChecklistDialog> {
           ));
         }
         if (!state.sendOrderLoading && state.sendOrderError != null) {
-          Navigator.of(context).pop();
+          final isAlready = state.sendOrderError!
+              .toLowerCase()
+              .contains('already processed');
+          if (!isAlready) Navigator.of(context).pop();
           ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
             content: Text(state.sendOrderError!),
-            backgroundColor: Colors.red,
+            backgroundColor: isAlready ? Colors.orange : Colors.red,
             behavior: SnackBarBehavior.floating,
             shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2705,13 +2721,12 @@ class _OrdersTabState extends State<_OrdersTab> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<OrdersCubit>().fetchOrders(
+        context.read<OrdersCubit>().fetchSchoolOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
           status: _selectedStatus,
-          classId: _selectedClass,
+          classFilter: _selectedClass,
           schoolId: widget.schoolId,
-          isSchool: false,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -2730,12 +2745,11 @@ class _OrdersTabState extends State<_OrdersTab> {
   }
 
   void _resetAndFetch() {
-    context.read<OrdersCubit>().fetchOrders(
+    context.read<OrdersCubit>().fetchSchoolOrders(
       search: _searchCtrl.text.trim(),
       status: _selectedStatus,
-      classId: _selectedClass,
+      classFilter: _selectedClass,
       schoolId: widget.schoolId,
-      isSchool: false,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -2971,19 +2985,18 @@ class _OrdersTabState extends State<_OrdersTab> {
   Widget _classDropdown() =>
       BlocBuilder<OrdersCubit, OrdersState>(
         buildWhen: (p, c) =>
-        p.availableClasses != c.availableClasses ||
-            p.classesLoading != c.classesLoading,
+        p.schoolClassesWithSections != c.schoolClassesWithSections ||
+            p.loading != c.loading,
         builder: (_, state) => _dropdown(
           value: _selectedClass.isEmpty ? '' : _selectedClass,
           hint: 'All Classes',
-          loading: state.classesLoading,
           items: [
             const DropdownMenuItem(
                 value: '', child: Text('All Classes')),
-            ...state.availableClasses.map(
+            ...state.schoolClassesWithSections.map(
                   (c) => DropdownMenuItem(
-                value: c.classId.toString(),
-                child: Text(c.nameWithprefix ?? c.name,
+                value: c.value,
+                child: Text(c.label,
                     overflow: TextOverflow.ellipsis),
               ),
             ),
@@ -3148,19 +3161,23 @@ class _OrderCardState extends State<_OrderCard> {
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
+    if (newStatus != 're_order') return;
     setState(() => _updating = true);
     final success = await context
         .read<OrdersCubit>()
-        .updateOrderStatus(widget.order.uuid, newStatus);
+        .reOrderWithPrintingIssue(
+      schoolId: widget.schoolId,
+      uuids: [widget.order.uuid],
+    );
     if (mounted) {
       setState(() {
         _updating = false;
-        if (success) _currentStatus = newStatus;
+        if (success) _currentStatus = 're_order';
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(success
-            ? 'Status updated successfully'
-            : 'Failed to update status'),
+            ? 'Re-order submitted successfully'
+            : 'Failed to submit re-order'),
         backgroundColor: success ? AppTheme.btnColor : Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -3313,21 +3330,19 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   List<PopupMenuEntry<String>> _buildStatusMenuItems() {
-    return kOrderStatuses
-        .where((s) => s.value != _currentStatus)
-        .map((s) => PopupMenuItem<String>(
-      value: s.value,
-      child: Row(
-        children: [
-          Icon(_statusIcon(s.value),
-              size: 16,
-              color: AppTheme.graySubTitleColor),
-          const SizedBox(width: 10),
-          Text(s.label),
-        ],
+    return [
+      PopupMenuItem<String>(
+        value: 're_order',
+        child: Row(
+          children: [
+            Icon(Icons.refresh_rounded,
+                size: 16, color: AppTheme.graySubTitleColor),
+            const SizedBox(width: 10),
+            const Text('Re-Order'),
+          ],
+        ),
       ),
-    ))
-        .toList();
+    ];
   }
 
   IconData _statusIcon(String status) {

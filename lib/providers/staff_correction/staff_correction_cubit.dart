@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/api_manager.dart';
@@ -51,6 +52,10 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
         return;
       }
 
+      print("=== STAFF CORRECTION RESPONSE ===");
+      print(response.body);
+      print("=================================");
+
       final json = jsonDecode(response.body);
       if (json['success'] != true) {
         emit(state.copyWith(
@@ -71,7 +76,17 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
           .map((e) => StaffCorrectionItem.fromJson(e as Map<String, dynamic>))
           .toList();
 
+      if (rawList.isNotEmpty) {
+        print("=== StaffCorrectionItem sample keys: ${(rawList.first as Map).keys.toList()}");
+        print("=== StaffCorrectionItem sample: ${rawList.first}");
+      }
+
       final updated = isLoadMore ? [...state.items, ...newItems] : newItems;
+
+      print("=== Parsed ${newItems.length} StaffCorrectionItems ===");
+      for (final item in newItems) {
+        print("  id=${item.id} uuid=${item.uuid} staff=${item.staff?.name} oldData=${item.oldData?.name} effectiveStaff=${item.effectiveStaff?.name}");
+      }
 
       emit(state.copyWith(
         loading: false,
@@ -103,11 +118,76 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
     emit(state.copyWith(selectedIds: {}));
   }
 
+  Future<void> createStaffOrder({
+    required String schoolId,
+    required String cardType,
+    required List<String> cardUsers,
+  }) async {
+    if (cardUsers.isEmpty) {
+      emit(state.copyWith(sendOrderError: 'No staff selected'));
+      return;
+    }
+
+    emit(state.copyWith(
+      sendOrderLoading: true,
+      clearSendOrderError: true,
+      sendOrderSuccess: false,
+    ));
+
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/staff/orders';
+      final body = <String, dynamic>{
+        'card_type': cardType,
+        'card_users': cardUsers,
+      };
+
+      print("=== createStaffOrder REQUEST ===");
+      print("URL: $url");
+      print("BODY: ${jsonEncode(body)}");
+
+      final response = await _api.postRequest(body, url);
+
+      print("=== createStaffOrder RESPONSE ===");
+      print("STATUS: ${response?.statusCode}");
+      print("BODY: ${response?.body}");
+      print("================================");
+
+      if (response == null) {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderError: 'Failed to create order',
+        ));
+        return;
+      }
+
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderSuccess: true,
+          selectedIds: {},
+        ));
+      } else {
+        emit(state.copyWith(
+          sendOrderLoading: false,
+          sendOrderError: json['message'] ?? 'Failed to create order',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        sendOrderLoading: false,
+        sendOrderError: e.toString(),
+      ));
+    }
+  }
+
   Future<void> processOrder({
     required String schoolId,
     String cardType = '',
     List<String> cardFor = const [],
     List<String>? staffUuids, // optional: pass directly from Staff list tab
+    String listType = '',
+    String processType = 'create',
   }) async {
     List<String> selectedUuids;
 
@@ -130,7 +210,8 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
     try {
       final url = '${Config.baseUrl}auth/school/$schoolId/staff/correction-lists/process';
       final body = <String, dynamic>{
-        'processType': 'create',
+        'processType': processType.isNotEmpty ? processType : 'create',
+        'listType': listType.isNotEmpty ? listType : 'selected',
         'staff': selectedUuids,
         if (cardType.isNotEmpty) 'card_type': cardType,
         if (cardFor.isNotEmpty) 'card_for': cardFor,
@@ -155,6 +236,118 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
       }
     } catch (e) {
       emit(state.copyWith(sendOrderLoading: false, sendOrderError: e.toString()));
+    }
+  }
+
+  /// Fetches staff form fields to use as download columns
+  Future<void> fetchStaffDownloadColumns({required String schoolId}) async {
+    emit(state.copyWith(columnsLoading: true));
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/form-fields/staff';
+      var response = await _api.getRequest(url);
+
+      if (response == null) {
+        emit(state.copyWith(columnsLoading: false));
+        return;
+      }
+
+      final json = jsonDecode(response.body);
+      final data = json['data'] ?? {};
+
+      List rawFields = [];
+      if (data['staff_form_fields'] is List) {
+        rawFields = data['staff_form_fields'] as List;
+      } else if (data['available_staff_form_fields'] is List) {
+        rawFields = data['available_staff_form_fields'] as List;
+      } else if (json['data'] is List) {
+        rawFields = json['data'] as List;
+      }
+
+      // Fallback: default staff fields if API returns nothing
+      if (rawFields.isEmpty) {
+        rawFields = [
+          {'name': 'name', 'label': 'Name'},
+          {'name': 'father_name', 'label': 'Father Name'},
+          {'name': 'phone', 'label': 'Phone'},
+          {'name': 'dob', 'label': 'DOB'},
+          {'name': 'gender', 'label': 'Gender'},
+          {'name': 'email', 'label': 'Email'},
+          {'name': 'photo', 'label': 'Photo'},
+          {'name': 'designation', 'label': 'Designation'},
+          {'name': 'department', 'label': 'Department'},
+          {'name': 'employee_id', 'label': 'Employee ID'},
+          {'name': 'address', 'label': 'Address'},
+        ];
+      }
+
+      final columns = rawFields
+          .where((e) => e['name'] != null && e['label'] != null)
+          .map((e) => StaffDownloadColumn(
+        key: e['name'].toString(),
+        label: e['label'].toString(),
+      ))
+          .toList();
+
+      emit(state.copyWith(columnsLoading: false, downloadColumns: columns));
+    } catch (e) {
+      emit(state.copyWith(columnsLoading: false));
+    }
+  }
+
+  /// POST auth/school/{schoolId}/staff/correction-lists/download
+  /// Body: { "ids": [...uuids], "selected": [...fields] }
+  /// Returns PDF bytes on success, null on failure.
+  Future<Uint8List?> downloadStaffCorrectionList({
+    required String schoolId,
+    required List<String> ids,
+    required List<String> selected,
+  }) async {
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/staff/correction-lists/download';
+      final body = <String, dynamic>{
+        'ids': ids,
+        'selected': selected,
+      };
+
+      print("=== downloadStaffCorrectionList REQUEST ===");
+      print("URL: $url");
+      print("BODY: ${jsonEncode(body)}");
+
+      final response = await _api.postRequest(body, url);
+
+      print("=== downloadStaffCorrectionList RESPONSE ===");
+      print("STATUS: ${response?.statusCode}");
+      print("CONTENT-TYPE: ${response?.headers['content-type']}");
+      print("BODY LENGTH: ${response?.bodyBytes.length}");
+
+      if (response == null) return null;
+
+      // If response is PDF bytes directly
+      final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+      if (contentType.contains('application/pdf') ||
+          contentType.contains('application/octet-stream') ||
+          (response.bodyBytes.isNotEmpty && response.bodyBytes.first == 0x25)) {
+        return Uint8List.fromList(response.bodyBytes);
+      }
+
+      // If response is JSON with a file URL
+      try {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true) {
+          final fileUrl = json['data']?['url'] ?? json['data']?['file_url'] ?? '';
+          if (fileUrl.toString().isNotEmpty) {
+            final res = await _api.getRequest(fileUrl.toString());
+            if (res != null && res.bodyBytes.isNotEmpty) {
+              return Uint8List.fromList(res.bodyBytes);
+            }
+          }
+        }
+      } catch (_) {}
+
+      return null;
+    } catch (e) {
+      print('downloadStaffCorrectionList error: $e');
+      return null;
     }
   }
 

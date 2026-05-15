@@ -12,17 +12,18 @@ class CorrectionState {
   final int page;
   final bool hasMore;
   final String? error;
-  final int studentsTotal;
   final Set<int> selectedIds;
   final bool sendOrderLoading;
   final bool sendOrderSuccess;
   final String? sendOrderError;
+  final bool createOrderLoading;
+  final bool createOrderSuccess;
+  final String? createOrderError;
   final bool downloadLoading;
   final String? downloadUrl;
   final String? downloadError;
   final bool columnsLoading;
   final List<DownloadColumn> downloadColumns;
-  final List<String> selectedClassIds;
 
   final bool studentsLoading;
   final List<CorrectionStudentItem> students;
@@ -30,6 +31,8 @@ class CorrectionState {
   final bool studentsHasMore;
   final String? studentsError;
   final Set<int> selectedStudentIds;
+  final List<String> selectedClassIds;
+  final int studentsTotal;
 
   const CorrectionState({
     this.loading = false,
@@ -37,12 +40,13 @@ class CorrectionState {
     this.page = 1,
     this.hasMore = true,
     this.error,
-    this.studentsTotal = 0,
-
     this.selectedIds = const {},
     this.sendOrderLoading = false,
     this.sendOrderSuccess = false,
     this.sendOrderError,
+    this.createOrderLoading = false,
+    this.createOrderSuccess = false,
+    this.createOrderError,
     this.downloadLoading = false,
     this.downloadUrl,
     this.downloadError,
@@ -55,15 +59,13 @@ class CorrectionState {
     this.studentsError,
     this.selectedStudentIds = const {},
     this.selectedClassIds = const [],
-
+    this.studentsTotal = 0,
   });
 
   CorrectionState copyWith({
     bool? loading,
     List<CorrectionItem>? items,
     int? page,
-    int? studentsTotal,
-
     bool? hasMore,
     String? error,
     bool? clearError,
@@ -72,6 +74,10 @@ class CorrectionState {
     bool? sendOrderSuccess,
     String? sendOrderError,
     bool? clearSendOrderError,
+    bool? createOrderLoading,
+    bool? createOrderSuccess,
+    String? createOrderError,
+    bool? clearCreateOrderError,
     bool? downloadLoading,
     String? downloadUrl,
     String? downloadError,
@@ -87,20 +93,21 @@ class CorrectionState {
     bool? clearStudentsError,
     Set<int>? selectedStudentIds,
     List<String>? selectedClassIds,
-
+    int? studentsTotal,
   }) {
     return CorrectionState(
       loading: loading ?? this.loading,
       items: items ?? this.items,
       page: page ?? this.page,
-      studentsTotal: studentsTotal ?? this.studentsTotal,
-
       hasMore: hasMore ?? this.hasMore,
       error: clearError == true ? null : (error ?? this.error),
       selectedIds: selectedIds ?? this.selectedIds,
       sendOrderLoading: sendOrderLoading ?? this.sendOrderLoading,
       sendOrderSuccess: sendOrderSuccess ?? this.sendOrderSuccess,
       sendOrderError: clearSendOrderError == true ? null : (sendOrderError ?? this.sendOrderError),
+      createOrderLoading: createOrderLoading ?? this.createOrderLoading,
+      createOrderSuccess: createOrderSuccess ?? this.createOrderSuccess,
+      createOrderError: clearCreateOrderError == true ? null : (createOrderError ?? this.createOrderError),
       downloadLoading: downloadLoading ?? this.downloadLoading,
       downloadUrl: clearDownloadUrl == true ? null : (downloadUrl ?? this.downloadUrl),
       downloadError: clearDownloadError == true ? null : (downloadError ?? this.downloadError),
@@ -113,7 +120,7 @@ class CorrectionState {
       studentsError: clearStudentsError == true ? null : (studentsError ?? this.studentsError),
       selectedStudentIds: selectedStudentIds ?? this.selectedStudentIds,
       selectedClassIds: selectedClassIds ?? this.selectedClassIds,
-
+      studentsTotal: studentsTotal ?? this.studentsTotal,
     );
   }
 }

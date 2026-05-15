@@ -1,8 +1,4 @@
-
-
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,15 +7,8 @@ import 'package:idmitra/api_mamanger/UserLocal.dart';
 import 'package:idmitra/api_mamanger/api_manager.dart';
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
-import 'package:idmitra/models/LoginModel.dart';
-import 'package:idmitra/models/LogoutModel.dart';
-import 'package:idmitra/models/home/PartnerDashboardModel.dart';
-import 'package:idmitra/models/home/UserDetailsModel.dart';
-import 'package:idmitra/models/schools/SchoolListModel.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
-import 'package:idmitra/providers/school/school_state.dart';
 import 'package:idmitra/providers/students/students_state.dart';
-
 
 class StudentsCubit extends Cubit<StudentsState> {
   StudentsCubit() : super(StudentsState());
@@ -47,6 +36,7 @@ class StudentsCubit extends Cubit<StudentsState> {
       gender: gender,
     );
   }
+
   Future<void> fetchStudents({
     bool isLoadMore = false,
     String search = "",
@@ -71,17 +61,10 @@ class StudentsCubit extends Cubit<StudentsState> {
     }
 
     try {
-      /// ✅ fallback from state (important)
-      final usedClassId =
-      classId.isEmpty ? state.selectedClassId : classId;
+      final usedClassId = classId.isEmpty ? state.selectedClassId : classId;
+      final usedSectionIds = sectionIds.isEmpty ? state.selectedSectionIds : sectionIds;
+      final usedGender = gender.isEmpty ? state.selectedGender : gender;
 
-      final usedSectionIds =
-      sectionIds.isEmpty ? state.selectedSectionIds : sectionIds;
-
-      final usedGender =
-      gender.isEmpty ? state.selectedGender : gender;
-
-      /// 🔥 Base URL
       String url =
           "${Config.baseUrl}auth/school/$schoolId"
           "?perPage=10"
@@ -89,8 +72,8 @@ class StudentsCubit extends Cubit<StudentsState> {
           "&page=$currentPage"
           "&gender=$usedGender"
           "&class_filters=$usedClassId";
-      String sectionQuery = "";
 
+      String sectionQuery = "";
       if (usedSectionIds.isNotEmpty) {
         sectionQuery = usedSectionIds
             .asMap()
@@ -98,21 +81,21 @@ class StudentsCubit extends Cubit<StudentsState> {
             .map((entry) => "sectionsIds[${entry.key}]=${entry.value}")
             .join("&");
       }
-
       if (sectionQuery.isNotEmpty) {
         url += "&$sectionQuery";
       }
 
       final response = await apiManager.getRequest(url);
-
+      debugPrint("===== STUDENT LIST RESPONSE BODY =====");
+      debugPrint(response.body);
+      debugPrint("======================================");
       final jsonData = jsonDecode(response.body);
 
       List list = jsonData["data"]?["data"] ?? [];
+      final total = jsonData["data"]?["total"] ?? 0;
 
       List<StudentDetailsData> newList =
-      list.map((e) => StudentDetailsData.fromJson(e)).toList();
-
-      final total = jsonData["data"]["total"] ?? 0;
+          list.map((e) => StudentDetailsData.fromJson(e)).toList();
 
       List<StudentDetailsData> updatedList = isLoadMore
           ? [...state.studentsList, ...newList]
@@ -134,6 +117,7 @@ class StudentsCubit extends Cubit<StudentsState> {
       debugPrint("Fetch Error: $e");
     }
   }
+
   void prependStudent(StudentDetailsData student) {
     emit(state.copyWith(
       studentsList: [student, ...state.studentsList],
@@ -179,7 +163,8 @@ class StudentsCubit extends Cubit<StudentsState> {
       final response = await apiManager.postWithoutRequest(
         "${Config.baseUrl}${Routes.moveStudentToExtra(schoolId, studentUuid)}",
       );
-      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
+      if (response != null &&
+          (response.statusCode == 200 || response.statusCode == 201)) {
         return true;
       }
     } catch (e) {
@@ -188,10 +173,12 @@ class StudentsCubit extends Cubit<StudentsState> {
     return false;
   }
 
-  Future<bool> toggleStudentStatus(String studentUuid, String schoolId, int currentStatus) async {
+  Future<bool> toggleStudentStatus(
+      String studentUuid, String schoolId, int currentStatus) async {
     try {
       final token = await UserSecureStorage.fetchToken();
-      final url = "${Config.baseUrl}${Routes.toggleStudentStatus(schoolId, studentUuid)}";
+      final url =
+          "${Config.baseUrl}${Routes.toggleStudentStatus(schoolId, studentUuid)}";
       final newStatusStr = currentStatus == 1 ? false : true;
 
       final result = await http.patch(
@@ -208,7 +195,8 @@ class StudentsCubit extends Cubit<StudentsState> {
 
       if (result.statusCode == 200 || result.statusCode == 201) {
         final json = jsonDecode(result.body);
-        final newStatus = (json['data']['status'] as int?) ?? (currentStatus == 1 ? 0 : 1);
+        final newStatus =
+            (json['data']['status'] as int?) ?? (currentStatus == 1 ? 0 : 1);
         final updated = state.studentsList.map((s) {
           if (s.uuid == studentUuid) return s.copyWith(status: newStatus);
           return s;
