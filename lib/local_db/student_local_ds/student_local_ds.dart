@@ -54,6 +54,43 @@ class StudentLocalDS {
     print("Inserted Students: ${list.length}");
   }
 
+  Future<void> insertSingleImage({
+    required int studentId,
+    required String imageUrl,
+    required String localPath,
+  }) async {
+    final db = await DBHelper.db;
+
+    await db.insert(
+      'student_images',
+      {
+        "student_id": studentId,
+        "image_url": imageUrl,
+        "local_image_path": localPath,
+        "created_at": DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+  Future<void> updateStudentImage({
+    required int studentId,
+    required String newImageUrl,
+    required String localPath,
+  }) async {
+
+    final db = await DBHelper.db;
+
+    await db.update(
+      'students',
+      {
+        'profile_photo_url': newImageUrl,
+        'local_image_path': localPath,
+      },
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+  }
+
   /// 🔍 FETCH STUDENTS
   Future<List<StudentDetailsData>> getStudents({
     String search = "",
