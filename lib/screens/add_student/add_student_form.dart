@@ -1264,6 +1264,7 @@ class _AddStudentFormPageState extends State<AddStudentFormPage>
                 .where((f) => !currentFields.any((c) => c.name == f.name))
                 .toList();
 
+
             return Scaffold(
               appBar: CommonAppBar(
                 title: widget.editStudent != null
