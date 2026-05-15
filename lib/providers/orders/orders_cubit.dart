@@ -134,7 +134,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     bool isLoadMore = false,
     String search = '',
     String status = '',
-    String classFilter = '',
+    String classFilter = '',  // value like "2486-1246" (classId-sectionId)
     String dateFrom = '',
     String dateTo = '',
     required String schoolId,
@@ -217,6 +217,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
+  // ─── Fetch orders list ────────────────────────────────────────────────────
   Future<void> fetchOrders({
     bool isLoadMore = false,
     String search = '',
@@ -227,6 +228,7 @@ class OrdersCubit extends Cubit<OrdersState> {
     String schoolId = '',
     bool isSchool = false,
   }) async {
+    // For fresh fetch (not load more), always allow — reset any stuck state
     if (isLoadMore && (state.isPaginationLoading || !state.hasMore)) return;
 
     final currentPage = isLoadMore ? state.page : 1;
@@ -248,8 +250,10 @@ class OrdersCubit extends Cubit<OrdersState> {
     try {
       String url;
       if (schoolId.isNotEmpty) {
+        // Both school admin and partner viewing a school: use partner orders endpoint with school_id filter
         url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20&school_id=$schoolId';
       } else {
+        // Partner: all orders without school filter
         url = '${Config.baseUrl}auth/partner/orders?page=$currentPage&per_page=20';
       }
       if (status.isNotEmpty) url += '&status=$status';
@@ -294,6 +298,8 @@ class OrdersCubit extends Cubit<OrdersState> {
 
       final newOrders = rawList.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
 
+      // Frontend class filter — backend does not support class_id param
+      // classId may be "classId_sectionId" or plain "classId"
       List<OrderModel> filtered;
       if (classId.isNotEmpty) {
         final parts = classId.split('_');
@@ -303,6 +309,7 @@ class OrdersCubit extends Cubit<OrdersState> {
           final matchClass = o.student?.classId?.toString() == filterClassId;
           if (!matchClass) return false;
           if (filterSectionId != null && filterSectionId.isNotEmpty) {
+            // sectionName comparison not available on OrderStudent, skip section filter on frontend
             return true;
           }
           return true;
@@ -315,6 +322,7 @@ class OrdersCubit extends Cubit<OrdersState> {
 
       final hasMore = respPage < lastPage;
 
+      // If class filter active and no results on this page but more pages exist, auto-load next
       if (classId.isNotEmpty && filtered.isEmpty && hasMore) {
         emit(state.copyWith(
           isPaginationLoading: false,
@@ -337,6 +345,7 @@ class OrdersCubit extends Cubit<OrdersState> {
         return;
       }
 
+      // Extract unique classes from orders (only on first page load)
       List<OrderClass> classes = state.availableClasses;
 
       emit(state.copyWith(
@@ -353,9 +362,11 @@ class OrdersCubit extends Cubit<OrdersState> {
     }
   }
 
+  // ─── Update order status
 
   Future<bool> updateOrderStatus(String uuid, String newStatus, {String schoolId = '', bool isSchool = false}) async {
     try {
+      // Always use partner endpoint — school-scoped route does not exist on backend
       final url = '${Config.baseUrl}auth/partner/orders/$uuid/status';
       print('updateOrderStatus URL: $url');
       print('Body: {status: $newStatus}');
@@ -364,11 +375,40 @@ class OrdersCubit extends Cubit<OrdersState> {
       final json = jsonDecode(response.body);
       print('updateOrderStatus response: ${response.body}');
       if (json['success'] == true) return true;
+      // show validation errors if any
       final errors = json['errors'];
       if (errors != null) print('Validation errors: $errors');
       return false;
     } catch (e) {
       print('updateOrderStatus error: $e');
+      return false;
+    }
+  }
+
+  // ─── Re-Order with printing_issue status (school-scoped bulk API)
+  Future<bool> reOrderWithPrintingIssue({
+    required String schoolId,
+    required List<String> uuids,
+    String issueNote = '',
+  }) async {
+    try {
+      final url = '${Config.baseUrl}auth/school/$schoolId/orders/status';
+      final body = <String, dynamic>{
+        'uuids': uuids,
+        'status': {
+          'status': 'printing_issue',
+          if (issueNote.isNotEmpty) 'issueNote': issueNote,
+        },
+      };
+      print('reOrderWithPrintingIssue URL: $url');
+      print('reOrderWithPrintingIssue Body: $body');
+      final response = await _api.patchRequestWithBody(url, body);
+      if (response == null) return false;
+      final json = jsonDecode(response.body);
+      print('reOrderWithPrintingIssue response: ${response.body}');
+      return json['success'] == true;
+    } catch (e) {
+      print('reOrderWithPrintingIssue error: $e');
       return false;
     }
   }
@@ -391,18 +431,22 @@ class OrdersCubit extends Cubit<OrdersState> {
       final data = json['data'] as Map<String, dynamic>?;
       int total = 0;
       if (data != null) {
+        // Format: { list: { data: [...], total: N, ... } }
         if (data['list'] is Map) {
           final listData = data['list'] as Map<String, dynamic>;
           total = listData['total'] ?? 0;
         }
+        // Format: { orders: [...], pagination: { total: N } }
         else if (data['orders'] is List) {
           final pagination = data['pagination'] as Map<String, dynamic>?;
           total = pagination?['total'] ?? (data['orders'] as List).length;
         }
+        // Format: { orders: { data: [...], total: N } }
         else if (data['orders'] is Map) {
           final ordersData = data['orders'] as Map<String, dynamic>;
           total = ordersData['total'] ?? 0;
         }
+        // Format: { data: [...], total: N }
         else if (data['total'] != null) {
           total = data['total'] ?? 0;
         }

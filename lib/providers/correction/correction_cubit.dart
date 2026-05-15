@@ -161,7 +161,7 @@ class CorrectionCubit extends Cubit<CorrectionState> {
     String listType = 'class_wise',
     String cardType = '',
     List<String> cardFor = const [],
-    List<String>? studentUuids, // optional: pass directly from Students tab
+    List<String>? studentUuids,
   }) async {
     List<String> selectedUuids;
 

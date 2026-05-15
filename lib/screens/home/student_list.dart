@@ -29,13 +29,13 @@ import 'package:idmitra/providers/student_form/student_form_cubit.dart';
 import 'package:idmitra/providers/student_form/student_form_data_cubit.dart';
 import 'package:idmitra/providers/students/students_cubit.dart';
 import 'package:idmitra/providers/students/students_state.dart';
+import 'package:printing/printing.dart';
 import 'package:idmitra/providers/school/school_cubit.dart';
 import 'package:idmitra/screens/add_student/add_student_form.dart';
 import 'package:idmitra/screens/home/FilterBottomSheet.dart';
 import 'package:idmitra/screens/home/StudentCard.dart';
 import 'package:idmitra/screens/home/StudentIdCardWidget.dart';
 import 'package:idmitra/screens/orders/order_detail_page.dart';
-import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class StudentListingPage extends StatefulWidget {
@@ -67,8 +67,7 @@ class _StudentListingPageState extends State<StudentListingPage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _ordersCubit = OrdersCubit()
-      ..fetchOrders(schoolId: widget.schoolId, isSchool: false)
-      ..fetchSchoolClasses(widget.schoolId);
+      ..fetchSchoolOrders(schoolId: widget.schoolId);
   }
 
   @override
@@ -267,7 +266,6 @@ class _StudentsTabState extends State<_StudentsTab> {
   final ScrollController _gridScrollCtrl = ScrollController();
   Timer? _debounce;
 
-  // Selection state for Process Checklist
   final Set<int> _selectedIds = {};
   final Map<int, String> _idToUuid = {};
 
@@ -307,6 +305,9 @@ class _StudentsTabState extends State<_StudentsTab> {
         .where((id) => _idToUuid.containsKey(id))
         .map((id) => _idToUuid[id]!)
         .toList();
+    print("=== _showProcessChecklistDialog ===");
+    print("selectedIds: $_selectedIds");
+    print("uuids to pass: $uuids");
     showDialog(
       context: ctx,
       barrierDismissible: false,
@@ -317,7 +318,6 @@ class _StudentsTabState extends State<_StudentsTab> {
           studentUuids: uuids,
           onSuccess: () {
             _clearSelection();
-            // Refresh student list
             context.read<StudentsCubit>().fetchStudents(
               search: _searchCtrl.text.trim(),
               schoolId: widget.schoolId,
@@ -373,7 +373,6 @@ class _StudentsTabState extends State<_StudentsTab> {
       if (mounted) {
         final schoolIntId = widget.schoolDetailsModel?.id;
         if (schoolIntId != null) {
-          // Always fetch latest imageShape from API so changes reflect immediately
           context.read<SchoolCubit>().fetchAndApplyImageShape(schoolIntId);
         }
       }
@@ -445,12 +444,6 @@ class _StudentsTabState extends State<_StudentsTab> {
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                '${_selectedIds.length} selected',
-                                style: MyStyles.mediumText(
-                                    size: 13, color: AppTheme.btnColor),
-                              ),
-                              const Spacer(),
                               TextButton(
                                 onPressed: () =>
                                     _selectAll(studState.studentsList),
@@ -480,7 +473,8 @@ class _StudentsTabState extends State<_StudentsTab> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text('Process checklist',
+                                      const SizedBox(width: 5),
+                                      Text('Process Checklist',
                                           style: MyStyles.mediumText(
                                               size: 12,
                                               color: Colors.white)),
@@ -519,17 +513,22 @@ class _StudentsTabState extends State<_StudentsTab> {
                               final String? gender = result['gender']
                                   ?.toString()
                                   .toLowerCase();
+                              final List<int> sectionIds = result['section'] is List
+                                  ? List<int>.from(
+                                  (result['section'] as List)
+                                      .map((e) => int.tryParse(e.toString()) ?? 0)
+                                      .where((e) => e != 0))
+                                  : [];
                               _debounce?.cancel();
                               _debounce = Timer(
                                   const Duration(milliseconds: 500), () {
                                 context
                                     .read<StudentsCubit>()
-                                    .fetchStudents(
-                                  search: '',
+                                    .applyFilters(
                                   schoolId: widget.schoolId,
                                   classId: classId ?? '',
                                   gender: gender ?? '',
-                                  sectionIds: result['section'] ?? [],
+                                  sectionIds: sectionIds,
                                 );
                               });
                             }
@@ -800,7 +799,9 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
         p.downloadUrl != c.downloadUrl ||
             p.downloadError != c.downloadError ||
             p.sendOrderSuccess != c.sendOrderSuccess ||
-            p.sendOrderError != c.sendOrderError,
+            p.sendOrderError != c.sendOrderError ||
+            p.createOrderSuccess != c.createOrderSuccess ||
+            p.createOrderError != c.createOrderError,
         listener: (context, state) async {
           if (state.sendOrderSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -811,19 +812,42 @@ class _CorrectionListTabState extends State<_CorrectionListTab> {
                   borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(12),
             ));
-            // Refresh correction list (remove ordered students)
             context.read<CorrectionCubit>().fetchCorrectionStudents(
               schoolId: widget.schoolId,
             );
-            // Refresh orders tab so new order appears
-            widget.ordersCubit?.fetchOrders(
+            widget.ordersCubit?.fetchSchoolOrders(
               schoolId: widget.schoolId,
-              isSchool: false,
             );
           }
           if (state.sendOrderError != null) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(state.sendOrderError!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(12),
+            ));
+          }
+          if (state.createOrderSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: const Text('Order created successfully!'),
+              backgroundColor: AppTheme.btnColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(12),
+            ));
+            context.read<CorrectionCubit>().fetchCorrectionStudents(
+              schoolId: widget.schoolId,
+            );
+            widget.ordersCubit?.fetchSchoolOrders(
+              schoolId: widget.schoolId,
+            );
+          }
+          if (state.createOrderError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.createOrderError!),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -2452,10 +2476,13 @@ class _ProcessChecklistDialogState extends State<_ProcessChecklistDialog> {
           ));
         }
         if (!state.sendOrderLoading && state.sendOrderError != null) {
-          Navigator.of(context).pop();
+          final isAlready = state.sendOrderError!
+              .toLowerCase()
+              .contains('already processed');
+          if (!isAlready) Navigator.of(context).pop();
           ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
             content: Text(state.sendOrderError!),
-            backgroundColor: Colors.red,
+            backgroundColor: isAlready ? Colors.orange : Colors.red,
             behavior: SnackBarBehavior.floating,
             shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2694,13 +2721,12 @@ class _OrdersTabState extends State<_OrdersTab> {
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
-        context.read<OrdersCubit>().fetchOrders(
+        context.read<OrdersCubit>().fetchSchoolOrders(
           isLoadMore: true,
           search: _searchCtrl.text.trim(),
           status: _selectedStatus,
-          classId: _selectedClass,
+          classFilter: _selectedClass,
           schoolId: widget.schoolId,
-          isSchool: false,
           dateFrom: _dateFromCtrl.text,
           dateTo: _dateToCtrl.text,
         );
@@ -2719,12 +2745,11 @@ class _OrdersTabState extends State<_OrdersTab> {
   }
 
   void _resetAndFetch() {
-    context.read<OrdersCubit>().fetchOrders(
+    context.read<OrdersCubit>().fetchSchoolOrders(
       search: _searchCtrl.text.trim(),
       status: _selectedStatus,
-      classId: _selectedClass,
+      classFilter: _selectedClass,
       schoolId: widget.schoolId,
-      isSchool: false,
       dateFrom: _dateFromCtrl.text,
       dateTo: _dateToCtrl.text,
     );
@@ -2960,19 +2985,18 @@ class _OrdersTabState extends State<_OrdersTab> {
   Widget _classDropdown() =>
       BlocBuilder<OrdersCubit, OrdersState>(
         buildWhen: (p, c) =>
-        p.availableClasses != c.availableClasses ||
-            p.classesLoading != c.classesLoading,
+        p.schoolClassesWithSections != c.schoolClassesWithSections ||
+            p.loading != c.loading,
         builder: (_, state) => _dropdown(
           value: _selectedClass.isEmpty ? '' : _selectedClass,
           hint: 'All Classes',
-          loading: state.classesLoading,
           items: [
             const DropdownMenuItem(
                 value: '', child: Text('All Classes')),
-            ...state.availableClasses.map(
+            ...state.schoolClassesWithSections.map(
                   (c) => DropdownMenuItem(
-                value: c.classId.toString(),
-                child: Text(c.nameWithprefix ?? c.name,
+                value: c.value,
+                child: Text(c.label,
                     overflow: TextOverflow.ellipsis),
               ),
             ),
@@ -3137,19 +3161,23 @@ class _OrderCardState extends State<_OrderCard> {
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
+    if (newStatus != 're_order') return;
     setState(() => _updating = true);
     final success = await context
         .read<OrdersCubit>()
-        .updateOrderStatus(widget.order.uuid, newStatus);
+        .reOrderWithPrintingIssue(
+      schoolId: widget.schoolId,
+      uuids: [widget.order.uuid],
+    );
     if (mounted) {
       setState(() {
         _updating = false;
-        if (success) _currentStatus = newStatus;
+        if (success) _currentStatus = 're_order';
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(success
-            ? 'Status updated successfully'
-            : 'Failed to update status'),
+            ? 'Re-order submitted successfully'
+            : 'Failed to submit re-order'),
         backgroundColor: success ? AppTheme.btnColor : Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -3302,21 +3330,19 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   List<PopupMenuEntry<String>> _buildStatusMenuItems() {
-    return kOrderStatuses
-        .where((s) => s.value != _currentStatus)
-        .map((s) => PopupMenuItem<String>(
-      value: s.value,
-      child: Row(
-        children: [
-          Icon(_statusIcon(s.value),
-              size: 16,
-              color: AppTheme.graySubTitleColor),
-          const SizedBox(width: 10),
-          Text(s.label),
-        ],
+    return [
+      PopupMenuItem<String>(
+        value: 're_order',
+        child: Row(
+          children: [
+            Icon(Icons.refresh_rounded,
+                size: 16, color: AppTheme.graySubTitleColor),
+            const SizedBox(width: 10),
+            const Text('Re-Order'),
+          ],
+        ),
       ),
-    ))
-        .toList();
+    ];
   }
 
   IconData _statusIcon(String status) {

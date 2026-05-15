@@ -138,7 +138,17 @@ class _StaffListingPageState extends State<StaffListingPage>
     _correctionCubit = StaffCorrectionCubit();
     _schoolCubit = SchoolCubit();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _loadSchoolAndFetch();
+  }
+
+  void _onTabChanged() {
+    if (_schoolId == null || _tabController.indexIsChanging) return;
+    if (_tabController.index == 1) {
+      _correctionCubit.fetchStaffCorrection(schoolId: _schoolId!);
+    } else if (_tabController.index == 2) {
+      _cubit.fetchStaffOrders(schoolId: _schoolId!, reset: true);
+    }
   }
 
   Future<void> _loadSchoolAndFetch() async {
@@ -151,8 +161,6 @@ class _StaffListingPageState extends State<StaffListingPage>
       setState(() => _schoolId = id);
       if (id.isNotEmpty) {
         _cubit.fetchStaff(schoolId: id);
-        _cubit.fetchStaffOrders(schoolId: id, reset: true);
-        _correctionCubit.fetchStaffCorrection(schoolId: id);
         final schoolIntId = int.tryParse(id);
         if (schoolIntId != null) {
           _schoolCubit.fetchAndApplyImageShape(schoolIntId);
@@ -163,6 +171,7 @@ class _StaffListingPageState extends State<StaffListingPage>
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _cubit.close();
     _correctionCubit.close();
     _schoolCubit.close();
@@ -3374,15 +3383,15 @@ class _StaffProcessChecklistDialogState
   static const _listTypes = [
     {'value': '', 'label': '- Select List Type -'},
     {'value': 'selected', 'label': 'Selected Staff Correction List'},
-    {'value': 'all', 'label': 'All Staff Correction List'},
   ];
 
   static const _processTypes = [
     {'value': '', 'label': '- Select Process Type -'},
     {'value': 'create', 'label': 'Create Correction List'},
+    {'value': 'order', 'label': 'Order'},
   ];
 
-  String _selectedListType = '';
+  String _selectedListType = 'selected';
   String _selectedProcessType = '';
 
   @override
@@ -3397,7 +3406,9 @@ class _StaffProcessChecklistDialogState
           Navigator.of(context).pop();
           widget.onSuccess?.call();
           ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: const Text('Correction list created successfully!'),
+            content: Text(_selectedProcessType == 'order'
+                ? 'Order processed successfully!'
+                : 'Correction list created successfully!'),
             backgroundColor: AppTheme.btnColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

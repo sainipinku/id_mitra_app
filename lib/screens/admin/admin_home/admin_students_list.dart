@@ -351,15 +351,11 @@ class _AdminStudentsTabState extends State<_AdminStudentsTab> {
     });
   }
 
-
   void _showProcessChecklistDialog(BuildContext ctx) {
     final uuids = _selectedIds
         .where((id) => _idToUuid.containsKey(id))
         .map((id) => _idToUuid[id]!)
         .toList();
-    print("=== _showProcessChecklistDialog ===");
-    print("selectedIds: $_selectedIds");
-    print("uuids to pass: $uuids");
     showDialog(
       context: ctx,
       barrierDismissible: false,
@@ -2222,10 +2218,13 @@ class _ProcessChecklistDialogState extends State<_ProcessChecklistDialog> {
           ));
         }
         if (!state.sendOrderLoading && state.sendOrderError != null) {
-          Navigator.of(context).pop();
+          final isAlready = state.sendOrderError!
+              .toLowerCase()
+              .contains('already processed');
+          if (!isAlready) Navigator.of(context).pop();
           ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
             content: Text(state.sendOrderError!),
-            backgroundColor: Colors.red,
+            backgroundColor: isAlready ? Colors.orange : Colors.red,
             behavior: SnackBarBehavior.floating,
             shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -3218,19 +3217,23 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       .label;
 
   Future<void> _updateStatus(String newStatus) async {
+    if (newStatus != 're_order') return;
     setState(() => _updating = true);
     final success = await context
         .read<OrdersCubit>()
-        .updateOrderStatus(widget.order.uuid, newStatus);
+        .reOrderWithPrintingIssue(
+      schoolId: widget.schoolId,
+      uuids: [widget.order.uuid],
+    );
     if (mounted) {
       setState(() {
         _updating = false;
-        if (success) _currentStatus = newStatus;
+        if (success) _currentStatus = 're_order';
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(success
-            ? 'Status updated successfully'
-            : 'Failed to update status'),
+            ? 'Re-order submitted successfully'
+            : 'Failed to submit re-order'),
         backgroundColor:
         success ? AppTheme.btnColor : Colors.red,
         behavior: SnackBarBehavior.floating,
@@ -3388,21 +3391,22 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   }
 
   List<PopupMenuEntry<String>> _buildStatusMenuItems() {
-    return kOrderStatuses
-        .where((s) => s.value != _currentStatus)
-        .map((s) => PopupMenuItem<String>(
-      value: s.value,
-      child: Row(
-        children: [
-          Icon(_statusIcon(s.value),
-              size: 16,
-              color: AppTheme.graySubTitleColor),
-          const SizedBox(width: 10),
-          Text(s.label),
-        ],
+    return [
+      PopupMenuItem<String>(
+        value: 're_order',
+        child: Row(
+          children: [
+            Icon(Icons.refresh_rounded,
+                size: 16, color: AppTheme.graySubTitleColor),
+            const SizedBox(width: 10),
+            const Text('Re-Order'),
+          ],
+        ),
       ),
-    ))
-        .toList();
+      // Other status options commented out
+      // ...kOrderStatuses.where((s) => s.value != _currentStatus && s.value != 're_order')
+      //     .map((s) => PopupMenuItem<String>(value: s.value, child: Text(s.label)))
+    ];
   }
 
   IconData _statusIcon(String status) {

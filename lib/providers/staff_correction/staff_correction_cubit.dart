@@ -211,7 +211,7 @@ class StaffCorrectionCubit extends Cubit<StaffCorrectionState> {
       final url = '${Config.baseUrl}auth/school/$schoolId/staff/correction-lists/process';
       final body = <String, dynamic>{
         'processType': processType.isNotEmpty ? processType : 'create',
-        'list_type': listType.isNotEmpty ? listType : 'selected',
+        'listType': listType.isNotEmpty ? listType : 'selected',
         'staff': selectedUuids,
         if (cardType.isNotEmpty) 'card_type': cardType,
         if (cardFor.isNotEmpty) 'card_for': cardFor,
