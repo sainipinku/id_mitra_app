@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:idmitra/api_mamanger/config.dart';
 import 'package:idmitra/api_mamanger/secure_storage.dart';
+import 'package:idmitra/local_db/student_local_ds/student_local_ds.dart';
 import 'package:idmitra/models/students/StudentsListModel.dart';
 
 class AddStudentState {
@@ -24,6 +25,8 @@ class AddStudentState {
 
 class AddStudentCubit extends Cubit<AddStudentState> {
   AddStudentCubit() : super(const AddStudentState());
+
+  final _localDS = StudentLocalDS();
 
   Future<void> submit({
     required String schoolId,
@@ -77,6 +80,11 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         StudentDetailsData? newStudent;
         try {
           if (data is Map<String, dynamic>) {
+            // Patch school_id from request if API response omits it
+            if (data['school_id'] == null) {
+              data['school_id'] = int.tryParse(schoolId);
+            }
+
             // Patch school_class_section_id from request if API response omits it
             final sectionId = fields['class_section'];
             if (sectionId != null && data['school_class_section_id'] == null) {
@@ -85,8 +93,16 @@ class AddStudentCubit extends Cubit<AddStudentState> {
                   : int.tryParse(sectionId.toString());
             }
             newStudent = StudentDetailsData.fromJson(data);
+
+            //  Save to Local DB
+            if (newStudent != null) {
+              await _localDS.insertStudents([newStudent]);
+              print("Student saved to local DB after successful add");
+            }
           }
-        } catch (_) {}
+        } catch (e) {
+          print("Error saving to local DB or parsing student: $e");
+        }
         emit(AddStudentState(
           success: true,
           message: json['message'] ?? 'Student added successfully',
@@ -172,9 +188,22 @@ class AddStudentCubit extends Cubit<AddStudentState> {
         try {
           final data = json['data'];
           if (data is Map<String, dynamic>) {
+            // Patch school_id from request if API response omits it
+            if (data['school_id'] == null) {
+              data['school_id'] = int.tryParse(schoolId);
+            }
+            
             updatedStudent = StudentDetailsData.fromJson(data);
+
+            //  Update in Local DB
+            if (updatedStudent != null) {
+              await _localDS.insertStudents([updatedStudent]);
+              print("Student updated in local DB after successful update");
+            }
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint("Error updating local DB or parsing student: $e");
+        }
         emit(AddStudentState(
           success: true,
           message: json['message'] ?? 'Student updated successfully',

@@ -25,11 +25,6 @@ void main() async{
   // NoInternetService will be initialized after MaterialApp is built
 // gdfkgljdfskgjdfkgdflkg
 
-
-
-
-
-
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.white,

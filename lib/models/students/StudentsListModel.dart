@@ -387,7 +387,9 @@ class StudentDetailsData {
       StudentDetailsData(
         id: json["id"],
         uuid: json["uuid"],
-        schoolId: json["school_id"],
+        schoolId: json["school_id"] is int
+            ? json["school_id"]
+            : int.tryParse(json["school_id"]?.toString() ?? ''),
 
         panNo: _firstOf(json, ['pan_no', 'pen_number', 'pan_number']),
 

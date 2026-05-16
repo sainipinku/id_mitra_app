@@ -575,7 +575,7 @@ class _StudentCardState extends State<StudentCard> {
                             .read<StudentsCubit>()
                             .deleteStudent(
                               studentDetailsData.uuid ?? '',
-                              studentDetailsData.schoolId?.toString() ?? '',
+                              studentDetailsData.schoolId?.toString() ?? widget.schoolId,
                             );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

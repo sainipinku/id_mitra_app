@@ -171,4 +171,11 @@ class StudentLocalDS {
     final db = await DBHelper.db;
     await db.delete('students');
   }
+
+  /// 🗑️ DELETE SINGLE STUDENT
+  Future<void> deleteStudent(String uuid) async {
+    final db = await DBHelper.db;
+    await db.delete('students', where: 'uuid = ?', whereArgs: [uuid]);
+    print("Deleted Student from local DB: $uuid");
+  }
 }

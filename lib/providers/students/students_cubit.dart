@@ -79,6 +79,7 @@ class StudentsCubit extends Cubit<StudentsState> {
       ));
     }
   }
+
   Future<void> syncAllStudents({
     required String schoolId,
     String search = "",
@@ -156,6 +157,9 @@ class StudentsCubit extends Cubit<StudentsState> {
         "${Config.baseUrl}${Routes.deleteStudent(schoolId, studentUuid)}",
       );
       if (result.statusCode == 200) {
+        // 🔥 Remove from Local DB
+        await localDS.deleteStudent(studentUuid);
+
         final updated = state.studentsList
             .where((s) => s.uuid != studentUuid)
             .toList();
@@ -219,6 +223,17 @@ class StudentsCubit extends Cubit<StudentsState> {
       if (result.statusCode == 200 || result.statusCode == 201) {
         final json = jsonDecode(result.body);
         final newStatus = (json['data']['status'] as int?) ?? (currentStatus == 1 ? 0 : 1);
+
+        // 🔥 Update in Local DB
+        try {
+          final studentToUpdate = state.studentsList.firstWhere((s) => s.uuid == studentUuid);
+          final updatedStudent = studentToUpdate.copyWith(status: newStatus);
+          await localDS.insertStudents([updatedStudent]);
+          debugPrint("Student status updated in local DB");
+        } catch (e) {
+          debugPrint("Error updating status in local DB: $e");
+        }
+
         final updated = state.studentsList.map((s) {
           if (s.uuid == studentUuid) return s.copyWith(status: newStatus);
           return s;
